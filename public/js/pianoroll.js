@@ -14,6 +14,7 @@ const BLACK = new Set([1, 3, 6, 8, 10]);
 function hexA(hex, a) { const m = hex.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i); if (!m) return hex; return `rgba(${parseInt(m[1],16)},${parseInt(m[2],16)},${parseInt(m[3],16)},${a})`; }
 
 export class PianoRoll {
+  static clipboard = null;
   constructor(canvas, opts = {}) {
     this.cv = canvas;
     this.ctx = canvas.getContext("2d");
@@ -130,6 +131,10 @@ export class PianoRoll {
           moved: false,
         };
         previewNote(t, n.p, n.v);
+      } else if (e.metaKey || e.ctrlKey || e.shiftKey) {
+        // 範囲選択 (⌘ / Shift + ドラッグ)
+        if (!e.shiftKey) this.selection.clear();
+        this.drag = { mode: "box", startX: x, startY: y, x, y, moved: false, base: new Set(this.selection) };
       } else {
         // 新規ノート追加
         const b = this.snapBeat(this.xToBeat(x));
@@ -159,6 +164,15 @@ export class PianoRoll {
       }
       const d = this.drag;
       const t = selectedTrack(); if (!t) return;
+      if (d.mode === "box") {
+        d.x = x; d.y = y; d.moved = true;
+        const b0 = Math.min(this.xToBeat(d.startX), this.xToBeat(x)), b1 = Math.max(this.xToBeat(d.startX), this.xToBeat(x));
+        const p0 = Math.min(this.yToPitch(d.startY), this.yToPitch(y)), p1 = Math.max(this.yToPitch(d.startY), this.yToPitch(y));
+        this.selection = new Set(d.base);
+        for (const n of t.notes) if (n.s + n.d > b0 && n.s < b1 && n.p >= p0 && n.p <= p1) this.selection.add(n.id);
+        this.draw();
+        return;
+      }
       const dBeat = (x - d.startX) / this.pxPerBeat;
       const dPitch = Math.round(-(y - d.startY) / this.rowH);
       const snap = this.getSnap();
@@ -183,6 +197,7 @@ export class PianoRoll {
 
     window.addEventListener("mouseup", () => {
       if (this.drag) {
+        if (this.drag.mode === "box") { this.drag = null; this.draw(); return; }
         if (this.drag.moved || this.drag.isNew) { pushUndo(); emit("tracks"); }
         this.drag = null;
         emit("notes");
@@ -237,6 +252,49 @@ export class PianoRoll {
         e.preventDefault();
         this.selection = new Set(t.notes.map((n) => n.id));
         this.draw();
+        return;
+      }
+      const t = selectedTrack(); if (!t) return;
+      const mod = e.metaKey || e.ctrlKey;
+      const selNotes = () => t.notes.filter((n) => this.selection.has(n.id));
+      // ⌘C / ⌘X: コピー / 切り取り (先頭のノートを 0 とした相対位置で持つ)
+      if (mod && (e.key === "c" || e.key === "x")) {
+        const sel = selNotes(); if (!sel.length) return;
+        e.preventDefault();
+        const s0 = Math.min(...sel.map((n) => n.s));
+        PianoRoll.clipboard = { notes: sel.map((n) => ({ p: n.p, s: +(n.s - s0).toFixed(4), d: n.d, v: n.v, ...(n.v2 != null ? { v2: n.v2 } : {}) })), length: Math.max(...sel.map((n) => n.s + n.d)) - s0 };
+        if (e.key === "x") { t.notes = t.notes.filter((n) => !this.selection.has(n.id)); this.selection.clear(); pushUndo(); emit("notes"); emit("tracks"); this.draw(); }
+        return;
+      }
+      // ⌘V: 再生位置 (スナップ済み) に貼り付け → 貼った分を選択
+      if (mod && e.key === "v") {
+        const cb = PianoRoll.clipboard; if (!cb?.notes.length) return;
+        e.preventDefault();
+        const at = this.snapBeat(state.playheadBeat, false);
+        this.pasteAt(t, cb, at);
+        return;
+      }
+      // ⌘D: 選択を直後に複製 (フレーズの繰り返し)
+      if (mod && e.key === "d") {
+        const sel = selNotes(); if (!sel.length) return;
+        e.preventDefault();
+        const s0 = Math.min(...sel.map((n) => n.s));
+        const snap = this.getSnap() || 0.25;
+        const len = Math.max(snap, Math.ceil((Math.max(...sel.map((n) => n.s + n.d)) - s0) / snap) * snap);
+        const cb = { notes: sel.map((n) => ({ p: n.p, s: +(n.s - s0).toFixed(4), d: n.d, v: n.v, ...(n.v2 != null ? { v2: n.v2 } : {}) })), length: len };
+        this.pasteAt(t, cb, s0 + len);
+        return;
+      }
+      // 矢印: ←→ スナップ分ずらす / ↑↓ 半音 (Shift で 1 オクターブ)
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
+        const sel = selNotes(); if (!sel.length) return;
+        e.preventDefault();
+        const snap = this.getSnap() || 0.25;
+        if (e.key === "ArrowLeft" || e.key === "ArrowRight") { const dd = (e.key === "ArrowLeft" ? -1 : 1) * snap; if (sel.some((n) => n.s + dd < 0)) return; for (const n of sel) n.s = +(n.s + dd).toFixed(4); }
+        else { const dp = (e.key === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 12 : 1); if (sel.some((n) => n.p + dp < 0 || n.p + dp > 127)) return; for (const n of sel) n.p += dp; if (sel.length <= 8) previewNote(t, sel[0].p, sel[0].v); }
+        t.notes.sort((a, b) => a.s - b.s);
+        clearTimeout(this._undoT); this._undoT = setTimeout(() => pushUndo(), 400);
+        emit("notes"); emit("tracks"); this.draw();
       }
     });
   }
@@ -375,6 +433,14 @@ export class PianoRoll {
     ctx.strokeStyle = "#27407a";
     ctx.beginPath(); ctx.moveTo(this.keyW + 0.5, 0); ctx.lineTo(this.keyW + 0.5, h); ctx.stroke();
 
+    // 範囲選択の枠
+    if (this.drag?.mode === "box" && this.drag.moved) {
+      const d = this.drag;
+      ctx.fillStyle = "rgba(56,195,255,.12)"; ctx.strokeStyle = "rgba(56,195,255,.8)";
+      ctx.fillRect(Math.min(d.startX, d.x), Math.min(d.startY, d.y), Math.abs(d.x - d.startX), Math.abs(d.y - d.startY));
+      ctx.strokeRect(Math.min(d.startX, d.x) + 0.5, Math.min(d.startY, d.y) + 0.5, Math.abs(d.x - d.startX), Math.abs(d.y - d.startY));
+    }
+
     // プレイヘッド
     const px = this.beatToX(state.playheadBeat);
     if (px >= this.keyW && px <= w) {
@@ -393,6 +459,18 @@ export class PianoRoll {
       ctx.font = "12px 'Zen Kaku Gothic New'";
       ctx.fillText("クリックでノートを置くか、右のAIパネルから生成 →", this.beatToX(this.scrollX) + 30, this.rulerH + 40);
     }
+  }
+
+  // クリップボードの内容を at (拍) に貼る
+  pasteAt(t, cb, at) {
+    const added = cb.notes.map((n) => ({ id: uid(), p: n.p, s: +(at + n.s).toFixed(4), d: n.d, v: n.v, ...(n.v2 != null ? { v2: n.v2 } : {}) }));
+    t.notes.push(...added);
+    t.notes.sort((a, b) => a.s - b.s);
+    this.selection = new Set(added.map((n) => n.id));
+    pushUndo(); emit("notes"); emit("tracks");
+    const end = at + (cb.length ?? 0);
+    if (this.beatToX(end) > this.w) this.scrollX = Math.max(0, at - 1);
+    this.draw();
   }
 
   // プレイヘッド追従
