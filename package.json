@@ -1,0 +1,16 @@
+{
+  "name": "bluegarage-studio",
+  "version": "1.0.0",
+  "description": "BLUE GARAGE STUDIO — AI-native MIDI sequencer. Style-prompt driven multitrack composition.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.116.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "ffmpeg-static": "^5.3.0"
+  }
+}

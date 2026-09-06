@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "bluegarage",
+      "runtimeExecutable": "/Users/satorun/.local/node/bin/node",
+      "runtimeArgs": ["server.js"],
+      "port": 5173
+    }
+  ]
+}

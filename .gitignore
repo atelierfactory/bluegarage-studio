@@ -1,0 +1,10 @@
+node_modules/
+.env
+env..rtf
+.DS_Store
+samples_src/
+exports/
+*.wav
+*.mid
+neon-overdrive.bluegarage.json
+.claude/settings.local.json
