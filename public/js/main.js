@@ -309,7 +309,7 @@ async function saveAsNew(name) {
   state.songId = id; state.song.title = copy.title; saveLocal(); emit("song");
   return id;
 }
-$("#btn-menu").addEventListener("click", async () => { await renderLibrary(); dlg.showModal(); });
+$("#btn-menu").addEventListener("click", async () => { await lib.saveSong(ensureSongId(), state.song).catch(() => {}); await renderLibrary(); dlg.showModal(); });
 $("#btn-menu-close").addEventListener("click", () => dlg.close());
 $("#btn-new-song").addEventListener("click", () => {
   if (!confirm(t("confirm.new"))) return;
@@ -860,6 +860,8 @@ async function boot() {
   $(".ai-badge").textContent = MODELS.find((m) => m.id === settings.get().model)?.label.split(" (")[0] ?? settings.get().model;
   log(`BLUE GARAGE STUDIO v2 (${tr === "direct" ? "your API key" : tr === "proxy" ? "server key" : "no key"})`);
   try { const v = localStorage.getItem("bluegarage:view"); if (v && VIEWS[v] && v !== "proll") showView(v); } catch {}
+  // 開いている曲をライブラリに登録 (初回はここで ID が付く)
+  if (state.song.tracks.some((x) => x.notes.length)) lib.saveSong(ensureSongId(), state.song).catch(() => {});
   const presetParam = new URLSearchParams(location.search).get("preset");
   if (presetParam) { await loadDemo(presetParam); return; }
   if (!hasNotes) {

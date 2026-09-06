@@ -37,7 +37,11 @@ node tools/compose.mjs --prompt "song idea" --name my-song   # blueprint → all
 | "Send this track to my DAW over MIDI" | Web MIDI out to hardware or a DAW hosting your VST/AU plugins |
 | "Export WAV", "Export MIDI" | Mixed, loudness-normalized WAV / Type-1 SMF with tempo changes and expression CC |
 
-Manual tools: piano roll editing, ⌘Z, Humanize / Quantize, per-track FX (low-cut / EQ / comp / HALL / ROOM sends), MIX (master), SYNTH (patch editor), MIDI OUT, ● REC (record from a MIDI keyboard).
+Manual tools: piano roll editing, ⌘Z, Humanize / Quantize, ♩ metronome, ● REC (record from a MIDI keyboard), MIDI OUT.
+
+Center tabs: **PIANO ROLL** / **RACK** (the selected track's instrument as a hardware-style panel: every synth knob, or sample-library info with an audition keyboard; the channel strip and master are on the same page) / **MIXER** (faders, pan, sends and level meters for every track).
+
+Songs are saved automatically to a browser-side library (IndexedDB). Open ☰ to list, open, rename, duplicate or delete them; the chat can do the same ("list songs", "open the previous song", "save as").
 
 ## How it gets the music right (v2)
 
@@ -93,9 +97,11 @@ public/js/
   midi.js            SMF Type-1 writer (tempo map, CC11)
   chat.js            conversation loop (tool_use executed in the browser)
   main.js            UI and tool implementations (generation pipeline, mix, sounds, recording)
+  rack.js / mixer.js / knob.js   hardware-style panels, mixer, knob widgets
+  library.js         song library (IndexedDB)
   synthpanel.js / settings.js / i18n.js
   pianoroll.js / arrange.js
-public/samples/      converted samples (not in git; built by build-samples.sh)
+public/samples/      converted samples (kept in git for distribution; rebuild with build-samples.sh)
 public/presets/      demo songs
 tools/               compose.mjs (CLI), sfz-import.mjs, wav-dir-sfz.mjs, build-samples.sh
 ```

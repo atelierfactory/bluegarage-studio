@@ -41,7 +41,11 @@ node tools/compose.mjs --prompt "曲のイメージ" --name my-song      # 設�
 | 「このトラックを DAW に MIDI で送って」 | Web MIDI で外部音源 / DAW 上の VST・AU に出力 |
 | 「WAV で書き出して」「MIDI で書き出して」 | ミックス済み・ラウドネス調整済み WAV / テンポ変化と表情 CC 付き SMF |
 
-手でもできる: ピアノロール編集、⌘Z、人間味 / Q (クオンタイズ)、トラックの FX (ローカット / EQ / コンプ / HALL / ROOM)、MIX (マスター)、SYNTH (音色)、MIDI OUT、● REC (MIDI 鍵盤から録音)。
+手でもできる: ピアノロール編集、⌘Z、人間味 / Q (クオンタイズ)、♩ メトロノーム、● REC (MIDI 鍵盤から録音)、MIDI OUT。
+
+画面中央のタブ: **PIANO ROLL** / **RACK** (選んだトラックの音源を機材パネルとして表示。シンセはつまみ全部、サンプル音源は中身の情報と試聴鍵盤。チャンネルストリップとマスターも同じ画面) / **MIXER** (全トラックのフェーダー・パン・センド・レベルメーター)。
+
+曲は開くたびにブラウザのライブラリ (IndexedDB) に自動保存される。右上「☰」で一覧・開く・名前変更・複製・削除。チャットでも「曲の一覧」「前の曲を開いて」「別名で保存」ができる。
 
 ## 曲の質を上げる仕組み (v2)
 
@@ -97,9 +101,11 @@ public/js/
   midi.js            SMF Type-1 書き出し (テンポマップ・CC11)
   chat.js            会話ループ (tool_use をブラウザで実行)
   main.js            UI と道具の実装 (生成パイプライン・ミックス・音色・録音)
+  rack.js / mixer.js / knob.js  機材パネル・ミキサー・つまみ部品
+  library.js         曲のライブラリ (IndexedDB)
   synthpanel.js / settings.js / i18n.js  各パネル・設定・表示言語
   pianoroll.js / arrange.js  キャンバス表示
-public/samples/      変換済み音源 (git 管理外・build-samples.sh で生成)
+public/samples/      変換済み音源 (配布のため git に含める。build-samples.sh で作り直せる)
 public/presets/      デモ曲 (neon-overdrive, dawn-voyage)
 tools/               compose.mjs (CLI 生成) / sfz-import.mjs / wav-dir-sfz.mjs / build-samples.sh
 ```
