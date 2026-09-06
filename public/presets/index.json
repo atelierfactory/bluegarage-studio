@@ -1,0 +1,18 @@
+[
+ {
+  "name": "dawn-voyage",
+  "title": "夜明けの大海原へ ―Voyage at Daybreak―",
+  "tempo": 104,
+  "key": "D major",
+  "tracks": 7,
+  "notes": 2098
+ },
+ {
+  "name": "neon-overdrive",
+  "title": "Neon Overdrive",
+  "tempo": 140,
+  "key": "F# minor (Sabi modulates to A major)",
+  "tracks": 7,
+  "notes": 2969
+ }
+]

@@ -276,11 +276,27 @@ let librarySaveTimer = null;
 function ensureSongId() { if (!state.songId) state.songId = lib.newId(); return state.songId; }
 // 自動保存: state.saveLocal() のたびにライブラリにも書く (少し間引く)
 onSave(() => { clearTimeout(librarySaveTimer); librarySaveTimer = setTimeout(() => lib.saveSong(ensureSongId(), state.song).catch(() => {}), 600); });
+async function listPresets() {
+  try { const r = await fetch("presets/index.json", { cache: "no-cache" }); if (r.ok) return await r.json(); } catch {}
+  return [];
+}
 async function renderLibrary() {
   const list = await lib.listSongs();
   const el = $("#lib-list");
-  if (!list.length) { el.innerHTML = `<p class="dim">${t("lib.empty")}</p>`; return; }
   el.innerHTML = "";
+  // 同梱のデモ曲 (配布版でも出る)
+  const presets = await listPresets();
+  if (presets.length) {
+    const head = document.createElement("div"); head.className = "lib-head"; head.textContent = getLang() === "en" ? "Demo songs (bundled)" : "デモ曲 (同梱)"; el.appendChild(head);
+    for (const p of presets) {
+      const row = document.createElement("div"); row.className = "lib-row demo";
+      row.innerHTML = `<div><div class="lib-title">${escapeHtml(p.title)}</div><div class="lib-meta">${p.tempo} BPM · ${escapeHtml(p.key ?? "")} · ${p.tracks} tracks · ${p.notes} notes</div></div><button class="gbtn small lib-open">${t("lib.open")}</button><span></span><span></span><span></span>`;
+      row.querySelector(".lib-open").addEventListener("click", async () => { await loadDemo(p.name); dlg.close(); });
+      el.appendChild(row);
+    }
+    const head2 = document.createElement("div"); head2.className = "lib-head"; head2.textContent = getLang() === "en" ? "My songs (this browser)" : "自分の曲 (このブラウザに保存)"; el.appendChild(head2);
+  }
+  if (!list.length) { const p = document.createElement("p"); p.className = "dim"; p.textContent = t("lib.empty"); el.appendChild(p); return; }
   for (const m of list) {
     const row = document.createElement("div"); row.className = "lib-row" + (m.id === state.songId ? " current" : "");
     const when = new Date(m.updatedAt ?? 0).toLocaleString(getLang() === "en" ? "en-GB" : "ja-JP");
@@ -738,7 +754,7 @@ const actions = {
   async project({ action, name }) {
     if (action === "save") { saveLocal(); return "ブラウザに保存しました"; }
     if (action === "new") { resetSong(); addDefaultTracks(); return "新規プロジェクトにしました (ドラム/ベース/ギター/キーボードの空トラック)"; }
-    if (action === "list_presets") { try { const list = await (await fetch("/api/presets")).json(); return list.length ? list.map((p) => `${p.name}: 「${p.title}」 ${p.tracks}トラック`).join("\n") : "プリセットはありません"; } catch { return "プリセット一覧はローカルサーバーでだけ使えます (neon-overdrive, dawn-voyage は読めます)"; } }
+    if (action === "list_presets") { const list = await listPresets(); return list.length ? "同梱のデモ曲 (load_preset の name):\n" + list.map((p) => `- ${p.name}: 「${p.title}」 ${p.tempo}BPM ${p.tracks}トラック ${p.notes}音`).join("\n") : "デモ曲はありません"; }
     if (action === "load_preset") { await loadDemo(name || "neon-overdrive"); return `プリセット ${name || "neon-overdrive"} を読み込みました: 「${state.song.title}」`; }
     if (action === "list") { const list = await lib.listSongs(); return list.length ? "保存されている曲:\n" + list.map((m) => `- 「${m.title}」 ${m.tempo}BPM ${m.key} ${m.bars}小節 ${m.tracks}トラック ${m.notes}音${m.id === state.songId ? " (開いている曲)" : ""}`).join("\n") : "保存された曲はまだありません"; }
     if (action === "open") { const m = await lib.findByTitle(name); if (!m) throw new Error(`「${name}」という曲は無い。project list で一覧を見て`); await openFromLibrary(m.id); return `「${state.song.title}」を開きました`; }
