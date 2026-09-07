@@ -12,6 +12,12 @@
       "runtimeExecutable": "/Users/satorun/.local/node/bin/node",
       "runtimeArgs": ["tools/static-serve.mjs", "5180"],
       "port": 5180
+    },
+    {
+      "name": "proxy-dev",
+      "runtimeExecutable": "zsh",
+      "runtimeArgs": ["/Users/satorun/Documents/agent/product/toys/music_app/tools/proxy-dev.sh"],
+      "port": 8787
     }
   ]
 }

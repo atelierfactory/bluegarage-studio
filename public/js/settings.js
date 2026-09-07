@@ -19,12 +19,15 @@ export function initSettings({ onLangChange, toast }) {
     modelSel.value = s.model ?? MODELS[0].id;
     langSel.value = detectLang(s.lang);
     const info = await probeServer();
-    $("#set-server-note").textContent = info.hasKey ? t("set.server") : info.embeddedKey ? t("set.embedded") : t("set.static");
+    $("#set-server-note").textContent = info.hasKey ? t("set.server") : info.remoteOk ? t("set.remote") : info.proxyUrl ? t("set.remote.down") : t("set.static");
+    // アクセスコード欄は中継サーバーがコードを要求するときだけ見せる
+    const passRow = $("#set-pass-row");
+    if (passRow) { passRow.hidden = !(info.proxyUrl && info.needPasscode); $("#set-pass").value = s.passcode ?? ""; }
     status.textContent = "";
   }
   $("#btn-settings").addEventListener("click", async () => { await fill(); dlg.showModal(); });
   $("#btn-set-save").addEventListener("click", async () => {
-    settings.set({ apiKey: keyInput.value.trim(), model: modelSel.value, lang: langSel.value });
+    settings.set({ apiKey: keyInput.value.trim(), passcode: ($("#set-pass")?.value ?? "").trim(), model: modelSel.value, lang: langSel.value });
     setLang(langSel.value); onLangChange?.();
     resetServerProbe();
     const tr = await resolveTransport();
@@ -33,7 +36,7 @@ export function initSettings({ onLangChange, toast }) {
     dlg.close();
   });
   $("#btn-set-test").addEventListener("click", async () => {
-    settings.set({ apiKey: keyInput.value.trim(), model: modelSel.value });
+    settings.set({ apiKey: keyInput.value.trim(), passcode: ($("#set-pass")?.value ?? "").trim(), model: modelSel.value });
     resetServerProbe();
     status.textContent = "…";
     try { const r = await testConnection(); status.textContent = `✓ ${r}`; status.className = "ok"; }

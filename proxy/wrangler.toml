@@ -1,0 +1,17 @@
+# BLUE GARAGE STUDIO の API 中継サーバー (Cloudflare Worker) の設定
+# 配置: このフォルダで `npx wrangler deploy` (先に `npx wrangler login`)
+# 秘密の値は wrangler.toml には書かない: `npx wrangler secret put ANTHROPIC_API_KEY` / `npx wrangler secret put PASSCODE`
+name = "bluegarage-proxy"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+# このサイトからしか受け付けない (カンマ区切り)。手元で試すときは http://localhost:5180 を足す
+ALLOWED_ORIGINS = "https://atelierfactory.github.io"
+
+# IP ごとの回数制限: 1 分あたり 20 リクエスト (Workers の Rate Limiting binding)
+[[unsafe.bindings]]
+name = "RATE_LIMITER"
+type = "ratelimit"
+namespace_id = "1001"
+simple = { limit = 20, period = 60 }

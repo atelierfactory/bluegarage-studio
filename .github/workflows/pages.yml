@@ -19,20 +19,19 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      # サイト同梱の API キー: リポジトリの secret ANTHROPIC_API_KEY があれば public/config.json に書き出す。
-      # git には入れない。ただし公開ページの中身なので、サイトを開いた人には見える
-      # → 必ず専用キー (Anthropic Console の別ワークスペース) にして、月の利用上限を設定すること。
-      - name: Write config.json from secrets
+      # 中継サーバー (proxy/ の Cloudflare Worker) の URL をサイトに教える。
+      # API キーそのものは Worker の secret にだけあり、ここにもサイトにも出ない。
+      # repository variable PROXY_URL が無ければ config.json を置かない (各自がキーを入れる方式)。
+      - name: Write config.json (proxy URL only)
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          EMBEDDED_MODEL: ${{ vars.EMBEDDED_MODEL }}
+          PROXY_URL: ${{ vars.PROXY_URL }}
         run: |
-          if [ -n "$ANTHROPIC_API_KEY" ]; then
-            printf '{"anthropicKey":"%s","model":"%s"}\n' "$ANTHROPIC_API_KEY" "${EMBEDDED_MODEL:-claude-opus-5}" > public/config.json
-            echo "config.json written (key length ${#ANTHROPIC_API_KEY})"
+          if [ -n "$PROXY_URL" ]; then
+            printf '{"proxyUrl":"%s"}\n' "$PROXY_URL" > public/config.json
+            echo "config.json: proxyUrl=$PROXY_URL"
           else
             rm -f public/config.json
-            echo "no ANTHROPIC_API_KEY secret: visitors must enter their own key"
+            echo "no PROXY_URL variable: visitors must enter their own key"
           fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

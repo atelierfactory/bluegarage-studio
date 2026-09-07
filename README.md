@@ -21,15 +21,13 @@ English: see [README.en.md](README.en.md).
 ```
 サーバーがキーを持っているとブラウザは `/api/proxy` 経由で呼ぶ。⚙ に自分のキーを入れるとそちらが優先。
 
-### 公開サイトにキーを同梱する (訪問者がキーを入れなくても使える)
+### 公開サイトを、訪問者がキー無しで使えるようにする (中継サーバー)
 
-GitHub のリポジトリに secret `ANTHROPIC_API_KEY` を登録すると、Pages のデプロイ時に `.github/workflows/pages.yml` が `public/config.json` を書き出し、ブラウザはそのキーで `api.anthropic.com` を直接呼ぶ (優先順位: ⚙ の自分のキー > ローカルサーバー > 同梱キー)。キーは git には入らない (`public/config.json` は `.gitignore` 済み)。
+静的サイトにはキーを置けない (置けば誰でも取り出せる) ので、キーは `proxy/` の中継サーバー (Cloudflare Worker) の secret にだけ置き、ブラウザはそこ経由で Claude を呼ぶ。キーはブラウザにも git にも出ない。手順は [proxy/README.md](proxy/README.md)。
 
-**注意: 同梱したキーは、サイトを開いた人なら誰でも取り出せる** (静的サイトなので隠す場所が無い)。必ず次の 2 つをやること。
-1. Anthropic Console で専用のワークスペースを作り、そこで発行したキーだけを使う (他の用途のキーを流用しない)
-2. そのワークスペースに月の利用上限 (Spend limit) を設定する
-
-登録・更新は `gh secret set ANTHROPIC_API_KEY --repo <owner>/<repo>`、その後 `gh workflow run pages.yml` で再デプロイ。secret を消して再デプロイすれば同梱なし (各自がキーを入れる方式) に戻る。モデルは repository variable `EMBEDDED_MODEL` で変えられる (既定 claude-opus-5)。
+- 優先順位: ⚙ の自分のキー > ローカルサーバー (`/api/proxy`) > 中継サーバー (`config.json` の `proxyUrl`)
+- 中継サーバーは Origin 制限・アクセスコード (`x-bluegarage-pass`)・IP ごとの回数制限を持つ。お金の上限は Anthropic Console のワークスペースの Spend limit で別途かける
+- `config.json` はデプロイ時に repository variable `PROXY_URL` から `.github/workflows/pages.yml` が書き出す (中身は URL だけ)。変数を消して再デプロイすれば各自キー方式に戻る
 
 ### C. コマンドライン
 ```bash

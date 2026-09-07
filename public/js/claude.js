@@ -10,7 +10,7 @@ export const MODELS = [
 ];
 export const DEFAULT_MODEL = "claude-opus-5";
 
-const defaults = { apiKey: "", model: DEFAULT_MODEL, transport: "auto", lang: "" };
+const defaults = { apiKey: "", passcode: "", model: DEFAULT_MODEL, transport: "auto", lang: "" };
 let cached = null;
 export const settings = {
   get() {
@@ -27,8 +27,8 @@ export const settings = {
 };
 
 // サーバーがキーを持っているか (ローカル起動時のみ true)。
-// 公開サイトでは、デプロイ時に GitHub Actions の secret から書き出される config.json の
-// 「サイト同梱キー」があればそれを使う (キーは git には入らないが、サイトを開いた人には見える)。
+// 公開サイトでは config.json (デプロイ時に GitHub Actions が書く) に中継サーバー (proxy/ の Cloudflare Worker) の URL が
+// あれば、そこ経由で Claude を呼ぶ。API キーは中継サーバーの中にだけあり、ブラウザには一切来ない。
 let serverInfo = null;
 export async function probeServer() {
   if (serverInfo) return serverInfo;
@@ -42,7 +42,15 @@ export async function probeServer() {
       const r = await fetch("config.json", { cache: "no-cache" }); // 相対パス (サブディレクトリ配信でも動く)
       if (r.ok) {
         const c = await r.json();
-        if (c?.anthropicKey) { info.embeddedKey = c.anthropicKey; if (c.model) info.embeddedModel = c.model; }
+        if (c?.proxyUrl) {
+          info.proxyUrl = String(c.proxyUrl).replace(/\/+$/, "");
+          try {
+            const h = await fetch(`${info.proxyUrl}/health`, { cache: "no-cache" });
+            const hj = h.ok ? await h.json() : {};
+            info.remoteOk = !!hj.ok && hj.hasKey !== false;
+            info.needPasscode = !!hj.passcode;
+          } catch { info.remoteOk = false; }
+        }
       }
     } catch {}
   }
@@ -51,11 +59,11 @@ export async function probeServer() {
 }
 export function resetServerProbe() { serverInfo = null; }
 
-// 実際に使う経路: "direct" (自分のキー) / "proxy" (ローカルサーバーのキー) / "embedded" (サイト同梱のキー)
+// 実際に使う経路: "direct" (自分のキー) / "proxy" (ローカルサーバーのキー) / "remote" (中継サーバー)
 export async function resolveTransport() {
   const s = settings.get();
   const info = await probeServer();
-  const fallback = () => (info.hasKey ? "proxy" : info.embeddedKey ? "embedded" : "none");
+  const fallback = () => (info.hasKey ? "proxy" : info.remoteOk ? "remote" : "none");
   if (s.transport === "direct") return s.apiKey ? "direct" : fallback();
   if (s.transport === "proxy") return info.hasKey ? "proxy" : (s.apiKey ? "direct" : fallback());
   if (s.apiKey) return "direct";
@@ -69,6 +77,7 @@ export class ClaudeError extends Error {
 function friendlyError(status, body) {
   const type = body?.error?.type ?? "";
   const msg = body?.error?.message ?? "";
+  if (type === "access_code_error") return new ClaudeError("アクセスコードが違います。⚙ 設定で「アクセスコード」を確認してください。", { status, type });
   if (status === 401 || type === "authentication_error") return new ClaudeError("APIキーが無効です。⚙ 設定でキーを確認してください。", { status, type });
   if (status === 403 || type === "permission_error") return new ClaudeError(`このキーでは使えません: ${msg}`, { status, type });
   if (status === 429 || type === "rate_limit_error") return new ClaudeError("レート制限に達しました。少し待って再試行してください。", { status, type, retryable: true });
@@ -108,7 +117,7 @@ export async function streamMessage(o) {
   let lastErr = null;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      return await attemptOnce(body, transport, transport === "embedded" ? (await probeServer()).embeddedKey : s.apiKey, o, attempt);
+      return await attemptOnce(body, transport, s.apiKey, o, attempt);
     } catch (e) {
       lastErr = e;
       if (o.signal?.aborted) throw e;
@@ -122,9 +131,15 @@ export async function streamMessage(o) {
 }
 
 async function attemptOnce(body, transport, apiKey, o, attempt) {
-  const url = transport === "proxy" ? "/api/proxy" : "https://api.anthropic.com/v1/messages";
+  const info = await probeServer();
+  const url = transport === "proxy" ? "/api/proxy" : transport === "remote" ? `${info.proxyUrl}/v1/messages` : "https://api.anthropic.com/v1/messages";
   const headers = { "Content-Type": "application/json" };
-  if (transport !== "proxy") {
+  if (transport === "remote") {
+    headers["anthropic-version"] = "2023-06-01";
+    const pass = settings.get().passcode ?? "";
+    if (pass) headers["x-bluegarage-pass"] = pass;
+  }
+  if (transport === "direct") {
     headers["x-api-key"] = apiKey;
     headers["anthropic-version"] = "2023-06-01";
     headers["anthropic-dangerous-direct-browser-access"] = "true";
