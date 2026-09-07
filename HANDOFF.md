@@ -3,6 +3,29 @@
 宛先：このプロジェクトの作業を続けるエージェント（ふぇぶるん本人の次セッションを含む）。
 会話ログ無しで再開できるように書いてある。さとるんへの文体・作法は `agent/CLAUDE.md` が正。
 
+## 0. 直近の作業と、止まっている場所（2026-09-07 夜・クレジット切れで中断）
+
+さとるんの要望の流れ：①各楽器を無料最高級の音源に（済）→ ②右パネルをチャットだけに（済）→ ③公開版に API キーを「他人が参照できない場所」に置いて配る（**途中**）。
+
+### 決まったこと（さとるんの決定。変えない）
+- **API キーは他人が参照できない場所（サーバー側の金庫）にしか置かない。** 静的サイトへの同梱（GitHub secret → config.json）は一度作ったが**却下・撤去済み**。Cloudflare Worker 案も「うちは AWS」で却下（`proxy/` に残骸あり。使わない。消してよい）
+- 公開先は **https://atelierfactory.jp/device/jukebox/**（会社サイト Amplify の中。名前「jukebox」はさとるん決定＝「話しかけると曲を作って鳴らす箱」）
+- **1日20曲**（設計図の数・訪問者全員合計・日本時間0時切替）。料金の心配（Opus 5 で1曲2〜5ドル→最悪1日100ドル）に対する提案は「Anthropic 側の月の Spend limit＋公開版は Sonnet 5・effort medium（1曲0.5〜1ドル）＋合言葉」。**さとるんの返事待ち**（OK なら `apps/jukebox/variables.tf` の `force_model="claude-sonnet-5"`, `effort="medium"` にして進める）
+- 公開サイトに影響する push は事前に一言確認（2026-09-07 に無断 push で驚かせた）。エージェントはキーそのものに触らない（`put_secret.sh` はさとるんが実行）
+
+### できているもの
+- **AWS 側**：`product/infra/apps/jukebox/`（Lambda Node22 ストリーミング Function URL＋DynamoDB 帳簿＋Secrets Manager 金庫＋予算$5＋ログ30日）。`terraform validate` 通過、`test_local.mjs` で門番・上限・モデル差し替えを検査済み。**まだ apply していない**（dev 079247879456 に置く予定）。infra はローカルコミット c4df8de、**未 push**（push はさとるん）
+- **会社サイト側**：`apps/site/jukebox.sh`（`toys/music_app/public` を `/device/jukebox/` に同梱し、`terraform output api_url` から `config.json` を書く）を `deploy.sh` に組み込み済み。**hosting.tf の CSP に中継の住所（connect-src）を足す作業が未着手**（住所は apply 後に決まる。`/device/jukebox/**` のパターンを追加→`./headers_push.sh`→`./deploy.sh`）
+- **アプリ側**：外の CDN を読まないよう Tone.js とフォント3種を `public/vendor/` に同梱（会社サイトの CSP 対応、push 済み 93e41cd）。`claude.js` は transport "remote"（`config.json` の `proxyUrl` を使い、ヘッダ `x-bluegarage-pass`（合言葉）と `x-bluegarage-kind`（blueprint/track/chat…）を送る）。⚙ に合言葉欄（中継が要求するときだけ表示）と「今日はあと N 曲」
+- **料金の実測**：7トラック42小節の曲＝入力9.2万＋出力5.3万トークン（thinking除く）≈ Opus 5 で1.9ドル、thinking・作り直し込みで2〜5ドル。測り方は `prompts.js` の `buildTrackRequest` を `count_tokens` にかける（無料）
+
+### 次にやること（この順）
+1. さとるん：`aws sso login --sso-session atelier` → エージェント：`cd infra/apps/jukebox && terraform init && terraform plan` を一枚で見せる → さとるん OK → `terraform apply`
+2. さとるん：`cd infra/apps/jukebox && ./put_secret.sh`（toys/env のキーを金庫へ。合言葉をその場で入力）→ `curl "$(terraform output -raw api_url)/health"` で `hasKey:true`
+3. エージェント：`apps/site/hosting.tf` に `/device/jukebox/**` の CSP パターン（`connect-src 'self' <api_url>`）を追加 → `./headers_push.sh` → `./deploy.sh` → https://atelierfactory.jp/device/jukebox/ を開き、⚙ に「専用の中継サーバー…」が出て、合言葉を入れて曲が作れることを確認
+4. 会社サイト（3D のアトリエ）にガラクタとして jukebox を1個置く（`aTELiER FACTORY/07_Webサイト/index.html` の `JUNK` 配列。apps/site/web/HANDOFF.md 参照）
+5. Anthropic Console で jukebox 専用ワークスペース＋月の Spend limit（さとるん）。`proxy/` フォルダの削除
+
 ## 1. 現在地（事実）
 
 - **公開済み**：https://atelierfactory.github.io/bluegarage-studio/ （GitHub Pages、`.github/workflows/pages.yml` が `public/` を配信。push すると約 1〜2 分で更新）
