@@ -19,7 +19,9 @@ export function initSettings({ onLangChange, toast }) {
     modelSel.value = s.model ?? MODELS[0].id;
     langSel.value = detectLang(s.lang);
     const info = await probeServer();
-    $("#set-server-note").textContent = info.hasKey ? t("set.server") : info.remoteOk ? t("set.remote") : info.proxyUrl ? t("set.remote.down") : t("set.static");
+    $("#set-server-note").textContent = info.hasKey ? t("set.server")
+      : info.remoteOk ? t("set.remote") + (info.songs ? " " + t("set.remote.songs").replace("{left}", info.songs.left).replace("{limit}", info.songs.limit) : "")
+      : info.proxyUrl ? t("set.remote.down") : t("set.static");
     // アクセスコード欄は中継サーバーがコードを要求するときだけ見せる
     const passRow = $("#set-pass-row");
     if (passRow) { passRow.hidden = !(info.proxyUrl && info.needPasscode); $("#set-pass").value = s.passcode ?? ""; }

@@ -8,7 +8,7 @@
 - **公開済み**：https://atelierfactory.github.io/bluegarage-studio/ （GitHub Pages、`.github/workflows/pages.yml` が `public/` を配信。push すると約 1〜2 分で更新）
 - **リポジトリ**：`github.com/atelierfactory/bluegarage-studio`（公開、MIT）。ローカルの git は `main`、origin に同期済み（最終コミット a3a8228）。音源 `public/samples/`（156MB）も git に含めて配布している
 - **手元の起動**：`~/.local/node/bin/node server.js` → http://localhost:5173 。`.claude/launch.json` の "bluegarage" で preview_start も可。5173 を古いプロセスが掴んでいたら kill してから
-- **API キー**：手元は `.env` の `ANTHROPIC_API_KEY`（サーバーが `/api/proxy` で代理呼び出し）。公開版は 2 通り：(a) 各自が ⚙ に自分のキーを入れる（localStorage、api.anthropic.com にだけ送る）、(b) 2026-09-07 追加：`proxy/` の中継サーバー (Cloudflare Worker) にキーを置き、`config.json` の `proxyUrl` 経由で呼ぶ（`claude.js` の transport "remote"、アクセスコード `x-bluegarage-pass`）。**キーを静的サイトに同梱する案はさとるんが却下（誰でも見えるため）。二度とやらない**。手順は `proxy/README.md`。セットアップは wrangler login（さとるんのブラウザで Cloudflare 認証）が要るので、さとるん同席で
+- **API キー**：手元は `.env` の `ANTHROPIC_API_KEY`（サーバーが `/api/proxy` で代理呼び出し）。公開版は 2 通り：(a) 各自が ⚙ に自分のキーを入れる（localStorage、api.anthropic.com にだけ送る）、(b) 2026-09-07 追加：`proxy/` の中継サーバー (Cloudflare Worker) にキーを置き、`config.json` の `proxyUrl` 経由で呼ぶ（`claude.js` の transport "remote"、アクセスコード `x-bluegarage-pass`）。**キーを静的サイトに同梱する案はさとるんが却下（誰でも見えるため）。二度とやらない**。手順は `proxy/README.md`。1 日の上限は Worker の KV で数える（`SONG_LIMIT`=20 曲/日・全員合計・日本時間 0 時切り替え、トラック生成 300 回/日、種類はヘッダ `x-bluegarage-kind`）。セットアップは wrangler login（さとるんのブラウザで Cloudflare 認証）→ secret 2 つ（キー・アクセスコード）はさとるん、KV 作成・deploy・`gh variable set PROXY_URL`・Pages 再デプロイはエージェントがやる。2026-09-07 時点: コードは push 済み、Cloudflare 側は未セットアップ（サイトは「各自キー方式」のまま動く）
 - **版**：v2.1。2026-09-06 に v1（2026-08-11）から土台を作り替えた。作り替えの経緯と全体像は `README.md`（日本語）/ `README.en.md`
 
 ## 2. 何ができるか（さとるんに説明するときの要点）

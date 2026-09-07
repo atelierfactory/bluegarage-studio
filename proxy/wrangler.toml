@@ -8,6 +8,15 @@ compatibility_date = "2026-09-01"
 [vars]
 # このサイトからしか受け付けない (カンマ区切り)。手元で試すときは http://localhost:5180 を足す
 ALLOWED_ORIGINS = "https://atelierfactory.github.io"
+# 1 日の上限: 曲 (設計図) の数。トラック生成は SONG_LIMIT×15 回、その他は 3000 回が既定 (TRACK_LIMIT / OTHER_LIMIT で変更可)
+SONG_LIMIT = "20"
+# 「1 日」の区切り: UTC からのずらし時間 (9 = 日本時間の 0 時で切り替わる)
+DAILY_TZ_OFFSET = "9"
+
+# 日ごとの回数を数える KV。`npx wrangler kv namespace create COUNTERS` で作り、出てきた id をここに入れる
+[[kv_namespaces]]
+binding = "COUNTERS"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
 
 # IP ごとの回数制限: 1 分あたり 20 リクエスト (Workers の Rate Limiting binding)
 [[unsafe.bindings]]

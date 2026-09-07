@@ -27,6 +27,16 @@ cd /Users/satorun/Documents/agent/product/toys/music_app/proxy && npx wrangler s
 ```
 サイトを使わせたい人にだけ教える「アクセスコード」(好きな文字列) を貼って Enter。不要なら設定しない (誰でも使える状態になるので非推奨)。
 
+## 1 日の上限 (曲数)
+
+`wrangler.toml` の `SONG_LIMIT` (既定 20) が 1 日に作れる曲 (設計図) の数。全員の合計で数える。トラック生成はその 15 倍、その他 (チャット等) は 3000 回/日。日本時間の 0 時で切り替わる。
+数えるために KV (小さな保存場所) を 1 つ使う。ログイン後に 1 回だけ:
+
+```bash
+cd /Users/satorun/Documents/agent/product/toys/music_app/proxy && npx wrangler kv namespace create COUNTERS
+```
+出てきた `id = "…"` を `wrangler.toml` の `[[kv_namespaces]]` の `id` に書く。KV が無い状態では曲作りは通らない (安全側に倒してある)。
+
 ## 配置と、サイトへのつなぎ込み
 
 ```bash
@@ -44,7 +54,8 @@ gh workflow run pages.yml --repo atelierfactory/bluegarage-studio
 
 ## 確認
 
-- `curl https://bluegarage-proxy.<アカウント名>.workers.dev/health` → `{"ok":true,"passcode":true,"hasKey":true}`
+- `curl https://bluegarage-proxy.<アカウント名>.workers.dev/health` → `{"ok":true,"passcode":true,"hasKey":true,"counter":true,"songs":{"used":0,"limit":20,"left":20},…}`
+- 上限を変える: `wrangler.toml` の `SONG_LIMIT` を書き換えて `npx wrangler deploy`
 - キーを変える: `secret put ANTHROPIC_API_KEY` をやり直すだけ (deploy 不要)
 - 止める: `npx wrangler delete` (または Cloudflare の画面で Worker を削除)。サイトは各自キー方式に戻る
 

@@ -49,6 +49,7 @@ export async function probeServer() {
             const hj = h.ok ? await h.json() : {};
             info.remoteOk = !!hj.ok && hj.hasKey !== false;
             info.needPasscode = !!hj.passcode;
+            if (hj.songs) info.songs = hj.songs; // {used, limit, left} 今日の曲数
           } catch { info.remoteOk = false; }
         }
       }
@@ -78,6 +79,7 @@ function friendlyError(status, body) {
   const type = body?.error?.type ?? "";
   const msg = body?.error?.message ?? "";
   if (type === "access_code_error") return new ClaudeError("アクセスコードが違います。⚙ 設定で「アクセスコード」を確認してください。", { status, type });
+  if (type === "daily_limit_error") return new ClaudeError(msg || "今日の利用上限に達しました。", { status, type });
   if (status === 401 || type === "authentication_error") return new ClaudeError("APIキーが無効です。⚙ 設定でキーを確認してください。", { status, type });
   if (status === 403 || type === "permission_error") return new ClaudeError(`このキーでは使えません: ${msg}`, { status, type });
   if (status === 429 || type === "rate_limit_error") return new ClaudeError("レート制限に達しました。少し待って再試行してください。", { status, type, retryable: true });
@@ -136,6 +138,7 @@ async function attemptOnce(body, transport, apiKey, o, attempt) {
   const headers = { "Content-Type": "application/json" };
   if (transport === "remote") {
     headers["anthropic-version"] = "2023-06-01";
+    headers["x-bluegarage-kind"] = o.kind ?? "chat"; // 中継サーバーが 1 日の曲数を数えるための種類
     const pass = settings.get().passcode ?? "";
     if (pass) headers["x-bluegarage-pass"] = pass;
   }
@@ -216,7 +219,7 @@ async function attemptOnce(body, transport, apiKey, o, attempt) {
 
 /** structured outputs で JSON を 1 つもらう */
 export async function generateStructured({ system, userText, schema, label, onProgress, maxTokens, signal, model }) {
-  const r = await streamMessage({ system, messages: [{ role: "user", content: userText }], schema, maxTokens: maxTokens ?? 100000, onProgress, signal, model });
+  const r = await streamMessage({ system, messages: [{ role: "user", content: userText }], schema, maxTokens: maxTokens ?? 100000, onProgress, signal, model, kind: label ?? "other" });
   if (r.stop_reason === "refusal") throw new ClaudeError("モデルがこのリクエストを拒否しました。プロンプトを変えて再試行してください。");
   if (r.stop_reason === "max_tokens") throw new ClaudeError("出力がトークン上限に達しました。生成範囲(小節数)を減らして再試行してください。");
   let data;
@@ -230,6 +233,6 @@ export async function generateStructured({ system, userText, schema, label, onPr
 
 /** 接続テスト (設定画面用) */
 export async function testConnection() {
-  const r = await streamMessage({ messages: [{ role: "user", content: "Reply with the single word OK." }], maxTokens: 16, model: "claude-sonnet-5" });
+  const r = await streamMessage({ messages: [{ role: "user", content: "Reply with the single word OK." }], maxTokens: 16, model: "claude-sonnet-5", kind: "test" });
   return r.text.trim();
 }
