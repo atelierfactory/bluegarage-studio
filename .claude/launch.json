@@ -6,6 +6,12 @@
       "runtimeExecutable": "/Users/satorun/.local/node/bin/node",
       "runtimeArgs": ["server.js"],
       "port": 5173
+    },
+    {
+      "name": "static-test",
+      "runtimeExecutable": "/Users/satorun/.local/node/bin/node",
+      "runtimeArgs": ["tools/static-serve.mjs", "5180"],
+      "port": 5180
     }
   ]
 }

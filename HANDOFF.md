@@ -8,7 +8,7 @@
 - **公開済み**：https://atelierfactory.github.io/bluegarage-studio/ （GitHub Pages、`.github/workflows/pages.yml` が `public/` を配信。push すると約 1〜2 分で更新）
 - **リポジトリ**：`github.com/atelierfactory/bluegarage-studio`（公開、MIT）。ローカルの git は `main`、origin に同期済み（最終コミット a3a8228）。音源 `public/samples/`（156MB）も git に含めて配布している
 - **手元の起動**：`~/.local/node/bin/node server.js` → http://localhost:5173 。`.claude/launch.json` の "bluegarage" で preview_start も可。5173 を古いプロセスが掴んでいたら kill してから
-- **API キー**：手元は `.env` の `ANTHROPIC_API_KEY`（サーバーが `/api/proxy` で代理呼び出し）。公開版はサーバー無しで、各自が ⚙ に自分のキーを入れる（localStorage、api.anthropic.com にだけ送る）
+- **API キー**：手元は `.env` の `ANTHROPIC_API_KEY`（サーバーが `/api/proxy` で代理呼び出し）。公開版は 2 通り：(a) 各自が ⚙ に自分のキーを入れる（localStorage、api.anthropic.com にだけ送る）、(b) 2026-09-07 追加：リポジトリ secret `ANTHROPIC_API_KEY` があれば Pages デプロイ時に `public/config.json` に書き出され「サイト同梱キー」として使われる（`claude.js` の transport "embedded"）。同梱キーは訪問者に見えるので専用ワークスペース + 月上限が前提（README「公開サイトにキーを同梱する」）
 - **版**：v2.1。2026-09-06 に v1（2026-08-11）から土台を作り替えた。作り替えの経緯と全体像は `README.md`（日本語）/ `README.en.md`
 
 ## 2. 何ができるか（さとるんに説明するときの要点）

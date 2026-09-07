@@ -19,6 +19,21 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      # サイト同梱の API キー: リポジトリの secret ANTHROPIC_API_KEY があれば public/config.json に書き出す。
+      # git には入れない。ただし公開ページの中身なので、サイトを開いた人には見える
+      # → 必ず専用キー (Anthropic Console の別ワークスペース) にして、月の利用上限を設定すること。
+      - name: Write config.json from secrets
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          EMBEDDED_MODEL: ${{ vars.EMBEDDED_MODEL }}
+        run: |
+          if [ -n "$ANTHROPIC_API_KEY" ]; then
+            printf '{"anthropicKey":"%s","model":"%s"}\n' "$ANTHROPIC_API_KEY" "${EMBEDDED_MODEL:-claude-opus-5}" > public/config.json
+            echo "config.json written (key length ${#ANTHROPIC_API_KEY})"
+          else
+            rm -f public/config.json
+            echo "no ANTHROPIC_API_KEY secret: visitors must enter their own key"
+          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

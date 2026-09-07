@@ -8,3 +8,4 @@ exports/
 *.mid
 neon-overdrive.bluegarage.json
 .claude/settings.local.json
+public/config.json

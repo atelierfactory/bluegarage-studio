@@ -21,6 +21,16 @@ English: see [README.en.md](README.en.md).
 ```
 サーバーがキーを持っているとブラウザは `/api/proxy` 経由で呼ぶ。⚙ に自分のキーを入れるとそちらが優先。
 
+### 公開サイトにキーを同梱する (訪問者がキーを入れなくても使える)
+
+GitHub のリポジトリに secret `ANTHROPIC_API_KEY` を登録すると、Pages のデプロイ時に `.github/workflows/pages.yml` が `public/config.json` を書き出し、ブラウザはそのキーで `api.anthropic.com` を直接呼ぶ (優先順位: ⚙ の自分のキー > ローカルサーバー > 同梱キー)。キーは git には入らない (`public/config.json` は `.gitignore` 済み)。
+
+**注意: 同梱したキーは、サイトを開いた人なら誰でも取り出せる** (静的サイトなので隠す場所が無い)。必ず次の 2 つをやること。
+1. Anthropic Console で専用のワークスペースを作り、そこで発行したキーだけを使う (他の用途のキーを流用しない)
+2. そのワークスペースに月の利用上限 (Spend limit) を設定する
+
+登録・更新は `gh secret set ANTHROPIC_API_KEY --repo <owner>/<repo>`、その後 `gh workflow run pages.yml` で再デプロイ。secret を消して再デプロイすれば同梱なし (各自がキーを入れる方式) に戻る。モデルは repository variable `EMBEDDED_MODEL` で変えられる (既定 claude-opus-5)。
+
 ### C. コマンドライン
 ```bash
 node tools/compose.mjs --prompt "曲のイメージ" --name my-song      # 設計図 → 全トラック (検査・手直し付き) → public/presets/my-song.json

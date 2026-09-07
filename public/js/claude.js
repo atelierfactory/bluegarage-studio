@@ -26,27 +26,40 @@ export const settings = {
   },
 };
 
-// サーバーがキーを持っているか (ローカル起動時のみ true)
+// サーバーがキーを持っているか (ローカル起動時のみ true)。
+// 公開サイトでは、デプロイ時に GitHub Actions の secret から書き出される config.json の
+// 「サイト同梱キー」があればそれを使う (キーは git には入らないが、サイトを開いた人には見える)。
 let serverInfo = null;
 export async function probeServer() {
   if (serverInfo) return serverInfo;
+  let info = { hasKey: false, static: true };
   try {
     const r = await fetch("/api/config", { cache: "no-cache" });
-    serverInfo = r.ok ? await r.json() : { hasKey: false, static: true };
-  } catch { serverInfo = { hasKey: false, static: true }; }
+    if (r.ok) info = await r.json();
+  } catch {}
+  if (!info.hasKey) {
+    try {
+      const r = await fetch("config.json", { cache: "no-cache" }); // 相対パス (サブディレクトリ配信でも動く)
+      if (r.ok) {
+        const c = await r.json();
+        if (c?.anthropicKey) { info.embeddedKey = c.anthropicKey; if (c.model) info.embeddedModel = c.model; }
+      }
+    } catch {}
+  }
+  serverInfo = info;
   return serverInfo;
 }
 export function resetServerProbe() { serverInfo = null; }
 
-// 実際に使う経路: "direct" (自分のキー) か "proxy" (サーバーのキー)
+// 実際に使う経路: "direct" (自分のキー) / "proxy" (ローカルサーバーのキー) / "embedded" (サイト同梱のキー)
 export async function resolveTransport() {
   const s = settings.get();
   const info = await probeServer();
-  if (s.transport === "direct") return s.apiKey ? "direct" : (info.hasKey ? "proxy" : "none");
-  if (s.transport === "proxy") return info.hasKey ? "proxy" : (s.apiKey ? "direct" : "none");
+  const fallback = () => (info.hasKey ? "proxy" : info.embeddedKey ? "embedded" : "none");
+  if (s.transport === "direct") return s.apiKey ? "direct" : fallback();
+  if (s.transport === "proxy") return info.hasKey ? "proxy" : (s.apiKey ? "direct" : fallback());
   if (s.apiKey) return "direct";
-  if (info.hasKey) return "proxy";
-  return "none";
+  return fallback();
 }
 
 export class ClaudeError extends Error {
@@ -95,7 +108,7 @@ export async function streamMessage(o) {
   let lastErr = null;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      return await attemptOnce(body, transport, s.apiKey, o, attempt);
+      return await attemptOnce(body, transport, transport === "embedded" ? (await probeServer()).embeddedKey : s.apiKey, o, attempt);
     } catch (e) {
       lastErr = e;
       if (o.signal?.aborted) throw e;
@@ -109,9 +122,9 @@ export async function streamMessage(o) {
 }
 
 async function attemptOnce(body, transport, apiKey, o, attempt) {
-  const url = transport === "direct" ? "https://api.anthropic.com/v1/messages" : "/api/proxy";
+  const url = transport === "proxy" ? "/api/proxy" : "https://api.anthropic.com/v1/messages";
   const headers = { "Content-Type": "application/json" };
-  if (transport === "direct") {
+  if (transport !== "proxy") {
     headers["x-api-key"] = apiKey;
     headers["anthropic-version"] = "2023-06-01";
     headers["anthropic-dangerous-direct-browser-access"] = "true";

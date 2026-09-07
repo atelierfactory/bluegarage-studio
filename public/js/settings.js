@@ -19,7 +19,7 @@ export function initSettings({ onLangChange, toast }) {
     modelSel.value = s.model ?? MODELS[0].id;
     langSel.value = detectLang(s.lang);
     const info = await probeServer();
-    $("#set-server-note").textContent = info.hasKey ? t("set.server") : t("set.static");
+    $("#set-server-note").textContent = info.hasKey ? t("set.server") : info.embeddedKey ? t("set.embedded") : t("set.static");
     status.textContent = "";
   }
   $("#btn-settings").addEventListener("click", async () => { await fill(); dlg.showModal(); });
