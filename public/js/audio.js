@@ -17,7 +17,7 @@ import * as midi from "./midiio.js";
 
 const NB = "https://nbrosowsky.github.io/tonejs-instruments/samples/";
 const TONEJS = "https://tonejs.github.io/audio/";
-const SAMPLE_BASE = "samples/"; // 相対パス (サブディレクトリ配信でも動く)
+const SAMPLE_BASE = new URL("../samples/", import.meta.url).href; // このファイルの場所基準 (piano/ などのサブページや、サブディレクトリ配信でも同じ音源を指す)
 
 const engines = new Map();   // trackId -> {chain, inst, instKind, patchKey, part}
 let graph = null;            // マスター + リバーブバス (メインコンテキスト)
