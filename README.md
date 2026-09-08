@@ -55,6 +55,12 @@ node tools/compose.mjs --prompt "曲のイメージ" --name my-song      # 設�
 
 曲は開くたびにブラウザのライブラリ (IndexedDB) に自動保存される。右上「☰」で一覧・開く・名前変更・複製・削除。チャットでも「曲の一覧」「前の曲を開いて」「別名で保存」ができる。
 
+## VESPER PIANO (ロボットが弾くピアノ)
+
+`public/piano/` は同じ部品で作った **ピアノだけ** のツール。左がピアノ 1 本のピアノロール、右は普段チャット、▶ を押すとロボットのピアニスト VESPER-01 (three.js) がグランドピアノを弾く舞台に切り替わる。
+曲は Claude が **音符ごとの手 (L/R)・指 (1〜5)・ペダル区間** まで決めて作り、`critic.js` の `analyzePiano` が「人の手で弾けるか」(片手 5 音・同じ指の重複・広がり 9 度超・左右の交差・指順) を検査して直させる。ペダルは再生 (音が伸びる)・MIDI (CC64)・舞台 (右足) で一致。ピアノロールでは右手が青、左手がオレンジ、音符に指番号、下に PEDAL の帯。選んだ音符に 1〜5 で指、L/R で手、P でペダルを付けられる。
+公開先: https://atelierfactory.github.io/bluegarage-studio/piano/
+
 ## 曲の質を上げる仕組み (v2)
 
 1. **本物の譜面を渡す** — トラックを作るとき、先にできたトラックの実際のノートを小節ごとの譜面テキスト (`D2@0(1) A2@1.5!`) にして渡す。ドラムとベースがロックし、メロディと内声がぶつからない。
@@ -113,6 +119,8 @@ public/js/
   library.js         曲のライブラリ (IndexedDB)
   synthpanel.js / settings.js / i18n.js  各パネル・設定・表示言語
   pianoroll.js / arrange.js  キャンバス表示
+public/piano/        VESPER PIANO (piano.js = 本体, scene.js = 3D 舞台とロボット, index.html / style.css)
+public/vendor/three/ three.js 0.170 (同梱)
 public/samples/      変換済み音源 (配布のため git に含める。build-samples.sh で作り直せる)
 public/presets/      デモ曲 (neon-overdrive, dawn-voyage)
 tools/               compose.mjs (CLI 生成) / sfz-import.mjs / wav-dir-sfz.mjs / build-samples.sh

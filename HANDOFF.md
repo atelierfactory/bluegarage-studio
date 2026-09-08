@@ -26,6 +26,16 @@
 4. 会社サイト（3D のアトリエ）にガラクタとして jukebox を1個置く（`aTELiER FACTORY/07_Webサイト/index.html` の `JUNK` 配列。apps/site/web/HANDOFF.md 参照）
 5. Anthropic Console で jukebox 専用ワークスペース＋月の Spend limit（さとるん）。`proxy/` フォルダの削除
 
+## 0b. VESPER PIANO（2026-09-08 追加・さとるんの新しい要望）
+
+さとるんの言葉：「いきなりフルのシーケンサーは難しい。良いピアノがあるので、まずピアノだけのツールを超作り込む。左 2/3 がシーケンサー、右上にグランドピアノと座っている VESPER くん、右下に VESPER の手と鍵盤。普段はチャット、演奏を始めたら VESPER に切り替え。曲を作るとき右左どの指でどの音を弾くかが決まっている。ベロシティやペダルも VESPER が弾く。ありものの組み合わせで簡単なのに超おもしろい」。VESPER = `product/toys/3D_model` の格闘ロボ VESPER-01（白い外装・黒い胴・銀の関節・青い胸と目）。
+
+- 場所：`public/piano/`（index.html / style.css / piano.js / scene.js）。公開は同じ Pages の `/piano/`。STUDIO の右上に PIANO リンクあり
+- 中身：`piano.js` は 1 トラック（piano）のピアノロール + チャット（`PIANO_CHAT_TOOLS` / `SYSTEM_CHAT_PIANO`、prompts.js 末尾）+ 生成パイプライン（設計図 → `buildPianoRequest` を 16 小節ごとに continue → `analyzePiano`（critic.js 末尾）→ revise）。`scene.js` は three.js（`public/vendor/three/` に同梱、importmap）でグランドピアノ・骨組み（BVH と同じ骨名）・`buildRobot`（3D_model の balance_mimic_v1.html と同じ部品）・指付きの手・2 本骨 IK・鍵の沈み・ペダルの足・体の揺れ・カメラ 2 つ（上：全景、下：手のアップ。1 キャンバスを scissor で 2 分割）
+- データ：音符に `h`（L/R）と `f`（1〜5）、`song.pedal = [{s, d}]`（拍）。ペダル中の音は `state.js` の `noteEndBeat` で終わりを伸ばす（audio.js の再生・オフライン共通）。MIDI は CC64。ピアノロールは手で色分け・指番号・PEDAL 帯。キー：1〜5 指、L/R 手、P ペダル
+- 検証済み（2026-09-08）：ページ表示・3D 舞台・手動で置いた音符での再生（手が鍵へ動く・鍵が沈む・ペダル表示・ペダルで音が伸びる）。チャットからの作曲（Opus 5、16 小節）は実行中に HANDOFF を書いた → 結果は git log / この節の更新を見る
+- 次に良くすること：手の見た目（今は箱と円柱。指はもう少し細く長く）、親指くぐりの動き、和音のロール、カメラの寄り引き、左手の跳躍先読み、鍵盤の反射・ホコリ・照明の作り込み、VESPER の顔の表情（バイザーの光は既に強弱で変わる）
+
 ## 1. 現在地（事実）
 
 - **公開済み**：https://atelierfactory.github.io/bluegarage-studio/ （GitHub Pages、`.github/workflows/pages.yml` が `public/` を配信。push すると約 1〜2 分で更新）

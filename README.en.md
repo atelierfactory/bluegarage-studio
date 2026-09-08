@@ -43,6 +43,12 @@ Center tabs: **PIANO ROLL** / **RACK** (the selected track's instrument as a har
 
 Songs are saved automatically to a browser-side library (IndexedDB). Open ☰ to list, open, rename, duplicate or delete them; the chat can do the same ("list songs", "open the previous song", "save as").
 
+## VESPER PIANO (a robot pianist)
+
+`public/piano/` is a **piano-only** tool built from the same parts. The left two thirds are a single-track piano roll; the right side is the chat, and when you press ▶ it becomes a 3D stage where the robot pianist VESPER-01 (three.js) plays a grand piano.
+Claude composes with **a hand (L/R), a finger (1-5) and sustain-pedal segments for every note**; `analyzePiano` in `critic.js` checks playability (max 5 notes per hand, duplicate fingers, spans over a 9th, hand crossing, finger order) and sends problems back for revision. The pedal is consistent across playback (notes sustain), MIDI (CC64) and the stage (right foot). In the piano roll the right hand is blue, the left hand orange, finger numbers are drawn on notes, and a PEDAL lane runs along the bottom. Keys 1-5 set the finger, L/R the hand and P toggles a pedal segment for the selection.
+Live: https://atelierfactory.github.io/bluegarage-studio/piano/
+
 ## How it gets the music right (v2)
 
 1. **Real scores as context** — when generating a track, the actual notes of the tracks already written are passed as a compact per-bar score (`D2@0(1) A2@1.5!`), so bass locks to the kick and melodies avoid the inner voices.
@@ -101,6 +107,8 @@ public/js/
   library.js         song library (IndexedDB)
   synthpanel.js / settings.js / i18n.js
   pianoroll.js / arrange.js
+public/piano/        VESPER PIANO (piano.js = app, scene.js = 3D stage and robot)
+public/vendor/three/ three.js 0.170 (bundled)
 public/samples/      converted samples (kept in git for distribution; rebuild with build-samples.sh)
 public/presets/      demo songs
 tools/               compose.mjs (CLI), sfz-import.mjs, wav-dir-sfz.mjs, build-samples.sh
