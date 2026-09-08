@@ -179,20 +179,20 @@ function buildRobot(B, hands) {
 
 // ピアノ用の手: 手のひら + 5 本の指 (2 関節)。手の骨の +x (左手) / -x (右手) 方向に指が伸びる
 // 指の並びは手のひらの幅方向 (骨の z 軸) に沿う。親指 (1) は体の内側。
-const FINGER_LEN = [1.0, 1.55, 1.7, 1.55, 1.25];   // 親指→小指 (ロボット単位)
-const FINGER_Z = [-0.95, -0.48, 0, 0.48, 0.95];    // 手のひら上の位置 (右手基準。左手は反転)
+const FINGER_LEN = [1.3, 2.0, 2.2, 2.0, 1.6];   // 親指→小指 (ロボット単位)
+const FINGER_Z = [-0.9, -0.45, 0, 0.45, 0.9];    // 手のひら上の位置 (右手基準。左手は反転)
 export const FINGER_SPREAD_M = FINGER_Z.map((z) => z * ROBOT_SCALE); // m
 function buildHand(H, sgn) {
   // sgn = +1 左手 (骨は +x に伸びる), -1 右手
-  const palm = box(H, V(sgn * 0.9, 0, 0), V(1.7, 0.42, 2.1), M.carbon);
-  box(H, V(sgn * 0.9, 0.24, 0), V(1.4, 0.18, 1.9), M.shell);
+  const palm = box(H, V(sgn * 0.85, 0, 0), V(1.5, 0.34, 2.0), M.carbon);
+  box(H, V(sgn * 0.85, 0.2, 0), V(1.25, 0.14, 1.8), M.shell);
   const fingers = [];
   for (let i = 0; i < 5; i++) {
     const root = new THREE.Object3D(); root.position.set(sgn * (i === 0 ? 1.2 : 1.75), i === 0 ? -0.15 : 0, FINGER_Z[i] * sgn); H.add(root);
     const len = FINGER_LEN[i];
-    const seg1 = limb(root, V(0, 0, 0), V(sgn * len * 0.55, 0, 0), 0.17, 0.15, M.shell, 10, true);
+    const seg1 = limb(root, V(0, 0, 0), V(sgn * len * 0.55, 0, 0), 0.14, 0.12, M.shell, 10, true);
     const joint = new THREE.Object3D(); joint.position.set(sgn * len * 0.55, 0, 0); root.add(joint);
-    const seg2 = limb(joint, V(0, 0, 0), V(sgn * len * 0.45, 0, 0), 0.14, 0.11, M.gun, 10, true);
+    const seg2 = limb(joint, V(0, 0, 0), V(sgn * len * 0.45, 0, 0), 0.115, 0.09, M.gun, 10, true);
     const tip = new THREE.Object3D(); tip.position.set(sgn * len * 0.45, -0.1, 0); joint.add(tip);
     fingers.push({ root, joint, tip, len, press: 0, target: 0 });
   }
@@ -447,7 +447,7 @@ export class PianoStage {
       st.x = lerp(st.x, palmX, Math.min(1, dt * rate));
       st.z = lerp(st.z || palmZ, palmZ, Math.min(1, dt * 10));
       st.y = lerp(st.y || targetY, targetY, Math.min(1, dt * 10));
-      const wristTarget = new THREE.Vector3(st.x + (h === "R" ? -0.055 : 0.055), st.y, st.z + 0.09);
+      const wristTarget = new THREE.Vector3(st.x + (h === "R" ? -0.05 : 0.05), st.y, st.z + 0.12);
       this._solveArm(side, wristTarget, dt);
       // 指: 押している指は曲げて沈める
       const pressing = new Map();
@@ -474,8 +474,8 @@ export class PianoStage {
     const orbit = this.t * 0.05;
     this.camMain.position.set(1.55 + Math.sin(orbit) * 0.35, 1.55 + Math.sin(this.t * 0.11) * 0.06, 1.75 + Math.cos(orbit) * 0.25);
     this.camMain.lookAt(-0.15, 0.9, -0.15);
-    this.camHands.position.set(lerp(this.camHands.position.x || cx, cx * 0.85, Math.min(1, dt * 2)), 1.12, 0.46);
-    this.camHands.lookAt(this.camHands.position.x * 0.9, KEY_TOP_Y - 0.02, -0.06);
+    this.camHands.position.set(lerp(this.camHands.position.x || cx, cx * 0.8, Math.min(1, dt * 2)), 1.22, 0.6);
+    this.camHands.lookAt(this.camHands.position.x * 0.85, KEY_TOP_Y - 0.03, -0.08);
   }
 
   render() {

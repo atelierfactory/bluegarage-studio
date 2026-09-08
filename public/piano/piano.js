@@ -53,7 +53,7 @@ const proll = new PianoRoll($("#proll"), { getSnap: () => parseFloat($("#inp-sna
 const arrange = new Arrange($("#arrange"));
 // 新しく置く音符に手を付ける (ピアノロールの追加は id/p/s/d/v だけなので後から補う)
 on("notes", () => { const tr = selectedTrack(); if (!tr) return; let changed = false; for (const n of tr.notes) if (!n.h) { n.h = $("#inp-hand").value; n.f = n.f ?? 2; changed = true; } if (changed) proll.draw(); if (stage) stage.setSong(tr.notes, state.song.pedal); });
-on("song", () => { if (stage) { const tr = selectedTrack(); if (tr) stage.setSong(tr.notes, state.song.pedal); $("#stage-title").textContent = state.song.title || ""; } });
+on("song", () => { syncTransportFields(); if (stage) { const tr = selectedTrack(); if (tr) stage.setSong(tr.notes, state.song.pedal); $("#stage-title").textContent = state.song.title || ""; } });
 
 /* ─────────── stage (VESPER) ─────────── */
 let stage = null;
