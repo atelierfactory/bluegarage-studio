@@ -37,6 +37,7 @@
 - 2026-09-08 夜の追加（さとるん要望）：UI を黒・白・銀に（点灯だけ金。pianoroll.js / arrange.js に THEME / ARR_THEME を追加し piano.js で上書き）。首と胴のつなぎ直し・上画面を VESPER の目線カメラに・ペダルと右足の小窓（3 つ目のビューポート）・肘の向き（IK の pole を外・下・手前に）・指と鍵の一致（指の並びを world x 基準に、押す角度を幾何で計算）・鍵の沈み 1cm・ハンマー / ダンパーの動き。グランドピアノを作り直し（Shape 押し出しのリム・響板・鋳鉄フレーム・弦 ≒230 本を InstancedMesh・チューニングピン・駒・ダンパー・ハンマー・屋根・譜面台・脚・リラ・銘板）。銘板と ♥ の窓に Salamander への感謝（一次資料は samples_src/salamander/README.md）。
 - JAM（即興）：`public/piano/jam.js`。手札（進行 / 左手の型 / 右手のモチーフ / フィル、度数書き）を Claude が 1 回作り localStorage に保存、`Improviser.next8` が 8 小節ずつ音符にして `audio.appendNotes` で再生中に足す。既定の手札 DEFAULT_BANK で API 無しでも鳴る。JAM ボタン / J キー / chat の jam tool
 - レパートリー：`public/piano/repertoire/`（Mutopia Project の Public Domain 版 MIDI 4 曲：The Entertainer, Für Elise, Clair de Lune, Chopin Trois Nouvelles Études No.1。index.json に出典とライセンス）。`public/js/midiread.js`（SMF 読み込み）+ `public/js/fingering.js`（ルールで手と指）。自分の MIDI は ☰ → MIDI 読み込み。**著作権のある曲（ビートルズ・久石譲・坂本龍一・ゲーム音楽・千本桜など）は同梱しない・生成もしない**（さとるん指示「権利的にアウトなことは絶対にしない」）
+- 2026-09-08 深夜 (v3・さとるん要望)：チャット廃止。ピアノロールの下に「お題」バー（即興 / 作曲、モデル選択 Opus 5 / Fable 5.1 / Sonnet 5、作り込み ふつう / 超作り込み = 8 小節刻み + polish パス）。即興は既定の手札ですぐ弾き始め、裏で Claude がお題の手札を作って差し替える（jamStart）。舞台は常時表示：上（または全画面の左）= 全体（オービットカメラ：ドラッグ回転・ホイール寄り引き、全体 / 横 / 上 / 目線）、下（右）= 指先。全画面ボタン（Esc で戻る）。アレンジ帯・PEDAL 表示・小窓・JAM HUD は削除。左足は床、右足だけペダル。「曲を選ぶ」= 同梱の名曲 + 作った曲 + MIDI 読み込み。旧 piano.js のチャット道具（compose_piano 等）は prompts.js の PIANO_CHAT_TOOLS に残っているが未使用
 - 次に良くすること：手の見た目（今は箱と円柱。指はもう少し細く長く）、親指くぐりの動き、和音のロール、カメラの寄り引き、左手の跳躍先読み、鍵盤の反射・ホコリ・照明の作り込み、VESPER の顔の表情（バイザーの光は既に強弱で変わる）
 
 ## 1. 現在地（事実）
