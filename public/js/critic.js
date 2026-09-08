@@ -169,3 +169,81 @@ export function describeAnalysis(a) {
   if (a.issues.length) parts.push(`指摘: ${a.issues.length}件`);
   return parts.join(" / ");
 }
+
+/* ================================ PIANO: 運指・両手・ペダルの検査 ================================ */
+// analyzeNotes の上に、ピアノ独奏ならではの「人の手で弾けるか」を足す。機械的に直せるものは直す。
+const HAND_SPAN_MAX = 16;   // 半音 (10 度)
+const HAND_SPAN_WARN = 14;  // 9 度を超えたら数える
+
+export function analyzePiano(raw, { song, range }) {
+  const track = { instrument: "piano", role: "piano" };
+  const base = analyzeNotes((raw?.notes ?? []).map((n) => ({ ...n })), { song, track, range });
+  // 手と指を元の配列から引き継ぐ (analyzeNotes は p/s/d/v だけ残す)
+  const srcByKey = new Map();
+  for (const n of raw?.notes ?? []) if (Number.isFinite(n.p) && Number.isFinite(n.s)) srcByKey.set(`${Math.round(n.p)}@${(+n.s).toFixed(3)}`, n);
+  const notes = base.notes.map((n) => { const src = srcByKey.get(`${n.p}@${n.s.toFixed(3)}`) ?? {}; return { ...n, h: src.h === "L" || src.h === "R" ? src.h : null, f: Number.isFinite(src.f) ? Math.max(1, Math.min(5, Math.round(src.f))) : null }; });
+  const issues = [...base.issues];
+  const fixes = [...(base.stats.fixes ?? [])];
+  if (!notes.length) return { ...base, notes, pedal: [], issues, severity: 3 };
+
+  // 1. 手が無い音 → 中央 (60) を境に割り振り
+  let assignedH = 0;
+  for (const n of notes) if (!n.h) { n.h = n.p < 60 ? "L" : "R"; assignedH++; }
+  if (assignedH) fixes.push(`手の指定が無い ${assignedH} 音を音域で振り分け`);
+
+  // 2. 同時 (0.06 拍以内) の和音ごとに: 片手 5 音超、指の順、指の重複、広がり、交差
+  const sorted = notes.slice().sort((a, b) => a.s - b.s || a.p - b.p);
+  const groups = [];
+  for (const n of sorted) { const g = groups[groups.length - 1]; if (g && n.s - g.s <= 0.06) g.notes.push(n); else groups.push({ s: n.s, notes: [n] }); }
+  let over5 = 0, spanBig = 0, cross = 0, reFingered = 0, dupF = 0;
+  const spanList = [];
+  for (const g of groups) {
+    for (const h of ["L", "R"]) {
+      const hand = g.notes.filter((n) => n.h === h).sort((a, b) => a.p - b.p);
+      if (!hand.length) continue;
+      if (hand.length > 5) over5++;
+      const span = hand[hand.length - 1].p - hand[0].p;
+      if (span > HAND_SPAN_WARN) { spanBig++; if (spanList.length < 8) spanList.push(`bar ${Math.floor(g.s / song.timeSig)}: ${h} 手 ${span} 半音`); }
+      // 指順: 右手は低→高で 1→5、左手は高→低で 1→5。崩れていたら並べ直す
+      const order = h === "R" ? hand : hand.slice().reverse();
+      const fs = order.map((n) => n.f);
+      const okOrder = fs.every((f, i) => f != null && (i === 0 || f > fs[i - 1]));
+      if (!okOrder && hand.length > 1) {
+        const n = hand.length;
+        const pick = n === 1 ? [1] : n === 2 ? [1, 5] : n === 3 ? [1, 3, 5] : n === 4 ? [1, 2, 4, 5] : [1, 2, 3, 4, 5];
+        order.forEach((x, i) => { x.f = pick[Math.min(i, pick.length - 1)]; });
+        reFingered++;
+      } else if (hand.length === 1 && hand[0].f == null) { hand[0].f = hand[0].p % 12 && [1, 3, 6, 8, 10].includes(hand[0].p % 12) ? 3 : 2; reFingered++; }
+      const seen = new Set();
+      for (const x of hand) { if (seen.has(x.f)) dupF++; seen.add(x.f); }
+    }
+    const L = g.notes.filter((n) => n.h === "L"), R = g.notes.filter((n) => n.h === "R");
+    if (L.length && R.length && Math.max(...L.map((n) => n.p)) > Math.min(...R.map((n) => n.p))) cross++;
+  }
+  if (reFingered) fixes.push(`指番号を ${reFingered} 箇所並べ直し`);
+  if (over5) issues.push(`片手で同時に 6 音以上押している箇所が ${over5} 箇所 (弾けない)`);
+  if (dupF) issues.push(`同じ手の同じ指を同時に 2 鍵に使っている箇所が ${dupF} 箇所`);
+  if (spanBig) issues.push(`片手の広がりが 9 度を超える箇所が ${spanBig} 箇所: ${spanList.join(" / ")}`);
+  if (cross) issues.push(`左手が右手より高い音を弾いている (交差) 箇所が ${cross} 箇所`);
+
+  // 3. 同じ手・同じ指の速い連打 (0.2 拍未満で 4 回以上続く)
+  let repeat = 0;
+  for (const h of ["L", "R"]) {
+    const hs = sorted.filter((n) => n.h === h);
+    let run = 1;
+    for (let i = 1; i < hs.length; i++) { if (hs[i].f === hs[i - 1].f && hs[i].p !== hs[i - 1].p && hs[i].s - hs[i - 1].s < 0.2 && hs[i].s > hs[i - 1].s + 1e-6) { run++; if (run === 4) repeat++; } else run = 1; }
+  }
+  if (repeat) issues.push(`同じ指で違う鍵を速く連続して弾く箇所が ${repeat} 箇所 (指を回す)`);
+
+  // 4. ペダル区間: 範囲内にクランプ、重なりを結合
+  const totalBeats = range.bars * song.timeSig;
+  let pedal = (raw?.pedal ?? []).filter((p) => Number.isFinite(p.s) && Number.isFinite(p.d) && p.d > 0).map((p) => ({ s: +Math.max(0, p.s).toFixed(4), d: +Math.min(p.d, totalBeats - Math.max(0, p.s)).toFixed(4) })).filter((p) => p.d > 0.05 && p.s < totalBeats).sort((a, b) => a.s - b.s);
+  const merged = [];
+  for (const p of pedal) { const last = merged[merged.length - 1]; if (last && p.s < last.s + last.d - 1e-6) last.d = +Math.max(last.d, p.s + p.d - last.s).toFixed(4); else merged.push({ ...p }); }
+  pedal = merged;
+
+  const stats = { ...base.stats, fixes, over5, spanBig, cross, dupF, repeat, pedalSegments: pedal.length, left: notes.filter((n) => n.h === "L").length, right: notes.filter((n) => n.h === "R").length };
+  let severity = issues.length ? 1 : 0;
+  if (base.severity >= 2 || over5 >= 2 || dupF >= 3 || spanBig >= 4 || cross >= 4) severity = 2;
+  return { notes, pedal, issues, stats, severity };
+}

@@ -350,12 +350,13 @@ export class PianoRoll {
         if (x + nw < this.keyW || x > w || y < this.rulerH - this.rowH || y > h) continue;
         const sel = this.selection.has(n.id);
         const alpha = 0.35 + (n.v / 127) * 0.65;
-        ctx.fillStyle = sel ? "#ffffff" : color;
+        const handColor = n.h === "L" ? "#ff8f5e" : n.h === "R" ? "#5ea2ff" : color;
+        ctx.fillStyle = sel ? "#ffffff" : handColor;
         if (!sel && n.v2 != null && n.v2 !== n.v && nw > 6) {
           // v2 (終わりの強さ): 濃さのグラデーションで表示
           const g = ctx.createLinearGradient(x, 0, x + nw, 0);
           const a2 = 0.35 + (n.v2 / 127) * 0.65;
-          g.addColorStop(0, hexA(color, alpha)); g.addColorStop(1, hexA(color, a2));
+          g.addColorStop(0, hexA(handColor, alpha)); g.addColorStop(1, hexA(handColor, a2));
           ctx.fillStyle = g; ctx.globalAlpha = 1;
         } else ctx.globalAlpha = sel ? 0.95 : alpha;
         ctx.beginPath();
@@ -368,6 +369,8 @@ export class PianoRoll {
           ctx.fillStyle = "rgba(0,0,0,.45)";
           ctx.fillRect(x + 2, y + this.rowH - 4, (nw - 4) * (n.v / 127), 2);
         }
+        // 指番号 (ピアノ独奏)
+        if (n.f != null && nw >= 12 && this.rowH >= 11) { ctx.fillStyle = sel ? "#000" : "rgba(255,255,255,.9)"; ctx.font = "bold 8px 'IBM Plex Mono'"; ctx.fillText(String(n.f), x + 3, y + this.rowH - 3); }
       }
     }
 
@@ -432,6 +435,17 @@ export class PianoRoll {
     }
     ctx.strokeStyle = "#27407a";
     ctx.beginPath(); ctx.moveTo(this.keyW + 0.5, 0); ctx.lineTo(this.keyW + 0.5, h); ctx.stroke();
+
+    // ペダル区間 (下端の帯)
+    if ((state.song.pedal ?? []).length) {
+      for (const pd of state.song.pedal) {
+        const x0 = this.beatToX(pd.s), x1 = this.beatToX(pd.s + pd.d);
+        if (x1 < this.keyW || x0 > w) continue;
+        ctx.fillStyle = "rgba(255,200,87,.28)"; ctx.fillRect(Math.max(this.keyW, x0), h - 8, Math.min(w, x1) - Math.max(this.keyW, x0), 8);
+        ctx.fillStyle = "rgba(255,200,87,.9)"; ctx.fillRect(Math.max(this.keyW, x0), h - 8, 2, 8);
+      }
+      ctx.fillStyle = "#ffc857"; ctx.font = "8px 'IBM Plex Mono'"; ctx.fillText("PEDAL", this.keyW + 4, h - 10);
+    }
 
     // 範囲選択の枠
     if (this.drag?.mode === "box" && this.drag.moved) {

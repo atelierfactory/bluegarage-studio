@@ -29,21 +29,24 @@ function md(text) {
 }
 
 const TOOL_LABEL = {
-  ja: { create_blueprint: "設計図を作る", generate_tracks: "トラックを生成", update_song: "曲の設定を変更", update_track: "トラックを変更", add_track: "トラックを追加", remove_track: "トラックを削除", edit_notes: "ノートを編集", transport: "再生/停止", export_file: "書き出し", project: "プロジェクト", get_song_details: "曲の詳細を確認", auto_mix: "AI ミックス", set_mix: "ミックス設定", set_master: "マスター設定", design_sound: "音色を設計", set_synth: "シンセ設定", set_tempo_map: "テンポ変化", midi_out: "MIDI 出力" },
-  en: { create_blueprint: "Blueprint", generate_tracks: "Generate tracks", update_song: "Song settings", update_track: "Track settings", add_track: "Add track", remove_track: "Remove track", edit_notes: "Edit notes", transport: "Transport", export_file: "Export", project: "Project", get_song_details: "Song details", auto_mix: "AI mix", set_mix: "Mix", set_master: "Master", design_sound: "Sound design", set_synth: "Synth", set_tempo_map: "Tempo map", midi_out: "MIDI out" },
+  ja: { create_blueprint: "設計図を作る", generate_tracks: "トラックを生成", update_song: "曲の設定を変更", update_track: "トラックを変更", add_track: "トラックを追加", remove_track: "トラックを削除", edit_notes: "ノートを編集", transport: "再生/停止", export_file: "書き出し", project: "プロジェクト", get_song_details: "曲の詳細を確認", auto_mix: "AI ミックス", set_mix: "ミックス設定", set_master: "マスター設定", design_sound: "音色を設計", set_synth: "シンセ設定", set_tempo_map: "テンポ変化", midi_out: "MIDI 出力", compose_piano: "ピアノ曲を作る", regenerate: "作り直し", set_pedal: "ペダル" },
+  en: { create_blueprint: "Blueprint", generate_tracks: "Generate tracks", update_song: "Song settings", update_track: "Track settings", add_track: "Add track", remove_track: "Remove track", edit_notes: "Edit notes", transport: "Transport", export_file: "Export", project: "Project", get_song_details: "Song details", auto_mix: "AI mix", set_mix: "Mix", set_master: "Master", design_sound: "Sound design", set_synth: "Synth", set_tempo_map: "Tempo map", midi_out: "MIDI out", compose_piano: "Compose piano", regenerate: "Regenerate", set_pedal: "Pedal" },
 };
 
-export function initChat(actions) {
+export function initChat(actions, opts = {}) {
+  const TOOLS = opts.tools ?? CHAT_TOOLS;
+  const SYSTEM = opts.system ?? SYSTEM_CHAT;
+  const KEY = opts.storageKey ?? LS_KEY;
   const logEl = $("#chat-log");
   const input = $("#chat-input");
   const sendBtn = $("#btn-chat-send");
   let messages = [];
   let busy = false;
 
-  function persist() { try { localStorage.setItem(LS_KEY, JSON.stringify(messages.slice(-KEEP_MESSAGES))); } catch {} }
+  function persist() { try { localStorage.setItem(KEY, JSON.stringify(messages.slice(-KEEP_MESSAGES))); } catch {} }
   function restore() {
     try {
-      const raw = localStorage.getItem(LS_KEY);
+      const raw = localStorage.getItem(KEY);
       if (!raw) return;
       messages = trimHistory(JSON.parse(raw));
       for (const m of messages) {
@@ -107,10 +110,10 @@ export function initChat(actions) {
     const langNote = getLang() === "en" ? "The user interface language is English. Reply in the language the user writes in." : "画面の言語は日本語。ユーザーが書いた言語で返す。";
     return streamMessage({
       system: [
-        { type: "text", text: SYSTEM_CHAT, cache_control: { type: "ephemeral" } },
+        { type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } },
         { type: "text", text: `# 現在の曲 (最新の状態。あなたがこれまでに道具で行った変更は反映済み)\n${actions.getSongState()}\n\n# 現在時刻\n${new Date().toLocaleString()}\n\n# 言語\n${langNote}` },
       ],
-      tools: CHAT_TOOLS,
+      tools: TOOLS,
       messages: trimHistory(messages),
       maxTokens: 4000,
       onText,
@@ -175,6 +178,6 @@ export function initChat(actions) {
   });
 
   restore();
-  if (!messages.length) addNote(t("welcome"));
+  if (!messages.length) addNote(opts.welcome ?? t("welcome"));
   return { send, note: addNote, get busy() { return busy; } };
 }

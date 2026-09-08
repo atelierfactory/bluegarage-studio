@@ -95,6 +95,7 @@ export function defaultSong() {
     ],
     chordProgression: [],
     tempoMap: [],          // [{beat, tempo}] 曲頭からの拍。点の間は直線 (リタルダンド等)
+    pedal: [],             // [{s, d}] サスティンペダルを踏んでいる区間 (拍)
     master: defaultMaster(),
     tracks: [],
   };
@@ -105,6 +106,7 @@ export function migrateSong(song) {
   if (!song) return defaultSong();
   song.version = 2;
   song.tempoMap ??= [];
+  song.pedal ??= [];
   song.master = { ...defaultMaster(), ...(song.master ?? {}) };
   song.chordProgression ??= [];
   song.sections ??= [];
@@ -214,6 +216,15 @@ export function secToBeat(sec, song = state.song) {
   return 0;
 }
 export function hasTempoMap(song = state.song) { return (song.tempoMap ?? []).length > 0; }
+
+/* ─────────── sustain pedal ─────────── */
+// ペダルを踏んでいる間に鍵を離しても音は続く → 実際の音の終わりは「ペダルを離す拍」まで伸びる
+export function pedalDownAt(beat, song = state.song) { return (song.pedal ?? []).some((p) => beat >= p.s - 1e-6 && beat < p.s + p.d - 1e-6); }
+export function noteEndBeat(n, song = state.song) {
+  const end = n.s + n.d;
+  for (const p of song.pedal ?? []) if (end >= p.s - 1e-6 && end < p.s + p.d - 1e-6) return Math.max(end, p.s + p.d);
+  return end;
+}
 
 /* ─────────── chords at beat (for piano roll display) ─────────── */
 export function chordAtBeat(beat) {

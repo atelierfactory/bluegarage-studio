@@ -74,6 +74,10 @@ export function songToMidi(song) {
     msgs.push({ tick: 0, type: 0xb0, p: 10, v: Math.round(64 + (track.pan ?? 0) * 63) });
     msgs.push({ tick: 0, type: 0xb0, p: 11, v: 127 });
     let exprActive = false;
+    // サスティンペダル (CC64): ピアノの曲のペダル区間
+    if ((song.pedal ?? []).length && (track.instrument === "piano" || track.instrument === "epiano")) {
+      for (const pd of song.pedal) { msgs.push({ tick: Math.round(pd.s * TPQ), type: 0xb0, p: 64, v: 127, order: -2 }); msgs.push({ tick: Math.round((pd.s + pd.d) * TPQ), type: 0xb0, p: 64, v: 0, order: -2 }); }
+    }
     for (const n of track.notes) {
       const on = Math.max(0, Math.round(n.s * TPQ));
       const off = Math.max(on + 1, Math.round((n.s + n.d) * TPQ));

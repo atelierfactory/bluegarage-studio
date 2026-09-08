@@ -8,7 +8,7 @@
 // 時間の基準: 拍 → 秒の変換は state.js の beatToSec (テンポマップ対応)。Transport の bpm は使わない。
 
 /* global Tone */
-import { state, totalBeats, emit, beatToSec, secToBeat, tempoAt, SYNTH_INSTRUMENTS, INSTRUMENT_DEFS } from "./state.js";
+import { state, totalBeats, emit, beatToSec, secToBeat, tempoAt, noteEndBeat, SYNTH_INSTRUMENTS, INSTRUMENT_DEFS } from "./state.js";
 import { SfzInstrument, sampleCacheStats } from "./sampler.js";
 import { createSynth, presetFor, normalizePatch } from "./synth.js";
 import { createMixGraph, createTrackChain } from "./mix.js";
@@ -332,7 +332,7 @@ function scheduleParts() {
     const silent = !!t.midiOut?.silent && mt;
     const events = t.notes.map((n, i) => [beatToSec(n.s), { n, i }]);
     eng.part = new Tone.Part((time, { n, i }) => {
-      const durSec = Math.max(0.03, beatToSec(n.s + n.d) - beatToSec(n.s));
+      const durSec = Math.max(0.03, beatToSec(t.instrument === "piano" || t.instrument === "epiano" ? noteEndBeat(n) : n.s + n.d) - beatToSec(n.s));
       if (mt) midi.sendNote(mt.out, t.instrument === "drums" ? 9 : mt.ch, n.p, n.v, midi.audioTimeToPerf(ctx, time), durSec * 1000);
       if (silent) return;
       if (eng.inst.kind === "drums") eng.inst.trigger(n.p, time, n.v, i);
@@ -448,7 +448,7 @@ export async function renderSong(onProgress, { normalize = true } = {}) {
       inst.reset?.();
       inst.setTempo?.(tempoAt(0, song));
       t.notes.forEach((n, i) => {
-        const durSec = Math.max(0.03, beatToSec(n.s + n.d, song) - beatToSec(n.s, song));
+        const durSec = Math.max(0.03, beatToSec(t.instrument === "piano" || t.instrument === "epiano" ? noteEndBeat(n, song) : n.s + n.d, song) - beatToSec(n.s, song));
         context.transport.schedule((time) => {
           if (inst.kind === "drums") inst.trigger(n.p, time, n.v, i);
           else inst.trigger(n.p, time, durSec, n.v, i, n.v2 ?? null);

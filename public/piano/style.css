@@ -1,0 +1,49 @@
+/* ═══════════ VESPER PIANO — 黒い漆のグランドピアノの色 ═══════════ */
+body.piano-app {
+  --ink: #0a0806;
+  --ink-2: #14100c;
+  --ink-3: #1c1611;
+  --panel: #120e0a;
+  --panel-2: #1b1510;
+  --line: #3a2d20;
+  --line-2: #5a4630;
+  --blue: #c9a24a;          /* 金 (アクセントとして流用) */
+  --blue-hi: #e6c46b;
+  --blue-neon: #f0d48a;
+  --blue-deep: #7a5f24;
+  --tape: #f3e9d2;
+  --txt: #efe6d4;
+  --txt-dim: #9c8a6c;
+  background:
+    radial-gradient(1000px 420px at 70% -10%, rgba(201, 162, 74, .12), transparent 60%),
+    radial-gradient(800px 380px at 10% 110%, rgba(240, 212, 138, .06), transparent 60%),
+    var(--ink);
+}
+body.piano-app .logo span { color: var(--blue-neon); }
+body.piano-app #grain { opacity: .04; }
+body.piano-app #topbar { background: linear-gradient(180deg, #171310, #0d0a08); border-bottom: 1px solid var(--line-2); box-shadow: 0 2px 20px rgba(0,0,0,.6); }
+body.piano-app .tbtn.play { color: var(--blue-neon); }
+body.piano-app .tbtn.active { background: var(--blue-deep); border-color: var(--blue); }
+body.piano-app .lcd { color: var(--blue-neon); text-shadow: 0 0 8px rgba(240,212,138,.5); }
+body.piano-app #center { background: var(--ink); }
+body.piano-app #proll-wrap { background: #0b0907; }
+body.piano-app #aipanel { width: 34%; min-width: 380px; background: var(--panel); border-left: 1px solid var(--line-2); display: flex; flex-direction: column; position: relative; }
+body.piano-app #tracklist { display: none; }
+#chatwrap { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+#chatwrap.hidden { display: none; }
+#proll-head .legend { font-family: var(--font-mono); font-size: 10px; color: var(--txt-dim); margin-left: 8px; display: inline-flex; gap: 6px; align-items: center; }
+.legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.legend .sw.r { background: #5ea2ff; } .legend .sw.l { background: #ff8f5e; } .legend .sw.p { background: #ffc857; }
+.tfield.hand select { accent-color: var(--blue); }
+a.gbtn { text-decoration: none; display: inline-flex; align-items: center; }
+
+/* ── VESPER stage (右側) ── */
+#stage { position: absolute; inset: 0; background: #000; display: flex; flex-direction: column; }
+#stage.hidden { display: none; }
+#stage-canvas { width: 100%; height: 100%; display: block; }
+#stage-hud { position: absolute; top: 8px; left: 10px; right: 10px; display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; color: var(--blue-neon); text-shadow: 0 0 6px rgba(0,0,0,.9); pointer-events: none; }
+#stage-title { font-family: var(--font-display); letter-spacing: 3px; font-size: 14px; }
+#stage-pedal { position: absolute; right: 12px; bottom: 12px; font-family: var(--font-display); letter-spacing: 3px; font-size: 11px; color: #5a4630; border: 1px solid #3a2d20; padding: 3px 10px; border-radius: 4px; background: rgba(0,0,0,.5); transition: all .12s; }
+#stage-pedal.on { color: #ffc857; border-color: #ffc857; box-shadow: 0 0 12px rgba(255,200,87,.7); }
+#btn-stage-chat { position: absolute; left: 12px; bottom: 12px; }
+#stage .divider { position: absolute; left: 0; right: 0; top: 58%; height: 1px; background: rgba(240,212,138,.25); pointer-events: none; }

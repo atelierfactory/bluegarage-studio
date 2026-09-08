@@ -529,3 +529,127 @@ ${description}
 ${current ? `\n## 今の音色 (これを土台に変えてよい)\n${JSON.stringify(current)}` : ""}`;
   return { system: SYSTEM_SOUND_DESIGNER, userText, schema: SYNTH_PATCH_SCHEMA, label: "synth" };
 }
+
+/* ================================ PIANO (VESPER が弾く独奏ピアノ) ================================ */
+// 1 トラックのピアノ独奏。音符ごとに 手 (h: L/R) と 指 (f: 1=親指〜5=小指)、ペダル区間 (pedal) を一緒に作らせる。
+
+export const PIANO_NOTES_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["performanceNotes", "notes", "pedal"],
+  properties: {
+    performanceNotes: { type: "string", description: "演奏意図 (2-4文): フレージング、強弱の設計、運指の考え方、ペダルの使い方" },
+    notes: {
+      type: "array",
+      description: "両手の音符 (1 つの配列に右手も左手も入れる)",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["p", "s", "d", "v", "h", "f"],
+        properties: {
+          p: { type: "integer", description: "MIDI ピッチ 21-108" },
+          s: { type: "number", description: "開始位置: 生成範囲の先頭からの拍 (0 始まり, 小数可)" },
+          d: { type: "number", description: "長さ (拍)" },
+          v: { type: "integer", description: "強さ 1-127" },
+          h: { type: "string", enum: ["L", "R"], description: "L=左手 R=右手" },
+          f: { type: "integer", description: "指 1=親指 2=人差し指 3=中指 4=薬指 5=小指" },
+        },
+      },
+    },
+    pedal: {
+      type: "array",
+      description: "サスティンペダルを踏んでいる区間 (踏む拍 s と長さ d)。踏み替えは区間を分ける。使わないなら空配列",
+      items: { type: "object", additionalProperties: false, required: ["s", "d"], properties: { s: { type: "number" }, d: { type: "number" } } },
+    },
+  },
+};
+
+export const SYSTEM_PIANIST = `あなたは世界トップクラスのピアニスト兼作曲家です。ピアノ独奏曲を「実際に両手で弾ける形」で打ち込みます。音符ごとに手 (L/R) と指 (1〜5) を決め、サスティンペダルの踏み替えも書きます。出力はそのまま演奏ロボットが弾くので、弾けない運指は許されません。
+
+# 出力の絶対条件
+- 完全にオリジナル。実在曲の複製をしない。
+- 生成範囲の拍数を超えない (s + d ≤ 総拍数)。ピッチは 21〜108。
+- notes を空で返さない。
+- performanceNotes には実際に出力した内容だけを書く。
+
+# 運指の物理条件 (機械で検査される)
+1. 同時に押す音は片手 5 音まで。同じ手の同じ指を同時に 2 つの鍵に使わない。
+2. 片手の同時の広がりは 10 度 (16 半音) 以内。9 度 (14 半音) を超えるのは強い和音の頂点だけ。
+3. 右手の和音は 低い音ほど小さい指番号 (1→5)、左手の和音は 高い音ほど小さい指番号 (1 が一番上)。これを崩さない。
+4. 左右の手は基本的に交差しない (左手の音は右手の音より低い)。意図的な交差は短い装飾に限る。
+5. 速いパッセージは 1-2-3-1-2-3-4 のような親指くぐりで指を回す。同じ指の連打は遅い音価だけ。
+6. 跳躍のあとは親指か小指で着地させると弾きやすい。
+7. 音符が黒鍵なら親指を避ける (できるだけ 2〜4)。
+
+# ピアニストとしての品質
+- 左手: ベース + 和音 (アルベルティ、分散和音、10 度のストライド、オクターブ)。右手: 旋律 + 内声。役割は曲想で変えてよい。
+- 強弱 (v): 旋律は伴奏より 15〜30 大きく。フレーズの山に向かってクレッシェンド、終わりで引く。左手の伴奏は 40〜75、旋律は 70〜110、クライマックス 110〜125。
+- タイミング: 和音は完全に同時でなく、低い音から 0.01〜0.03 拍ずつずらす (ロール) と生っぽい。ルバートはやりすぎない。
+- ペダル: 和声が変わるごとに踏み替える (区間を分ける)。速いパッセージや歯切れの良い場所は踏まない。
+- 音域: 左手 21〜72、右手 48〜108 が目安。
+- 密度の目安 (1 小節): 伴奏的な曲 6〜14 音、華やかな曲 14〜28 音。`;
+
+const pianoScoreText = (notes, ts, startBeat, endBeat) => {
+  const list = notes.filter((n) => n.s >= startBeat - 1e-6 && n.s < endBeat - 1e-6);
+  if (!list.length) return "(空)";
+  const byBar = new Map();
+  for (const n of list) { const b = Math.floor((n.s - startBeat) / ts); (byBar.get(b) ?? byBar.set(b, []).get(b)).push(n); }
+  return [...byBar.entries()].sort((a, c) => a[0] - c[0]).map(([b, arr]) => `b${b}: ` + arr.sort((x, y) => x.s - y.s || x.p - y.p).map((n) => `${noteName(n.p)}@${+(n.s - startBeat - b * ts).toFixed(2)}(${+n.d.toFixed(2)})${n.h ?? ""}${n.f ?? ""}`).join(" ")).join("\n");
+};
+
+export function buildPianoRequest({ song, range, mode, previousNotes, previousPedal, previousPerformanceNotes, extraDirection, issues, revisedNotes, stylePrompt }) {
+  const ts = song.timeSig;
+  const totalBeats = range.bars * ts;
+  const chordText = (song.chordProgression ?? []).filter((c) => c.bar >= range.startBar && c.bar < range.startBar + range.bars).map((c) => `bar ${c.bar - range.startBar} beat ${c.beat}: ${c.chord}`).join(" | ") || "(コード指定なし: キーに従って自由に)";
+  let bar = 0; const secs = [];
+  for (const s of song.sections ?? []) { const st = bar, en = bar + s.bars; bar = en; const rs = Math.max(st, range.startBar), re = Math.min(en, range.startBar + range.bars); if (rs < re) secs.push(`- bars ${rs - range.startBar}〜${re - range.startBar - 1}: ${s.name}${s.description ? ` — ${s.description}` : ""}`); }
+  const tempoText = (song.tempoMap ?? []).length ? `\n- テンポ変化: ${song.tempoMap.map((p) => `bar ${Math.floor(p.beat / ts)} beat ${+(p.beat % ts).toFixed(2)} → ${p.tempo}`).join(", ")}` : "";
+  let modeText = "## モード: 新規生成";
+  if (mode === "continue") modeText = `## モード: 続きを生成\n直前の範囲から自然につながるように (モチーフ・伴奏の型・手の位置を引き継ぐ)。直前の演奏 (s は直前範囲の先頭基準):\n${JSON.stringify(previousNotes ?? []).slice(0, 40000)}\n直前のペダル: ${JSON.stringify(previousPedal ?? [])}${previousPerformanceNotes ? `\n直前範囲の演奏意図: ${previousPerformanceNotes}` : ""}`;
+  if (mode === "revise") modeText = `## モード: 手直し (校閲役)\n下の演奏の、検査で見つかった問題だけを最小限に直して、範囲全体の完全版を返す。音楽は変えない。\n\n### 問題\n${(issues ?? []).map((i) => `- ${i}`).join("\n")}\n\n### 演奏\n${JSON.stringify(revisedNotes ?? []).slice(0, 80000)}`;
+  if (mode === "variation") modeText = `## モード: 作り直し\n同じ曲想で別のテイクを作る。元の演奏 (参考):\n${JSON.stringify(previousNotes ?? []).slice(0, 40000)}`;
+  const userText = `次のピアノ独奏を打ち込んでください (両手・運指・ペダル付き)。
+
+## 曲情報
+- タイトル: ${song.title ?? "(無題)"}
+- テンポ: ${song.tempo} BPM / 拍子: ${song.timeSig}/4 / キー: ${song.key}${tempoText}
+- 曲のコンセプト: ${song.concept ?? "(指定なし)"}
+- スタイル指示: ${stylePrompt || "(指定なし)"}
+${extraDirection ? `- 追加ディレクション: ${extraDirection}` : ""}
+
+## 生成範囲
+- 曲の bar ${range.startBar} から ${range.bars} 小節分 (総拍数 ${totalBeats} 拍)。s は 0〜${totalBeats}
+
+## この範囲のセクション (小節番号は生成範囲基準)
+${secs.join("\n") || "(セクション情報なし)"}
+
+## コード進行 (小節番号は生成範囲基準)
+${chordText}
+
+${modeText}`;
+  return { system: SYSTEM_PIANIST, userText, schema: PIANO_NOTES_SCHEMA, label: mode === "revise" ? "revise" : "piano" };
+}
+
+export const SYSTEM_CHAT_PIANO = `あなたは VESPER PIANO (ロボットのピアニスト VESPER-01 が弾く、AI ネイティブのピアノ作曲ツール) の中にいる、腕利きの作曲家兼ピアニストです。ユーザーは右のチャットで話しかけ、あなたは道具 (tool) で曲を作り、直し、弾かせ、書き出します。
+
+# ふるまい
+- 曲のイメージを言われたら、確認を挟まずに compose_piano で設計図から全部作る。細かい指定が無い所はプロとして埋める。
+- 「もっと静かに」「サビを作り直して」は regenerate (範囲と direction) で該当部分だけ。
+- テンポ・キー・タイトルは update_song。移調や強弱の一括変更は edit_notes。テンポの揺れは set_tempo_map。再生は transport。書き出しは export_file。曲の管理は project。
+- 曲は 1 トラックのピアノ。音符ごとに手 (L/R) と指 (1〜5)、ペダル区間を持つ。生成後は自動検査 (片手 5 音・指の重複・広がり・交差・指順) と手直しが入る。
+- 道具の結果を受け取ったら 1〜4 文で短く報告する。道具の結果に「変更済み」「生成しました」とあれば完了。同じ変更を繰り返さない。
+- ユーザーの言語で話す。中学生でも分かる言葉で。音楽用語は使ってよい。
+- 生成は 1 回 1〜3 分かかる。`;
+
+export const PIANO_CHAT_TOOLS = [
+  { name: "compose_piano", description: "曲のイメージから設計図 (タイトル・テンポ・キー・構成・コード進行・テンポ変化) を作り、ピアノ独奏 (両手・運指・ペダル) を全部生成する。既存の曲は新しい曲に置き換わる (前の曲はライブラリに残る)。", input_schema: { type: "object", properties: { prompt: { type: "string", description: "曲のイメージ (ジャンル、雰囲気、参考作曲家、テンポ感、長さの希望など)" }, tempo: { type: "number" }, key: { type: "string" } }, required: ["prompt"] } },
+  { name: "regenerate", description: "指定した範囲のピアノ演奏だけを作り直す (direction に直しの要望)", input_schema: { type: "object", properties: { startBar: { type: "integer", description: "1 始まり (省略=1)" }, bars: { type: "integer", description: "小節数 (省略=最後まで)" }, direction: { type: "string" }, mode: { type: "string", enum: ["new", "variation"] } } } },
+  { name: "update_song", description: "曲全体の設定を変える", input_schema: { type: "object", properties: { title: { type: "string" }, tempo: { type: "number" }, key: { type: "string" }, timeSig: { type: "integer" }, stylePrompt: { type: "string", description: "演奏スタイルの指示 (次の生成から使う)" } } } },
+  { name: "edit_notes", description: "既存の音符を直接いじる (即時)。transpose=半音移調、velocity_scale=強さ倍率、velocity_add=強さ加算、humanize=揺らす、quantize=グリッド (amount=拍)、clear=削除、shift=ずらす、legato、staccato。hand='L'|'R' で片手だけ。startBar/bars で範囲。", input_schema: { type: "object", properties: { action: { type: "string", enum: ["transpose", "velocity_scale", "velocity_add", "humanize", "quantize", "clear", "shift", "legato", "staccato"] }, amount: { type: "number" }, hand: { type: "string", enum: ["L", "R"] }, startBar: { type: "integer" }, bars: { type: "integer" } }, required: ["action"] } },
+  { name: "set_pedal", description: "ペダル区間を設定する。mode=replace で全部置き換え、add で追加、clear で消す。segments は {bar(1始まり), beat(0始まり), lengthBeats}", input_schema: { type: "object", properties: { mode: { type: "string", enum: ["replace", "add", "clear"] }, segments: { type: "array", items: { type: "object", properties: { bar: { type: "integer" }, beat: { type: "number" }, lengthBeats: { type: "number" } }, required: ["bar", "beat", "lengthBeats"] } } }, required: ["mode"] } },
+  { name: "set_tempo_map", description: "テンポの変化 (リタルダンド等)。points を空で一定に戻す。", input_schema: { type: "object", properties: { points: { type: "array", items: { type: "object", properties: { bar: { type: "integer" }, beat: { type: "number" }, tempo: { type: "number" } }, required: ["bar", "beat", "tempo"] } } }, required: ["points"] } },
+  { name: "transport", description: "再生・停止・頭出し (再生すると VESPER が弾く)", input_schema: { type: "object", properties: { action: { type: "string", enum: ["play", "stop", "seek"] }, bar: { type: "integer" }, loop: { type: "boolean" } }, required: ["action"] } },
+  { name: "export_file", description: "書き出し。midi=SMF (運指はテキストイベント、ペダルは CC64)、wav=オーディオ、json=プロジェクト", input_schema: { type: "object", properties: { format: { type: "string", enum: ["midi", "wav", "json"] } }, required: ["format"] } },
+  { name: "project", description: "曲の管理。list=一覧、open=曲名で開く(name)、save_as=別名で保存(name)、rename=改名(name)、delete=削除(name)、new=空の新曲", input_schema: { type: "object", properties: { action: { type: "string", enum: ["list", "open", "save_as", "rename", "delete", "new"] }, name: { type: "string" } }, required: ["action"] } },
+  { name: "get_song_details", description: "曲の詳しい情報 (構成の説明、コード進行、演奏メモ、運指の検査結果、小節ごとの音数)", input_schema: { type: "object", properties: {} } },
+];
