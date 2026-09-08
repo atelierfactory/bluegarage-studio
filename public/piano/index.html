@@ -17,7 +17,7 @@
 <header id="topbar">
   <div class="logo-block">
     <div class="logo">VESPER<span>PIANO</span></div>
-    <div class="logo-sub">ROBOT PIANIST VESPER-01 — AI PIANO COMPOSER</div>
+    <div class="logo-sub">ROBOT PIANIST VESPER-01</div>
   </div>
   <div class="transport">
     <button id="btn-rew" class="tbtn" title="先頭へ (Home)">⏮</button>
@@ -25,7 +25,6 @@
     <button id="btn-stop" class="tbtn" title="停止">■</button>
     <button id="btn-loop" class="tbtn" title="ループ">⟲</button>
     <button id="btn-met" class="tbtn met" title="メトロノーム (M)">♩</button>
-    <button id="btn-jam" class="tbtn jam" title="JAM: 手札を混ぜて即興で弾き続ける (J)">JAM</button>
     <div class="lcd"><span id="pos-display">001.1</span><span class="lcd-dim" id="time-display">0:00.0</span></div>
     <label class="tfield"><span>BPM</span><input id="inp-tempo" type="number" min="30" max="300" step="1" value="90" /></label>
     <label class="tfield"><span>拍子</span><select id="inp-timesig"><option value="4">4/4</option><option value="3">3/4</option><option value="6">6/8*</option></select></label>
@@ -36,18 +35,12 @@
   <div class="topbar-right">
     <label class="tfield master"><span>VOL</span><input id="inp-master" type="range" min="-40" max="6" step="0.5" value="-4" /></label>
     <div class="btn-group">
-      <button id="btn-humanize" class="gbtn tiny" title="ヒューマナイズ">人間味</button>
-      <button id="btn-quantize" class="gbtn tiny" title="クオンタイズ">Q</button>
+      <button id="btn-songs" class="gbtn tiny" title="曲を選ぶ (名曲 / 作った曲 / MIDI)">曲を選ぶ</button>
       <button id="btn-check" class="gbtn tiny" title="運指を検査 (弾けるか)">検査</button>
-    </div>
-    <div class="btn-group">
-      <button id="btn-export" class="gbtn tiny" title="MIDI 書き出し (ペダル CC64 付き)">MIDI</button>
+      <button id="btn-export" class="gbtn tiny" title="MIDI 書き出し">MIDI</button>
       <button id="btn-export-wav" class="gbtn tiny" title="WAV 書き出し">WAV</button>
-      <button id="btn-save" class="gbtn tiny" title="保存">保存</button>
-      <button id="btn-repertoire" class="gbtn tiny" title="レパートリー (著作権切れの名曲 / 自分の MIDI)">♪</button>
-      <button id="btn-menu" class="gbtn tiny" title="曲の管理">☰</button>
-      <button id="btn-thanks" class="gbtn tiny" title="この楽器について (Salamander Grand Piano への感謝)">♥</button>
-      <button id="btn-settings" class="gbtn tiny" title="設定 (API キー / モデル / 言語)">⚙</button>
+      <button id="btn-thanks" class="gbtn tiny" title="この楽器について (Salamander への感謝)">♥</button>
+      <button id="btn-settings" class="gbtn tiny" title="設定 (API キー / モデル)">⚙</button>
       <a class="gbtn tiny" href="../" title="BLUE GARAGE STUDIO (フルのシーケンサー)">STUDIO</a>
     </div>
   </div>
@@ -55,56 +48,58 @@
 
 <div id="workspace">
   <main id="center">
-    <div id="arrange-wrap"><canvas id="arrange"></canvas></div>
     <div id="proll-head">
-      <span id="proll-title">PIANO ROLL</span>
-      <span class="legend"><i class="sw r"></i>右手 <i class="sw l"></i>左手 <i class="sw p"></i>ペダル <i class="sw lit"></i>いま鳴っている音</span>
-      <span id="proll-hint">クリック=追加 / ドラッグ=移動 / 右端=長さ / ⌥クリック=削除 / ⌘ドラッグ=範囲選択 / 1〜5=指 / L R=手 / P=選択範囲にペダル / ⌘C ⌘V ⌘D / ←→↑↓</span>
+      <span id="proll-title" class="song-title">—</span>
+      <span class="legend"><i class="sw r"></i>右手 <i class="sw l"></i>左手 <i class="sw lit"></i>鳴っている音</span>
+      <span id="proll-hint">クリック=追加 / ドラッグ=移動 / 右端=長さ / ⌥クリック=削除 / ⌘ドラッグ=範囲選択 / 1〜5=指 / L R=手 / P=ペダル / ⌘C ⌘V ⌘D / ←→↑↓</span>
     </div>
     <div id="proll-wrap" class="view view-active"><canvas id="proll"></canvas></div>
+
+    <!-- お題 → 即興 / 作曲 -->
+    <div id="prompt-bar">
+      <div class="mode-tabs">
+        <button class="mtab on" data-mode="jam">即興</button>
+        <button class="mtab" data-mode="compose">作曲</button>
+      </div>
+      <input id="inp-theme" type="text" placeholder="お題 (例: 雨の日の午後、静かで少し切ない曲。坂本龍一みたいに)" />
+      <select id="sel-model" title="作曲に使うモデル"></select>
+      <select id="sel-effort" title="作り込み">
+        <option value="quick">ふつう (2〜3 分)</option>
+        <option value="deep">超作り込み (5〜8 分)</option>
+      </select>
+      <button id="btn-go" class="gbtn accent">▶ 始める</button>
+      <button id="btn-cancel" class="gbtn small hidden">止める</button>
+    </div>
+    <div id="status-bar"><span id="status-text">お題を入れて「始める」。即興はすぐ弾き始め、弾きながらお題に合う手札を作って切り替えます。作曲は 2〜8 分かけて 1 曲を仕上げます。</span></div>
   </main>
 
   <aside id="aipanel">
-    <div id="stage" class="hidden">
+    <div id="stage">
       <canvas id="stage-canvas"></canvas>
       <div id="stage-hud"><span id="stage-title"></span><span id="stage-info"></span></div>
-      <div id="stage-pedal" title="サスティンペダル">PEDAL</div>
-      <button id="btn-stage-chat" class="gbtn tiny" title="チャットに戻る">CHAT</button>
-    </div>
-    <div id="chatwrap">
-      <div class="panel-head blue">
-        <span>AI PIANIST</span>
-        <span class="ai-badge">Claude Opus 5</span>
-        <button id="btn-stage-show" class="gbtn tiny" title="VESPER を見る">VESPER</button>
-        <button id="btn-chat-clear" class="gbtn tiny" title="会話を消す (曲は残る)">クリア</button>
+      <div id="stage-tools">
+        <button class="vbtn on" data-view="wide" title="全体 (ドラッグで回転・ホイールで寄り引き)">全体</button>
+        <button class="vbtn" data-view="side" title="横から">横</button>
+        <button class="vbtn" data-view="top" title="上から">上</button>
+        <button class="vbtn" data-view="eye" title="VESPER の目線">目線</button>
+        <button id="btn-fullscreen" class="vbtn" title="全画面 (左: 全体 / 右: 指先)。Esc で戻る">全画面</button>
       </div>
-      <div id="chat-log"></div>
-      <div id="chat-input-wrap">
-        <textarea id="chat-input" rows="2" placeholder="例: 雨の日の午後、静かで少し切ないピアノ曲。坂本龍一みたいに"></textarea>
-        <button id="btn-chat-send" class="gbtn accent" title="送信 (Enter)">送信</button>
-      </div>
+      <div id="stage-label-hands">指先</div>
     </div>
   </aside>
 </div>
 
-<dialog id="dlg-menu" class="wide">
-  <h3>曲の管理</h3>
+<dialog id="dlg-songs" class="wide">
+  <h3>曲を選ぶ</h3>
   <div class="lib-top">
-    <button id="btn-new-song" class="gbtn small accent">新規</button>
-    <button id="btn-save-as" class="gbtn small">名前を付けて保存 (複製)</button>
+    <button id="btn-new-song" class="gbtn small">空の曲</button>
+    <button id="btn-save-as" class="gbtn small">今の曲を別名で保存</button>
     <button id="btn-export-json" class="gbtn small">JSON 書き出し</button>
     <label class="gbtn small file-label"><span>JSON 読み込み</span><input id="inp-import-json" type="file" accept=".json" hidden /></label>
-    <label class="gbtn small file-label"><span>MIDI 読み込み (自動で手と指を付ける)</span><input id="inp-import-midi" type="file" accept=".mid,.midi" hidden /></label>
+    <label class="gbtn small file-label"><span>MIDI 読み込み (手と指は自動)</span><input id="inp-import-midi" type="file" accept=".mid,.midi" hidden /></label>
   </div>
   <div id="lib-list" class="lib-list"></div>
-  <div class="dlg-foot"><button id="btn-menu-close" class="gbtn small">閉じる</button></div>
-</dialog>
-
-<dialog id="dlg-repertoire" class="wide">
-  <h3>レパートリー</h3>
-  <p class="dim">著作権が切れている (パブリックドメインの) 名曲を同梱しています。楽譜データは The Mutopia Project の Public Domain 版。自分の MIDI ファイルも「☰ → MIDI 読み込み」で弾かせられます (手と指は自動で付きます)。</p>
-  <div id="rep-list" class="lib-list"></div>
-  <div class="dlg-foot"><button id="btn-rep-close" class="gbtn small">閉じる</button></div>
+  <div class="dlg-foot"><button id="btn-songs-close" class="gbtn small">閉じる</button></div>
 </dialog>
 
 <dialog id="dlg-thanks" class="wide">
@@ -134,6 +129,7 @@
 
 <div id="toast"></div>
 <div id="loader" class="hidden"><div class="loader-inner"><div class="spinner"></div><span id="loader-text">…</span></div></div>
+<span class="ai-badge hidden"></span>
 
 <script type="module" src="piano.js"></script>
 </body>

@@ -378,7 +378,12 @@ export class PianoStage {
     this.poseSeated();
     this.camEye = new THREE.PerspectiveCamera(62, 1, 0.03, 30);
     this.camHands = new THREE.PerspectiveCamera(32, 1, 0.02, 10);
-    this.camPedal = new THREE.PerspectiveCamera(40, 1, 0.02, 10);
+    this.camWide = new THREE.PerspectiveCamera(40, 1, 0.05, 40);
+    // 全体カメラ: 目標点のまわりを回す (ドラッグ = 回転、ホイール = 寄り引き)
+    this.orbit = { target: new THREE.Vector3(0.1, 0.95, -0.3), theta: 0.75, phi: 1.15, radius: 3.0, auto: true };
+    this.view = "wide";          // 上 (または左) の画面: wide | eye | side | top
+    this.layout = "stack";       // stack (上下) | side (左右)
+    this._bindOrbit();
     this.t = 0; this.energy = 0; this.pedalDown = false; this.pedalAmt = 0; this._lastPedalAmt = -1; this._damperInit = false;
     this.handState = { L: { x: keyX(48), y: KEY_TOP_Y + 0.05, z: 0.115 }, R: { x: keyX(72), y: KEY_TOP_Y + 0.05, z: 0.115 } };
     this.notesRef = []; this.pedalRef = [];
@@ -393,11 +398,35 @@ export class PianoStage {
     const w = Math.max(64, Math.floor(r.width)), h = Math.max(64, Math.floor(r.height));
     this.renderer.setSize(w, h, false);
     this.w = w; this.h = h;
-    this.split = Math.round(h * 0.58);
-    this.camEye.aspect = w / this.split; this.camEye.updateProjectionMatrix();
-    this.camHands.aspect = w / (h - this.split); this.camHands.updateProjectionMatrix();
-    this.pip = { w: Math.round(w * 0.30), h: Math.round(h * 0.19) };
-    this.camPedal.aspect = this.pip.w / this.pip.h; this.camPedal.updateProjectionMatrix();
+    if (this.layout === "side") {
+      this.split = Math.round(w * 0.6);
+      this.rects = { main: [0, 0, this.split, h], hands: [this.split, 0, w - this.split, h] };
+    } else {
+      this.split = Math.round(h * 0.58);
+      this.rects = { main: [0, h - this.split, w, this.split], hands: [0, 0, w, h - this.split] };
+    }
+    for (const c of [this.camEye, this.camWide]) { c.aspect = this.rects.main[2] / this.rects.main[3]; c.updateProjectionMatrix(); }
+    this.camHands.aspect = this.rects.hands[2] / this.rects.hands[3]; this.camHands.updateProjectionMatrix();
+  }
+  setLayout(layout) { this.layout = layout; this._resize(); }
+  setView(view) {
+    this.view = view;
+    const o = this.orbit; o.auto = false;
+    if (view === "wide") { o.theta = 0.75; o.phi = 1.15; o.radius = 3.0; o.auto = true; }
+    if (view === "side") { o.theta = Math.PI / 2 + 0.05; o.phi = 1.35; o.radius = 2.6; }
+    if (view === "top") { o.theta = 0.2; o.phi = 0.35; o.radius = 2.8; }
+    if (view === "front") { o.theta = Math.PI + 0.35; o.phi = 1.25; o.radius = 3.2; }
+  }
+  _bindOrbit() {
+    const cv = this.canvas; const o = this.orbit;
+    let drag = null;
+    const inMain = (x, y) => { const [rx, ry, rw, rh] = this.rects.main; const gy = this.h - y; return x >= rx && x <= rx + rw && gy >= ry && gy <= ry + rh; };
+    cv.addEventListener("pointerdown", (e) => { const r = cv.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top; if (!inMain(x, y) || this.view === "eye") return; drag = { x: e.clientX, y: e.clientY, theta: o.theta, phi: o.phi }; cv.setPointerCapture(e.pointerId); o.auto = false; });
+    cv.addEventListener("pointermove", (e) => { if (!drag) return; o.theta = drag.theta - (e.clientX - drag.x) * 0.006; o.phi = clamp(drag.phi - (e.clientY - drag.y) * 0.005, 0.25, 1.5); });
+    const up = (e) => { if (!drag) return; drag = null; try { cv.releasePointerCapture(e.pointerId); } catch {} };
+    cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+    cv.addEventListener("wheel", (e) => { const r = cv.getBoundingClientRect(); if (!inMain(e.clientX - r.left, e.clientY - r.top)) return; e.preventDefault(); o.radius = clamp(o.radius * (e.deltaY > 0 ? 1.08 : 0.92), 0.9, 7); o.auto = false; }, { passive: false });
+    cv.addEventListener("dblclick", () => { if (this.view !== "eye") this.setView("wide"); });
   }
 
   poseSeated() {
@@ -405,12 +434,13 @@ export class PianoStage {
     this.robot.position.set(0, 0.5 + 1.0 * ROBOT_SCALE, 0.64);
     this.robot.rotation.y = Math.PI;
     B.Hips.rotation.set(0, 0, 0);
-    for (const s of ["Left", "Right"]) {
-      B[s + "UpLeg"].rotation.set(-Math.PI / 2 + 0.08, 0, (s === "Left" ? -1 : 1) * 0.10);
-      B[s + "Leg"].rotation.set(Math.PI / 2 - 0.42, 0, 0);
-      B[s + "Foot"].rotation.set(0.42 - 0.08, 0, 0);
-    }
-    B.RightUpLeg.rotation.z = 0.06;
+    // 左足: ペダルから離して床に平らに (少し外側・手前)。右足: サスティンペダルの上 (踵は床)
+    B.LeftUpLeg.rotation.set(-Math.PI / 2 + 0.25, 0.05, -0.34);
+    B.LeftLeg.rotation.set(Math.PI / 2 - 0.55, 0, 0);
+    B.LeftFoot.rotation.set(0.30, 0, 0.05);
+    B.RightUpLeg.rotation.set(-Math.PI / 2 + 0.08, 0, 0.02);
+    B.RightLeg.rotation.set(Math.PI / 2 - 0.42, 0, 0);
+    B.RightFoot.rotation.set(0.34, 0, 0);
     B.LeftShoulder.rotation.set(0, 0, -0.05); B.RightShoulder.rotation.set(0, 0, 0.05);
     this.robot.updateMatrixWorld(true);
     this.armLen = { upper: SKELETON.LeftForeArm[0] * ROBOT_SCALE, fore: SKELETON.LeftHand[0] * ROBOT_SCALE };
@@ -577,18 +607,19 @@ export class PianoStage {
     const hx = lerp(this.camHands.position.x || cx, cx * 0.8, Math.min(1, dt * 2));
     this.camHands.position.set(hx, 1.12, 0.30);
     this.camHands.lookAt(hx * 0.85, KEY_TOP_Y - 0.02, -0.07);
-    // カメラ 3: ペダルと右足
-    this.camPedal.position.set(0.38, 0.24, 0.42);
-    this.camPedal.lookAt(0.085, 0.08, -0.08);
+    // カメラ 3: 全体 (回せる)。auto のときはゆっくり回る
+    const o = this.orbit;
+    if (o.auto) o.theta += dt * 0.04;
+    this.camWide.position.set(o.target.x + o.radius * Math.sin(o.phi) * Math.sin(o.theta), o.target.y + o.radius * Math.cos(o.phi), o.target.z + o.radius * Math.sin(o.phi) * Math.cos(o.theta));
+    this.camWide.lookAt(o.target);
   }
 
   render() {
-    const r = this.renderer; const w = this.w, h = this.h, sp = this.split;
+    const r = this.renderer;
+    const main = this.view === "eye" ? this.camEye : this.camWide;
     r.setScissorTest(true);
-    r.setViewport(0, h - sp, w, sp); r.setScissor(0, h - sp, w, sp); r.render(this.scene, this.camEye);
-    r.setViewport(0, 0, w, h - sp); r.setScissor(0, 0, w, h - sp); r.render(this.scene, this.camHands);
-    const pw = this.pip.w, ph = this.pip.h;
-    r.setViewport(8, h - sp + 8, pw, ph); r.setScissor(8, h - sp + 8, pw, ph); r.render(this.scene, this.camPedal);
+    const [mx, my, mw, mh] = this.rects.main; r.setViewport(mx, my, mw, mh); r.setScissor(mx, my, mw, mh); r.render(this.scene, main);
+    const [hx, hy, hw, hh] = this.rects.hands; r.setViewport(hx, hy, hw, hh); r.setScissor(hx, hy, hw, hh); r.render(this.scene, this.camHands);
     r.setScissorTest(false);
   }
 }

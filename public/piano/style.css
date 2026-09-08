@@ -89,3 +89,39 @@ a.gbtn { text-decoration: none; display: inline-flex; align-items: center; }
 #stage-jam.on { display: block; }
 #stage-pip { position: absolute; left: 8px; width: 30%; height: 19%; top: calc(58% - 19% - 8px); border: 1px solid rgba(255,255,255,.4); border-radius: 3px; pointer-events: none; box-shadow: 0 0 0 1px rgba(0,0,0,.6); }
 #stage-pip::after { content: "PEDAL / RIGHT FOOT"; position: absolute; left: 6px; top: 4px; font-family: var(--font-mono); font-size: 9px; letter-spacing: 1px; color: #cfcfcf; text-shadow: 0 0 4px #000; }
+
+/* ═══════════ v3: ピアノロールだけ + お題バー + 舞台は常時 ═══════════ */
+body.piano-app #arrange-wrap { display: none; }
+body.piano-app #center { display: flex; flex-direction: column; min-width: 0; }
+body.piano-app #proll-head { padding: 6px 12px; display: flex; align-items: center; gap: 12px; }
+body.piano-app #proll-head .song-title { font-family: var(--font-display); letter-spacing: 2px; font-size: 14px; color: #fff; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.piano-app #proll-hint { margin-left: auto; text-align: right; }
+body.piano-app #proll-wrap { flex: 1; min-height: 0; }
+#prompt-bar { display: flex; gap: 8px; align-items: center; padding: 8px 12px; background: #0a0a0a; border-top: 1px solid #3a3a3a; }
+#prompt-bar .mode-tabs { display: flex; border: 1px solid #3a3a3a; border-radius: 6px; overflow: hidden; }
+#prompt-bar .mtab { background: #0e0e0e; color: #8a8a8a; border: none; padding: 7px 14px; font-weight: 700; cursor: pointer; letter-spacing: 1px; }
+#prompt-bar .mtab.on { background: #f0f0f0; color: #000; }
+#prompt-bar input { flex: 1; background: #000; color: #f0f0f0; border: 1px solid #3a3a3a; border-radius: 6px; padding: 8px 10px; font-family: var(--font-body); font-size: 13px; }
+#prompt-bar input:focus { outline: none; border-color: #cfcfcf; }
+#prompt-bar select { background: #000; color: #d0d0d0; border: 1px solid #3a3a3a; border-radius: 6px; padding: 7px 8px; font-family: var(--font-mono); font-size: 11px; }
+#prompt-bar #btn-go { padding: 0 16px; height: 34px; }
+#status-bar { padding: 4px 12px 6px; background: #0a0a0a; font-family: var(--font-mono); font-size: 10.5px; color: #9a9a9a; min-height: 22px; white-space: pre-wrap; max-height: 64px; overflow-y: auto; border-top: 1px solid #1c1c1c; }
+#status-bar .lit { color: var(--lit); }
+body.piano-app #aipanel { width: 36%; min-width: 400px; }
+#stage { position: absolute; inset: 0; }
+#stage-tools { position: absolute; left: 10px; bottom: 10px; display: flex; gap: 4px; }
+.vbtn { background: rgba(0,0,0,.6); color: #cfcfcf; border: 1px solid #3a3a3a; border-radius: 4px; font-family: var(--font-mono); font-size: 10px; padding: 3px 8px; cursor: pointer; }
+.vbtn:hover { color: #fff; border-color: #cfcfcf; }
+.vbtn.on { background: #f0f0f0; color: #000; border-color: #f0f0f0; }
+#stage-label-hands { position: absolute; right: 10px; bottom: 10px; font-family: var(--font-display); letter-spacing: 3px; font-size: 11px; color: #8a8a8a; pointer-events: none; }
+#stage .divider { position: absolute; left: 0; right: 0; top: 58%; height: 1px; background: rgba(255,255,255,.18); pointer-events: none; }
+/* 全画面: 左 = 全体, 右 = 指先 */
+body.stage-full #aipanel { position: fixed; inset: 0; width: 100vw; min-width: 0; z-index: 50; border: none; }
+body.stage-full #stage .divider { top: 0; bottom: 0; left: 60%; right: auto; width: 1px; height: auto; }
+body.stage-full #stage-tools { bottom: 14px; left: 14px; }
+body.stage-full #stage-label-hands { bottom: 14px; }
+body.stage-full #stage-hud { font-size: 13px; }
+body.stage-full #stage-title { font-size: 18px; }
+body.piano-app .gbtn.tiny { white-space: nowrap; }
+body.piano-app .transport { flex-wrap: nowrap; }
+body.piano-app #topbar { gap: 10px; }

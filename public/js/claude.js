@@ -5,7 +5,8 @@
 
 const LS_KEY = "bluegarage:settings:v1";
 export const MODELS = [
-  { id: "claude-opus-5", label: "Claude Opus 5 (最高品質)" },
+  { id: "claude-opus-5", label: "Claude Opus 5 (高品質)" },
+  { id: "claude-fable-5-1", label: "Claude Fable 5.1 (最上位)" },
   { id: "claude-sonnet-5", label: "Claude Sonnet 5 (速い)" },
 ];
 export const DEFAULT_MODEL = "claude-opus-5";

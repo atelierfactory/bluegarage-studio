@@ -608,6 +608,7 @@ export function buildPianoRequest({ song, range, mode, previousNotes, previousPe
   if (mode === "continue") modeText = `## モード: 続きを生成\n直前の範囲から自然につながるように (モチーフ・伴奏の型・手の位置を引き継ぐ)。直前の演奏 (s は直前範囲の先頭基準):\n${JSON.stringify(previousNotes ?? []).slice(0, 40000)}\n直前のペダル: ${JSON.stringify(previousPedal ?? [])}${previousPerformanceNotes ? `\n直前範囲の演奏意図: ${previousPerformanceNotes}` : ""}`;
   if (mode === "revise") modeText = `## モード: 手直し (校閲役)\n下の演奏の、検査で見つかった問題だけを最小限に直して、範囲全体の完全版を返す。音楽は変えない。\n\n### 問題\n${(issues ?? []).map((i) => `- ${i}`).join("\n")}\n\n### 演奏\n${JSON.stringify(revisedNotes ?? []).slice(0, 80000)}`;
   if (mode === "variation") modeText = `## モード: 作り直し\n同じ曲想で別のテイクを作る。元の演奏 (参考):\n${JSON.stringify(previousNotes ?? []).slice(0, 40000)}`;
+  if (mode === "polish") modeText = `## モード: 磨き上げ (名ピアニストの推敲)\n下は自分が打ち込んだ演奏の完成版候補。これを「本番の録音」に出せる水準まで磨く。やること: (1) フレーズの山と谷 (強弱の設計) を明確に (2) 声部進行 (内声の動き、ベースラインの歌) を滑らかに (3) 単調な繰り返しは 2 回目を少し変える (4) ペダルの踏み替えを和声と合わせ、濁りを消す (5) 運指を弾きやすく見直す (6) 音楽的に弱い小節を書き直す。良い部分は残す。範囲全体の完全版を返す。\n\n### 演奏\n${JSON.stringify(revisedNotes ?? []).slice(0, 80000)}`;
   const userText = `次のピアノ独奏を打ち込んでください (両手・運指・ペダル付き)。
 
 ## 曲情報
@@ -627,7 +628,7 @@ ${secs.join("\n") || "(セクション情報なし)"}
 ${chordText}
 
 ${modeText}`;
-  return { system: SYSTEM_PIANIST, userText, schema: PIANO_NOTES_SCHEMA, label: mode === "revise" ? "revise" : "piano" };
+  return { system: SYSTEM_PIANIST, userText, schema: PIANO_NOTES_SCHEMA, label: mode === "revise" ? "revise" : mode === "polish" ? "polish" : "piano" };
 }
 
 export const SYSTEM_CHAT_PIANO = `あなたは VESPER PIANO (ロボットのピアニスト VESPER-01 が弾く、AI ネイティブのピアノ作曲ツール) の中にいる、腕利きの作曲家兼ピアニストです。ユーザーは右のチャットで話しかけ、あなたは道具 (tool) で曲を作り、直し、弾かせ、書き出します。
