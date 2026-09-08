@@ -366,6 +366,7 @@ export class PianoStage {
     const fill = new THREE.PointLight(0xffe6c4, 5, 5, 1.6); fill.position.set(0.6, 1.5, 1.6); this.scene.add(fill);
     const inside = new THREE.PointLight(0xffe9c8, 3.5, 2.6, 1.6); inside.position.set(0.1, 1.25, -0.9); this.scene.add(inside);
     const handLamp = new THREE.PointLight(0xffffff, 4, 2.0, 1.8); handLamp.position.set(0, 1.35, 0.3); this.scene.add(handLamp);
+    const pedalLamp = new THREE.PointLight(0xfff0d8, 2.2, 1.4, 1.6); pedalLamp.position.set(0.35, 0.45, 0.35); this.scene.add(pedalLamp); // ペダルと右足 (小窓用)
     const floor = shadowed(new THREE.Mesh(new THREE.CircleGeometry(7, 64), P.floor)); floor.rotation.x = -Math.PI / 2; this.scene.add(floor);
     this.piano = buildPiano(this.scene);
     this.bones = buildSkeleton();
@@ -577,8 +578,8 @@ export class PianoStage {
     this.camHands.position.set(hx, 1.12, 0.30);
     this.camHands.lookAt(hx * 0.85, KEY_TOP_Y - 0.02, -0.07);
     // カメラ 3: ペダルと右足
-    this.camPedal.position.set(0.42, 0.26, 0.55);
-    this.camPedal.lookAt(0.06, 0.07, -0.06);
+    this.camPedal.position.set(0.38, 0.24, 0.42);
+    this.camPedal.lookAt(0.085, 0.08, -0.08);
   }
 
   render() {

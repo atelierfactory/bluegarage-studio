@@ -79,7 +79,7 @@ on("song", () => { syncTransportFields(); if (stage) { const tr = selectedTrack(
 /* ─────────── stage (VESPER) ─────────── */
 let stage = null;
 let stageVisible = false;
-function ensureStage() { if (!stage) { stage = new PianoStage($("#stage-canvas")); window.vesperStage = stage; const d = document.createElement("div"); d.className = "divider"; $("#stage").appendChild(d); const j = document.createElement("div"); j.id = "stage-jam"; $("#stage").appendChild(j); } return stage; }
+function ensureStage() { if (!stage) { stage = new PianoStage($("#stage-canvas")); window.vesperStage = stage; const d = document.createElement("div"); d.className = "divider"; $("#stage").appendChild(d); const j = document.createElement("div"); j.id = "stage-jam"; $("#stage").appendChild(j); const pip = document.createElement("div"); pip.id = "stage-pip"; $("#stage").appendChild(pip); } return stage; }
 function showStage(show) {
   stageVisible = show;
   $("#stage").classList.toggle("hidden", !show);
@@ -90,6 +90,9 @@ let lastFrame = performance.now();
 function frame(now) {
   requestAnimationFrame(frame);
   if (!stage || !stageVisible) return;
+  // 表示直後にサイズが取れていないことがあるので、毎フレーム実寸と照らす
+  const cw = stage.canvas.clientWidth, ch = stage.canvas.clientHeight;
+  if (cw > 0 && ch > 0 && (Math.abs(cw - stage.w) > 1 || Math.abs(ch - stage.h) > 1)) stage._resize();
   const dt = Math.min(0.05, (now - lastFrame) / 1000); lastFrame = now;
   const beat = audio.currentBeat();
   stage.update(beat, (b) => beatToSec(b), dt, state.playing);
