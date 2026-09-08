@@ -242,9 +242,11 @@ export class PianoRoll {
       }
       if (e.shiftKey) {
         this.scrollX = Math.max(0, this.scrollX + e.deltaY / this.pxPerBeat);
-      } else {
-        this.scrollY = Math.max(12, Math.min(126, this.scrollY + (e.deltaY > 0 ? -2 : 2)));
+      } else if (Math.abs(e.deltaX) >= Math.abs(e.deltaY)) {
+        // 横スワイプ (トラックパッド): 横だけ動かす。縦のわずかな揺れは無視
         this.scrollX = Math.max(0, this.scrollX + e.deltaX / this.pxPerBeat);
+      } else {
+        this.scrollY = Math.max(12, Math.min(126, this.scrollY + (e.deltaY > 0 ? -1 : 1)));
       }
       this.draw();
     }, { passive: false });

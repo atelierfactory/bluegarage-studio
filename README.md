@@ -61,7 +61,8 @@ node tools/compose.mjs --prompt "曲のイメージ" --name my-song      # 設�
 曲は Claude が **音符ごとの手 (L/R)・指 (1〜5)・ペダル区間** まで決めて作り、`critic.js` の `analyzePiano` が「人の手で弾けるか」(片手 5 音・同じ指の重複・広がり 9 度超・左右の交差・指順) を検査して直させる。ペダルは再生 (音が伸びる)・MIDI (CC64)・舞台 (右足) で一致。ピアノロールでは右手が青、左手がオレンジ、音符に指番号、下に PEDAL の帯。選んだ音符に 1〜5 で指、L/R で手、P でペダルを付けられる。
 画面は黒・白・銀で、点灯するもの（いま鳴っている音・再生位置・ペダル）だけ金。上の画面は VESPER の目線、下は手元のアップ、左上の小窓はペダルと右足。ピアノは弦 1 本ずつ・ハンマー・ダンパー・鋳鉄フレーム・銘板まで組んだ一般的なコンサートグランド（特定メーカーの意匠は写していない）。
 **JAM**（即興）: 定番の進行・伴奏型・モチーフの「手札」を混ぜながら弾き続ける。手札は Claude が 1 回作ってブラウザに保存、混ぜるのはブラウザの中だけなので API を呼ばずに何時間でも弾ける。
-**レパートリー**（♪）: 著作権切れの名曲（The Entertainer / Für Elise / Clair de Lune / Chopin 新練習曲第 1 番、Mutopia Project の Public Domain 版）と、自分で用意した MIDI を読み込んで、手と指を自動で付けて弾かせる。著作権のある曲は同梱しない・生成もしない。
+**既存の曲**: 著作権切れの名曲（The Entertainer / Für Elise / Clair de Lune / Chopin 新練習曲第 1 番、Mutopia Project の Public Domain 版）。The Entertainer は、楽譜はそのままに **Claude Fable 5.1 が演奏家として強弱・間・音の切り方・手と指・ペダルを全部決めた「演奏解釈版」**（`repertoire/entertainer.vesper.json`。`tools` 無しでブラウザの `window.vesperInterpret({model})` で作れる）。自分の MIDI も読み込める（手と指は自動、ペダル CC64 も読む）。著作権のある曲は同梱しない・生成もしない。
+**即興の手札**: `public/piano/banks/` に 20 スタイル・1320 パターン（進行 / 左手の型 / 右手のモチーフ / フィル、度数書き。`tools/make-banks.mjs` で Fable 5.1 が作成）。お題の言葉から近いスタイルを選び、ブラウザの中だけで混ぜて何時間でも弾く。
 **♥**: この楽器 Salamander Grand Piano への感謝と来歴。
 公開先: https://atelierfactory.github.io/bluegarage-studio/piano/
 

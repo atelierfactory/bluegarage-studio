@@ -15,6 +15,7 @@ export function parseMidi(buffer) {
   let pos = 14;
   const tracks = [];
   const tempos = [];      // {tick, uspq}
+  const ccEvents = [];    // {tick, cc, v, ch}
   let timeSig = null;
   for (let t = 0; t < nTracks && pos + 8 <= bytes.length; t++) {
     if (str(bytes, pos, pos + 4) !== "MTrk") { pos += 8 + u32(pos + 4); continue; }
@@ -37,6 +38,7 @@ export function parseMidi(buffer) {
         running = status;
         const type = status & 0xf0, ch = status & 0x0f;
         const d1 = bytes[pos++]; const d2 = type === 0xc0 || type === 0xd0 ? 0 : bytes[pos++];
+        if (type === 0xb0) ccEvents.push({ tick, cc: d1, v: d2, ch });
         if (type === 0x90 && d2 > 0) { const k = `${ch}:${d1}`; if (on.has(k)) { const o = on.get(k); notes.push({ p: d1, tick: o.tick, dur: Math.max(1, tick - o.tick), v: o.v, ch }); } on.set(k, { tick, v: d2 }); }
         else if (type === 0x80 || (type === 0x90 && d2 === 0)) { const k = `${ch}:${d1}`; const o = on.get(k); if (o) { notes.push({ p: d1, tick: o.tick, dur: Math.max(1, tick - o.tick), v: o.v, ch }); on.delete(k); } }
       }
@@ -50,5 +52,12 @@ export function parseMidi(buffer) {
   const out = [];
   for (const tr of tracks) for (const n of tr.notes) out.push({ p: n.p, s: n.tick / tpq, d: n.dur / tpq, v: n.v, track: tr.index, ch: n.ch, trackName: tr.name });
   out.sort((a, b) => a.s - b.s || a.p - b.p);
-  return { format, tpq, tempo: Math.round(bpm0 * 100) / 100, tempos: tempos.map((t) => ({ beat: t.tick / tpq, tempo: 60000000 / t.uspq })), timeSig: timeSig ?? { num: 4, den: 4 }, tracks: tracks.map((t) => ({ index: t.index, name: t.name, count: t.notes.length })), notes: out };
+  // サスティンペダル (CC64): 踏んでいる区間に
+  const pedal = [];
+  let down = null;
+  for (const e of ccEvents.filter((x) => x.cc === 64).sort((a, b) => a.tick - b.tick)) {
+    if (e.v >= 64 && down == null) down = e.tick;
+    else if (e.v < 64 && down != null) { if (e.tick > down) pedal.push({ s: down / tpq, d: (e.tick - down) / tpq }); down = null; }
+  }
+  return { format, tpq, pedal, tempo: Math.round(bpm0 * 100) / 100, tempos: tempos.map((t) => ({ beat: t.tick / tpq, tempo: 60000000 / t.uspq })), timeSig: timeSig ?? { num: 4, den: 4 }, tracks: tracks.map((t) => ({ index: t.index, name: t.name, count: t.notes.length })), notes: out };
 }

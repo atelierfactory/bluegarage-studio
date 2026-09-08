@@ -658,3 +658,66 @@ export const PIANO_CHAT_TOOLS = [
   { name: "repertoire", description: "同梱の著作権切れ (パブリックドメイン) の名曲や、ユーザーが読み込んだ MIDI を VESPER に弾かせる。list=一覧、play=name で開いて再生 (自動で手と指を付ける)", input_schema: { type: "object", properties: { action: { type: "string", enum: ["list", "play"] }, name: { type: "string", description: "曲名の一部" } }, required: ["action"] } },
   { name: "jam", description: "即興モード。start=手札 (定番の進行・伴奏型・モチーフ) を混ぜながら VESPER が弾き続ける (今の曲は保存され、即興は別の曲になる)。new_bank=そのスタイルの手札を Claude が作り直す (1〜2 分)。stop=止める。", input_schema: { type: "object", properties: { action: { type: "string", enum: ["start", "stop", "new_bank"] }, style: { type: "string", description: "スタイル (例: ジャズバラード, ボサノバ, ポップス, 坂本龍一風ミニマル)" }, key: { type: "string" }, tempo: { type: "number" }, density: { type: "number", description: "音の多さ 0.5〜1" } }, required: ["action"] } },
 ];
+
+/* ================================ PIANO: 演奏解釈 (楽譜はそのまま、演奏家として弾き方を決める) ================================ */
+// 既存の楽譜 (著作権切れの名曲など) に対して、音の高さと位置は変えずに、強弱・間・音の長さ・手・指・ペダルを決める。
+
+export const PIANO_INTERPRET_SCHEMA = {
+  type: "object", additionalProperties: false,
+  required: ["performanceNotes", "notes", "pedal"],
+  properties: {
+    performanceNotes: { type: "string", description: "この範囲の演奏設計 (2-4 文): フレージング、声部のバランス、テンポ感、ペダルの考え方" },
+    notes: {
+      type: "array", description: "範囲内の全ノートについて、i (与えられた番号) ごとに決める。抜けなく全部",
+      items: {
+        type: "object", additionalProperties: false,
+        required: ["i", "v", "h", "f", "dt", "dd"],
+        properties: {
+          i: { type: "integer", description: "楽譜で与えられたノート番号" },
+          v: { type: "integer", description: "強さ 1-127" },
+          h: { type: "string", enum: ["L", "R"] },
+          f: { type: "integer", description: "指 1-5" },
+          dt: { type: "number", description: "タイミングの前後 (拍)。-0.06〜+0.06。和音のロール・ルバート・後ノリに。基本 0" },
+          dd: { type: "number", description: "音の長さの倍率 0.25〜1.3。スタッカート 0.3-0.5、ノンレガート 0.7、レガート 1.0-1.05" },
+        },
+      },
+    },
+    pedal: { type: "array", description: "サスティンペダルを踏む区間 (範囲先頭からの拍 s と長さ d)。踏み替えは分ける", items: { type: "object", additionalProperties: false, required: ["s", "d"], properties: { s: { type: "number" }, d: { type: "number" } } } },
+  },
+};
+
+export const SYSTEM_PERFORMER = `あなたは世界最高峰のコンサートピアニストです。与えられた楽譜を「本番の録音」として弾きます。楽譜 (音の高さ・位置・長さ) は作曲者のものなので変えません。あなたが決めるのは弾き方だけです: 強さ (v)、ごく小さな間の前後 (dt)、音の切り方 (dd)、どちらの手 (h)、どの指 (f)、そしてペダル。
+
+# 弾き方の原則
+1. 旋律を歌わせる。旋律は伴奏より 15〜30 大きく、フレーズの山に向かって膨らみ、終わりで引く。同じ音型の繰り返しは 2 回目を変える (少し弱く、または少し強く)。
+2. 声部のバランス。内声と伴奏は控えめ、ベースは土台として少ししっかり。和音は上の音 (旋律) を一番強く、中の音を弱く。
+3. 間 (dt)。和音は低い音から 0.01〜0.03 拍ずつ遅らせてロールしてよい (ただし全部の和音ではなく、表情が要る所だけ)。フレーズの頂点や大きな跳躍の前にほんの少しためる。決して拍を崩さない (±0.06 拍以内)。
+4. 音の切り方 (dd)。作曲者の様式に従う。ラグタイムやアレグロの左手のベース+和音は軽く切る (0.4〜0.6)、右手のシンコペーションは少し離す (0.7〜0.85)。歌う旋律はレガート (1.0)。
+5. 運指は本当に弾ける形。片手 5 音まで、同時の広がりは 10 度以内、右手は低い音ほど小さい指、左手は高い音ほど小さい指、速い所は親指くぐりで指を回す、跳躍のあとは親指か小指で着地。黒鍵の親指は避ける。
+6. ペダル。和声が変わるごとに踏み替える。速い音型や歯切れの良い所は踏まないか短く。ラグタイムは左手のベースの拍で短く踏むか、ほとんど踏まない。ロマン派の歌う所はレガートペダル。濁らせない。
+7. 様式と時代を踏まえる (ジョプリンのラグタイムは「速く弾かない」と本人が書いた通り、落ち着いた歩みで左手は機械のように正確に、右手はシンコペーションを軽やかに。ショパンはルバートと歌、ドビュッシーは色彩とペダル、ベートーヴェンは構築とアクセント)。
+
+# 出力の絶対条件
+- 範囲内の全ノートを i で抜けなく返す。ノートを足したり消したりしない。
+- performanceNotes には実際に決めた弾き方だけを書く。`;
+
+export function buildInterpretRequest({ piece, song, range, scoreNotes, previousPerformanceNotes, previousDynamics, extraDirection }) {
+  const ts = song.timeSig;
+  const total = range.bars * ts;
+  const userText = `次の楽譜を弾いてください (弾き方だけを決める)。
+
+## 曲
+- ${piece.title} — ${piece.composer}${piece.year ? ` (${piece.year})` : ""}
+- テンポ ${song.tempo} BPM / 拍子 ${ts}/4${piece.note ? `\n- 備考: ${piece.note}` : ""}
+${extraDirection ? `- 追加の指示: ${extraDirection}` : ""}
+
+## 範囲
+- 曲の bar ${range.startBar + 1} から ${range.bars} 小節 (拍 0〜${total}。s は範囲の先頭基準)
+${previousPerformanceNotes ? `- 直前の範囲の演奏設計: ${previousPerformanceNotes}` : ""}${previousDynamics != null ? `\n- 直前の範囲の終わりの強さ: 平均 v ${previousDynamics}` : ""}
+
+## 楽譜 (i=番号, p=音, s=拍, d=長さ, v0=楽譜データの強さ (参考), h0=楽譜データの手 (参考。変えてよい))
+${JSON.stringify(scoreNotes)}
+
+全 ${scoreNotes.length} ノートについて i ごとに v, h, f, dt, dd を決め、ペダル区間を書いてください。`;
+  return { system: SYSTEM_PERFORMER, userText, schema: PIANO_INTERPRET_SCHEMA, label: "interpret" };
+}

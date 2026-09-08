@@ -47,8 +47,8 @@ const P = {
   plateDark: new THREE.MeshPhysicalMaterial({ color: 0x7e6428, roughness: 0.6, metalness: 0.7 }),
   steel: new THREE.MeshPhysicalMaterial({ color: 0xd8dadc, roughness: 0.3, metalness: 1.0 }),           // 鋼の弦
   copper: new THREE.MeshPhysicalMaterial({ color: 0xb3672f, roughness: 0.42, metalness: 0.95 }),         // 巻線 (低音)
-  spruce: new THREE.MeshStandardMaterial({ color: 0xd9b57a, roughness: 0.62 }),                          // 響板 (スプルース)
-  maple: new THREE.MeshStandardMaterial({ color: 0x9c6a3a, roughness: 0.55 }),                           // 駒・ピン板
+  spruce: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.62 }),                          // 響板 (スプルース。木目は後で貼る)
+  maple: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55 }),                           // 駒・ピン板
   feltRed: new THREE.MeshStandardMaterial({ color: 0x8a1f2a, roughness: 0.95 }),
   feltWhite: new THREE.MeshStandardMaterial({ color: 0xe9e4d6, roughness: 0.95 }),
   hammerWood: new THREE.MeshStandardMaterial({ color: 0x6b4a2b, roughness: 0.7 }),
@@ -239,20 +239,62 @@ function textPlate(text, w, h, opts = {}) {
   c.strokeStyle = opts.line ?? "#6b5320"; c.lineWidth = 8; c.strokeRect(14, 14, cv.width - 28, cv.height - 28);
   c.fillStyle = opts.fg ?? "#3b2c0c"; c.textAlign = "center"; c.textBaseline = "middle";
   const lines = text.split("\n");
-  const size = opts.size ?? Math.min(72, Math.floor(cv.height / (lines.length + 1.2)));
-  c.font = `${opts.weight ?? "600"} ${size}px 'IBM Plex Mono', monospace`;
+  let size = opts.size ?? Math.min(72, Math.floor(cv.height / (lines.length + 1.2)));
+  // 一番長い行がプレートの幅に収まるまで小さくする
+  for (;;) { c.font = `${opts.weight ?? "600"} ${size}px 'IBM Plex Mono', monospace`; const wmax = Math.max(...lines.map((ln) => c.measureText(ln).width)); if (wmax <= cv.width - 60 || size <= 10) break; size -= 1; }
   lines.forEach((ln, i) => c.fillText(ln, cv.width / 2, cv.height / 2 + (i - (lines.length - 1) / 2) * size * 1.25));
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
   return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshPhysicalMaterial({ map: tex, roughness: 0.35, metalness: 0.8 }));
 }
 
+// 木目 (計算で描く) — 響板のスプルースとピン板のメープル
+function woodTexture({ base = "#d9b57a", grain = "#b98f55", lines = 160, w = 1024, h = 1024, noise = 0.08 } = {}) {
+  const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+  const c = cv.getContext("2d");
+  c.fillStyle = base; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < lines; i++) {
+    const x = (i / lines) * w + (Math.random() - 0.5) * 6;
+    c.strokeStyle = grain; c.globalAlpha = 0.12 + Math.random() * 0.25; c.lineWidth = 0.6 + Math.random() * 1.6;
+    c.beginPath(); c.moveTo(x, 0);
+    for (let y = 0; y <= h; y += 32) c.lineTo(x + Math.sin(y * 0.01 + i) * 3 + (Math.random() - 0.5) * 2, y);
+    c.stroke();
+  }
+  c.globalAlpha = noise;
+  for (let k = 0; k < 4000; k++) { c.fillStyle = Math.random() < 0.5 ? "#000" : "#fff"; c.fillRect(Math.random() * w, Math.random() * h, 1, 1); }
+  c.globalAlpha = 1;
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.anisotropy = 8;
+  return tex;
+}
+// 映り込み用の環境 (暗いホール: 天井の照明と壁の淡い光)
+function makeEnvironment(renderer) {
+  const pm = new THREE.PMREMGenerator(renderer);
+  const env = new THREE.Scene();
+  env.add(new THREE.Mesh(new THREE.SphereGeometry(20, 32, 16), new THREE.MeshBasicMaterial({ color: 0x141414, side: THREE.BackSide })));
+  const lamp = (x, y, z, w, h, col, i) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: col })); m.position.set(x, y, z); m.lookAt(0, 0, 0); m.material.color.multiplyScalar(i); env.add(m); };
+  lamp(0, 8, 2, 6, 3, 0xfff1dc, 6); lamp(-6, 5, -4, 4, 2, 0xbfd8ff, 2.5); lamp(6, 4, -3, 3, 2, 0xffe6c4, 2); lamp(0, 2.5, 9, 8, 1.2, 0xffffff, 0.8);
+  const rt = pm.fromScene(env, 0.04);
+  pm.dispose();
+  return rt.texture;
+}
+
 function buildPiano(scene) {
   const g = new THREE.Group();
+  if (!P.spruce.map) { P.spruce.map = woodTexture({ base: "#dcb97e", grain: "#b58b4e", lines: 220 }); P.spruce.map.repeat.set(2, 2); P.spruce.needsUpdate = true; }
+  if (!P.maple.map) { P.maple.map = woodTexture({ base: "#a8743f", grain: "#7a4f26", lines: 90 }); P.maple.map.repeat.set(3, 3); P.maple.needsUpdate = true; }
   const rim = extrudeOutline(outline(0), RIM_H, P.lacquer, outline(0.032)); rim.position.y = TOP_Y - RIM_H; g.add(rim);
   const bottom = extrudeOutline(outline(0.02), 0.02, P.lacquerMatte); bottom.position.y = TOP_Y - RIM_H; g.add(bottom);
   const board = extrudeOutline(outline(0.035), 0.012, P.spruce); board.position.y = TOP_Y - RIM_H + 0.08; g.add(board);
   for (let i = 0; i < 9; i++) { const rib = new THREE.Mesh(new THREE.BoxGeometry(1.2 - i * 0.05, 0.006, 0.02), P.maple); rib.position.set(-0.05 - i * 0.02, TOP_Y - RIM_H + 0.075, -0.55 - i * 0.16); rib.rotation.y = -0.35; g.add(rib); }
-  const plate = extrudeOutline(outline(0.06), 0.02, P.plate); plate.position.y = TOP_Y - RIM_H + 0.10; g.add(plate);
+  // 鋳鉄フレーム: 響板を響かせる丸い抜き穴を 4 つ
+  const plateShape = outline(0.06);
+  for (const [cx, cz, rx, rz] of [[-0.05, -0.80, 0.16, 0.13], [0.30, -0.75, 0.12, 0.10], [-0.42, -1.25, 0.12, 0.11], [-0.10, -1.30, 0.16, 0.12]]) {
+    const hole = new THREE.Path(); hole.absellipse(cx, -cz, rx, rz, 0, Math.PI * 2, false, 0); plateShape.holes.push(hole);
+  }
+  const plate = extrudeOutline(plateShape, 0.02, P.plate); plate.position.y = TOP_Y - RIM_H + 0.10; g.add(plate);
+  // フレームの縁取り (少し暗い金の帯)
+  const plateEdge = extrudeOutline(outline(0.055), 0.004, P.plateDark, outline(0.085)); plateEdge.position.y = TOP_Y - RIM_H + 0.12; g.add(plateEdge);
+  // 弦の下の緑のフェルト (ピン板の手前)
+  const felt = new THREE.Mesh(new THREE.BoxGeometry(HALF_W * 2 - 0.14, 0.004, 0.05), new THREE.MeshStandardMaterial({ color: 0x2f5a3a, roughness: 0.95 })); felt.position.set(0, TOP_Y - RIM_H + 0.158, -0.40); g.add(felt);
   const struts = [[-0.55, -0.35, -0.62, -1.75], [-0.2, -0.35, -0.36, -1.85], [0.15, -0.35, -0.12, -1.55], [0.45, -0.35, 0.25, -1.15], [0.68, -0.35, 0.62, -0.75]];
   for (const [x0, z0, x1, z1] of struts) { const len = Math.hypot(x1 - x0, z1 - z0); const bar = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.05, len), P.plateDark)); bar.position.set((x0 + x1) / 2, TOP_Y - RIM_H + 0.145, (z0 + z1) / 2); bar.rotation.y = Math.atan2(x1 - x0, -(z1 - z0)); g.add(bar); }
   const pinblock = shadowed(new THREE.Mesh(new THREE.BoxGeometry(HALF_W * 2 - 0.08, 0.05, 0.14), P.plateDark)); pinblock.position.set(0, TOP_Y - RIM_H + 0.13, -0.30); g.add(pinblock);
@@ -287,6 +329,15 @@ function buildPiano(scene) {
   const pinMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.0035, 0.0035, 0.06, 8), P.silver, pins.length);
   pins.forEach((pn, i) => { tmp.position.set(pn.x, pn.y, pn.z); tmp.rotation.set(0, 0, 0); tmp.scale.set(1, 1, 1); tmp.updateMatrix(); pinMesh.setMatrixAt(i, tmp.matrix); });
   g.add(pinMesh);
+  // アグラフ (中高音の弦の始点を押さえる真鍮の小さな金具) とヒッチピン (弦の終点)
+  const agGeo = new THREE.BoxGeometry(0.009, 0.006, 0.007);
+  const agraffes = strings.filter((st) => !st.wound);
+  const agMesh = new THREE.InstancedMesh(agGeo, P.brass, agraffes.length);
+  agraffes.forEach((st, i) => { tmp.position.set(st.x0 + (st.x1 - st.x0) * 0.04, st.y - 0.002, st.z0 + (st.z1 - st.z0) * 0.04); tmp.rotation.set(0, Math.atan2(st.x1 - st.x0, -(st.z1 - st.z0)), 0); tmp.scale.set(1, 1, 1); tmp.updateMatrix(); agMesh.setMatrixAt(i, tmp.matrix); });
+  g.add(agMesh);
+  const hitchMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.0025, 0.0025, 0.02, 6), P.silver, strings.length);
+  strings.forEach((st, i) => { tmp.position.set(st.x1, st.y - 0.004, st.z1); tmp.rotation.set(0, 0, 0); tmp.scale.set(1, 1, 1); tmp.updateMatrix(); hitchMesh.setMatrixAt(i, tmp.matrix); });
+  g.add(hitchMesh);
   // ── 駒
   const bridgePts = strings.filter((s) => !s.wound && s.p % 4 === 1).map((s) => ({ x: s.x1 + (s.x0 - s.x1) * 0.06, z: s.z1 + (s.z0 - s.z1) * 0.06 }));
   for (let i = 1; i < bridgePts.length; i++) { const a = bridgePts[i - 1], b = bridgePts[i]; const len = Math.hypot(b.x - a.x, b.z - a.z); const seg = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.028, len + 0.006), P.maple); seg.position.set((a.x + b.x) / 2, TOP_Y - RIM_H + 0.165, (a.z + b.z) / 2); seg.rotation.y = Math.atan2(b.x - a.x, -(b.z - a.z)); g.add(seg); }
@@ -305,9 +356,25 @@ function buildPiano(scene) {
     const black = isBlack(p);
     const pivot = new THREE.Object3D();
     pivot.position.set(keyX(p), black ? KEY_TOP_Y + 0.004 : KEY_TOP_Y - KEY_H / 2, -WHITE_L - 0.02);
-    const geo = black ? new THREE.BoxGeometry(BLACK_W, KEY_H * 0.95, BLACK_L) : new THREE.BoxGeometry(WHITE_W - 0.0012, KEY_H, WHITE_L + 0.02);
+    let geo;
+    if (black) { geo = new THREE.BoxGeometry(BLACK_W, KEY_H * 0.95, BLACK_L); }
+    else {
+      // 白鍵は奥で黒鍵をよける L 字 / T 字。左右どちらに黒鍵があるかで奥の幅を削る
+      const gap = 0.0006, fullW = WHITE_W - gap * 2;
+      const leftBlack = p > LOW && isBlack(p - 1), rightBlack = p < HIGH && isBlack(p + 1);
+      const cutL = leftBlack ? (keyX(p - 1) + BLACK_W / 2 + gap) - (keyX(p) - WHITE_W / 2) : 0;
+      const cutR = rightBlack ? (keyX(p) + WHITE_W / 2) - (keyX(p + 1) - BLACK_W / 2 - gap) : 0;
+      const backLen = BLACK_L + 0.006, frontLen = WHITE_L + 0.02 - backLen;
+      const sh = new THREE.Shape();
+      const x0 = -fullW / 2, x1 = fullW / 2;
+      sh.moveTo(x0, 0); sh.lineTo(x1, 0); sh.lineTo(x1, frontLen); sh.lineTo(x1 - Math.max(0, cutR), frontLen); sh.lineTo(x1 - Math.max(0, cutR), frontLen + backLen); sh.lineTo(x0 + Math.max(0, cutL), frontLen + backLen); sh.lineTo(x0 + Math.max(0, cutL), frontLen); sh.lineTo(x0, frontLen); sh.lineTo(x0, 0);
+      geo = new THREE.ExtrudeGeometry(sh, { depth: KEY_H, bevelEnabled: true, bevelThickness: 0.0008, bevelSize: 0.0008, bevelSegments: 2 });
+      geo.rotateX(-Math.PI / 2); // shape の y → -z。奥 (frontLen+backLen) が -z 側になるので反転して手前が +z
+      geo.rotateY(Math.PI);
+      geo.translate(0, -KEY_H / 2, WHITE_L + 0.02);
+    }
     const mesh = shadowed(new THREE.Mesh(geo, black ? P.ebony : P.ivory));
-    mesh.position.set(0, black ? KEY_H * 0.48 : 0, black ? BLACK_L / 2 + 0.02 : (WHITE_L + 0.02) / 2);
+    mesh.position.set(0, black ? KEY_H * 0.48 : 0, black ? BLACK_L / 2 + 0.02 : 0);
     pivot.add(mesh); g.add(pivot);
     keys[p] = { pivot, mesh, black, press: 0, target: 0, idx: p - LOW, hasDamper: p <= 89, dirty: true };
   }
@@ -361,6 +428,8 @@ export class PianoStage {
     this.scene.background = new THREE.Color(0x050505);
     this.scene.fog = new THREE.Fog(0x050505, 7, 16);
     this.scene.add(new THREE.HemisphereLight(0x9a9a9a, 0x0a0a0a, 0.5));
+    this.scene.environment = makeEnvironment(this.renderer); // 漆・金属の映り込み
+    this.scene.environmentIntensity = 0.55;
     const key = new THREE.SpotLight(0xfff1dc, 110, 12, 0.55, 0.55, 1.4); key.position.set(1.6, 3.8, 1.6); key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -0.0003; this.scene.add(key); this.scene.add(key.target); key.target.position.set(0, 0.8, -0.3);
     const rim = new THREE.SpotLight(0xbfd8ff, 35, 10, 0.7, 0.7, 1.4); rim.position.set(-2.4, 2.8, -2.0); this.scene.add(rim);
     const fill = new THREE.PointLight(0xffe6c4, 5, 5, 1.6); fill.position.set(0.6, 1.5, 1.6); this.scene.add(fill);
@@ -490,6 +559,28 @@ export class PianoStage {
     hand.quaternion.slerp(pq.clone().invert().multiply(wq), Math.min(1, dt * 20));
   }
 
+
+  _updateKeys(dt) {
+    const pn = this.piano;
+    const pedalChanged = Math.abs(this.pedalAmt - this._lastPedalAmt) > 1e-3;
+    let mechDirty = false;
+    for (const k of Object.values(pn.keys)) {
+      const prev = k.press;
+      k.press = lerp(k.press, k.target, Math.min(1, dt * (k.target ? 60 : 16)));
+      const moving = Math.abs(k.press - prev) > 1e-4 || k.press > 1e-3;
+      if (!moving && !k.dirty && !pedalChanged) continue;
+      k.dirty = moving;
+      k.pivot.rotation.x = Math.atan(KEY_DIP / (k.black ? BLACK_L : WHITE_L)) * k.press;
+      const swing = Math.min(1, k.press * 1.4);
+      const lift = k.hasDamper ? Math.max(k.press, this.pedalAmt) * 0.012 : 0.02;
+      this._placeMechanics(k, swing, lift);
+      mechDirty = true;
+    }
+    if (!this._damperInit) { for (const k of Object.values(pn.keys)) this._placeMechanics(k, 0, k.hasDamper ? 0 : 0.02); this._damperInit = true; mechDirty = true; }
+    if (mechDirty) pn.hammers.instanceMatrix.needsUpdate = pn.hammerShank.instanceMatrix.needsUpdate = pn.dampers.instanceMatrix.needsUpdate = pn.damperHead.instanceMatrix.needsUpdate = true;
+    this._lastPedalAmt = this.pedalAmt;
+  }
+
   _placeMechanics(k, swing, lift) {
     const pn = this.piano, tmp = pn.tmp, x = keyX(k.idx + LOW);
     tmp.position.set(x, pn.STRING_Y - 0.075 + swing * 0.06, pn.HAMMER_Z); tmp.rotation.set(-0.9 + swing * 0.85, 0, 0); tmp.scale.set(1, 1, 1); tmp.updateMatrix(); pn.hammers.setMatrixAt(k.idx, tmp.matrix);
@@ -502,7 +593,7 @@ export class PianoStage {
     this.t += dt;
     const B = this.bones; const pn = this.piano;
     const nowSec = beatToSec(beat);
-    const LOOK = 0.35;
+    const LOOK = 0.5;
     const active = { L: [], R: [] }, upcoming = { L: [], R: [] };
     let accent = 0;
     for (const n of this.notesRef) {
@@ -521,24 +612,11 @@ export class PianoStage {
     B.RightFoot.rotation.x = 0.42 - 0.08 + this.pedalAmt * 0.14;
     // 鍵・ハンマー・ダンパー
     for (const k of Object.values(pn.keys)) k.target = 0;
-    for (const h of ["L", "R"]) for (const n of active[h]) { const k = pn.keys[n.p]; if (k) k.target = 0.7 + 0.3 * (n.v / 127); }
-    const pedalChanged = Math.abs(this.pedalAmt - this._lastPedalAmt) > 1e-3;
-    let mechDirty = false;
-    for (const k of Object.values(pn.keys)) {
-      const prev = k.press;
-      k.press = lerp(k.press, k.target, Math.min(1, dt * (k.target ? 60 : 16)));
-      const moving = Math.abs(k.press - prev) > 1e-4 || k.press > 1e-3;
-      if (!moving && !k.dirty && !pedalChanged) continue;
-      k.dirty = moving;
-      k.pivot.rotation.x = Math.atan(KEY_DIP / (k.black ? BLACK_L : WHITE_L)) * k.press;
-      const swing = Math.min(1, k.press * 1.4);
-      const lift = k.hasDamper ? Math.max(k.press, this.pedalAmt) * 0.012 : 0.02;
-      this._placeMechanics(k, swing, lift);
-      mechDirty = true;
-    }
-    if (!this._damperInit) { for (const k of Object.values(pn.keys)) this._placeMechanics(k, 0, k.hasDamper ? 0 : 0.02); this._damperInit = true; mechDirty = true; }
-    if (mechDirty) pn.hammers.instanceMatrix.needsUpdate = pn.hammerShank.instanceMatrix.needsUpdate = pn.dampers.instanceMatrix.needsUpdate = pn.damperHead.instanceMatrix.needsUpdate = true;
-    this._lastPedalAmt = this.pedalAmt;
+    // 鍵は「その音を受け持つ指が鍵の上に来た時」に沈む (指が届く前に鍵だけ沈まない)。
+    // 指が遠すぎる場合は 80ms だけ待ってから沈める (音とのずれを大きくしないため)。
+    this._pendingKeys = [];
+    for (const h of ["L", "R"]) for (const n of active[h]) { const k = pn.keys[n.p]; if (k) this._pendingKeys.push({ k, n, h }); }
+    // (鍵の更新は指の判定のあとで行う: _updateKeys)
     // 体
     const density = active.L.length + active.R.length;
     this.energy = lerp(this.energy, clamp(density / 4 + accent * 0.6, 0, 1.2), Math.min(1, dt * 2.5));
@@ -569,7 +647,7 @@ export class PianoStage {
         const blackRatio = list.filter((n) => isBlack(n.p)).length / list.length;
         palmZ = 0.115 - blackRatio * 0.04;
       } else if (playing) palmX = lerp(st.x, h === "L" ? keyX(48) : keyX(72), 0.002);
-      st.x = lerp(st.x, palmX, Math.min(1, dt * (active[h].length ? 28 : 14)));
+      st.x = lerp(st.x, palmX, Math.min(1, dt * (active[h].length ? 40 : 22)));
       st.z = lerp(st.z, palmZ, Math.min(1, dt * 10));
       const palmY = KEY_TOP_Y + 0.05;
       st.y = palmY;
@@ -581,7 +659,7 @@ export class PianoStage {
       hand.fingers.forEach((f, i) => {
         const n = pressing.get(i) ?? nextByF.get(i);
         const p = pressing.has(i) ? 1 : nextByF.has(i) ? 0.3 : 0;
-        f.press = lerp(f.press, p, Math.min(1, dt * (p === 1 ? 50 : 16)));
+        f.press = lerp(f.press, p, Math.min(1, dt * (p === 1 ? 60 : 18)));
         const keyTop = n && isBlack(n.p) ? KEY_TOP_Y + 0.012 : KEY_TOP_Y;
         const restDrop = clamp((palmY - keyTop - 0.018) / f.lenM, 0, 0.95), pressDrop = clamp((palmY - keyTop + 0.006) / f.lenM, 0, 0.98);
         const ang = Math.asin(lerp(restDrop, pressDrop, f.press));
@@ -590,10 +668,22 @@ export class PianoStage {
         let shift = 0;
         if (n) shift = keyX(n.p) - (st.x + fingerOffsetX(h, i));
         const target = clamp(shift / Math.max(0.03, f.lenM * 0.9), -0.8, 0.8);
-        f.spread = lerp(f.spread, target, Math.min(1, dt * 18));
+        f.spread = lerp(f.spread, target, Math.min(1, dt * 26));
         f.root.rotation.y = -Math.asin(f.spread);
       });
     }
+
+    // 鍵を沈める判定 (指先の world x が鍵から 1 鍵分以内、または音が始まって 80ms 過ぎた)
+    const tipPos = new THREE.Vector3();
+    for (const { k, n, h } of this._pendingKeys) {
+      const hand = this.hands[h === "L" ? "Left" : "Right"];
+      const f = hand.fingers[clamp((n.f ?? 3) - 1, 0, 4)];
+      f.tip.getWorldPosition(tipPos);
+      const near = Math.abs(tipPos.x - keyX(n.p)) < WHITE_W * 1.1;
+      const elapsed = nowSec - beatToSec(n.s);
+      if (near || elapsed > 0.08) k.target = 0.7 + 0.3 * (n.v / 127);
+    }
+    this._updateKeys(dt);
 
     // カメラ 1: VESPER の目線
     const eyePos = new THREE.Vector3(); this.robotParts.eye.getWorldPosition(eyePos);

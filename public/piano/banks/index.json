@@ -1,0 +1,262 @@
+[
+ {
+  "id": "jazz-ballad",
+  "name": "ジャズバラード",
+  "tempo": 66,
+  "key": "Eb major",
+  "desc": "ゆったりした 4 分の歩み、テンションの効いた和音、右手はブロックコードと歌う単音、左手はルート+シェルボイシング。ビル・エヴァンス系の色彩",
+  "counts": {
+   "progressions": 12,
+   "lh": 16,
+   "rh": 30,
+   "fills": 8
+  }
+ },
+ {
+  "id": "swing",
+  "name": "スウィング / ビバップ",
+  "tempo": 160,
+  "key": "F major",
+  "desc": "左手はウォーキングベース、右手はスウィングする 8 分のライン、ii-V-I と循環、ブルーノート",
+  "counts": {
+   "progressions": 12,
+   "lh": 16,
+   "rh": 30,
+   "fills": 8
+  }
+ },
+ {
+  "id": "bossa",
+  "name": "ボサノバ",
+  "tempo": 120,
+  "key": "D major",
+  "desc": "左手はベース+裏拍の和音 (ボサのパターン)、右手は柔らかい 9th/13th の旋律、ジョビン系の進行",
+  "counts": {
+   "progressions": 12,
+   "lh": 16,
+   "rh": 30,
+   "fills": 8
+  }
+ },
+ {
+  "id": "ragtime",
+  "name": "ラグタイム",
+  "tempo": 96,
+  "key": "C major",
+  "desc": "左手はストライド (低音-和音-低音-和音)、右手はシンコペーションの旋律、ジョプリン風。速く弾かない",
+  "counts": {
+   "progressions": 12,
+   "lh": 16,
+   "rh": 30,
+   "fills": 8
+  }
+ },
+ {
+  "id": "blues",
+  "name": "ブルース",
+  "tempo": 88,
+  "key": "G major",
+  "desc": "12 小節ブルースと 8 小節ブルース、シャッフル、左手はブギの型、右手はブルーノートとターン",
+  "counts": {
+   "progressions": 12,
+   "lh": 16,
+   "rh": 30,
+   "fills": 8
+  }
+ },
+ {
+  "id": "gospel",
+  "name": "ゴスペル / ソウル",
+  "tempo": 76,
+  "key": "Ab major",
+  "desc": "豊かな和音、経過和音の多い進行、左手はオクターブベース、右手はブロックコードと合いの手",
+  "counts": {
+   "progressions": 12,
+   "lh": 16,
+   "rh": 30,
+   "fills": 8
+  }
+ },
+ {
+  "id": "jpop-ballad",
+  "name": "J-POP バラード",
+  "tempo": 72,
+  "key": "C major",
+  "desc": "4-5-3-6 や 1-5-6-4、サビで盛り上がる、左手はアルペジオ、右手は歌えるメロディ",
+  "counts": {
+   "progressions": 12,
+   "lh": 16,
+   "rh": 30,
+   "fills": 8
+  }
+ },
+ {
+  "id": "citypop",
+  "name": "シティポップ",
+  "tempo": 104,
+  "key": "Ab major",
+  "desc": "メジャー 7th と 9th、ii-V の連続、軽いシンコペーション、左手はオクターブとルート 5 度、都会的",
+  "counts": {
+   "progressions": 12,
+   "lh": 16,
+   "rh": 30,
+   "fills": 8
+  }
+ },
+ {
+  "id": "cinematic",
+  "name": "映画音楽 (壮大)",
+  "tempo": 84,
+  "key": "D minor",
+  "desc": "広いアルペジオ、5 度と 8 度の開いた和音、少しずつ盛り上がる、モーダルな進行 (i-VI-III-VII)",
+  "counts": {
+   "progressions": 12,
+   "lh": 16,
+   "rh": 30,
+   "fills": 8
+  }
+ },
+ {
+  "id": "minimal",
+  "name": "ミニマル / アンビエント",
+  "tempo": 72,
+  "key": "A minor",
+  "desc": "少ない音で繰り返しをずらす、ペダルで溶かす、add9 と sus、静かな左手の分散和音、間を大切に",
+  "counts": {
+   "progressions": 12,
+   "lh": 16,
+   "rh": 30,
+   "fills": 8
+  }
+ },
+ {
+  "id": "romantic",
+  "name": "ロマン派 (ノクターン風)",
+  "tempo": 66,
+  "key": "Eb major",
+  "desc": "左手は広い分散和音、右手は装飾のある歌、半音階的な経過和音、ショパン風のルバート感",
+  "counts": {
+   "progressions": 12,
+   "lh": 16,
+   "rh": 30,
+   "fills": 8
+  }
+ },
+ {
+  "id": "impressionist",
+  "name": "印象派 (ドビュッシー風)",
+  "tempo": 76,
+  "key": "Db major",
+  "desc": "全音音階・平行和音・ペンタトニック、色彩的な 9th/11th、ペダルで滲ませる",
+  "counts": {
+   "progressions": 12,
+   "lh": 16,
+   "rh": 30,
+   "fills": 8
+  }
+ },
+ {
+  "id": "baroque",
+  "name": "バロック (対位法)",
+  "tempo": 100,
+  "key": "G minor",
+  "desc": "左手は動く低音線 (通奏低音的)、右手は装飾つきの旋律、循環進行、カノン的な模倣",
+  "counts": {
+   "progressions": 12,
+   "lh": 16,
+   "rh": 30,
+   "fills": 8
+  }
+ },
+ {
+  "id": "classical",
+  "name": "古典派 (モーツァルト風)",
+  "tempo": 112,
+  "key": "C major",
+  "desc": "アルベルティ・バス、明快な 4 小節楽節、カデンツ、トリルとスケール",
+  "counts": {
+   "progressions": 12,
+   "lh": 16,
+   "rh": 30,
+   "fills": 8
+  }
+ },
+ {
+  "id": "latin",
+  "name": "ラテン / サルサ",
+  "tempo": 132,
+  "key": "C minor",
+  "desc": "モントゥーノ (右手のシンコペーション型)、左手はトゥンバオ風のベース、2-3 クラーベ感",
+  "counts": {
+   "progressions": 12,
+   "lh": 16,
+   "rh": 30,
+   "fills": 8
+  }
+ },
+ {
+  "id": "tango",
+  "name": "タンゴ",
+  "tempo": 120,
+  "key": "A minor",
+  "desc": "鋭いスタッカートの左手、ハバネラのリズム、ドラマチックな半音下降、ピアソラ風の緊張",
+  "counts": {
+   "progressions": 12,
+   "lh": 16,
+   "rh": 30,
+   "fills": 8
+  }
+ },
+ {
+  "id": "newage",
+  "name": "ニューエイジ / ヒーリング",
+  "tempo": 68,
+  "key": "F major",
+  "desc": "澄んだアルペジオ、sus2 と add9、ゆっくりした和声、広い音域、ペダル多め",
+  "counts": {
+   "progressions": 12,
+   "lh": 16,
+   "rh": 30,
+   "fills": 8
+  }
+ },
+ {
+  "id": "pop-rock",
+  "name": "ポップス / ロック (8 ビート)",
+  "tempo": 118,
+  "key": "E major",
+  "desc": "左手はオクターブの 8 分刻み、右手はコードのリズムとフック、1-5-6-4、パワーコード的",
+  "counts": {
+   "progressions": 12,
+   "lh": 16,
+   "rh": 30,
+   "fills": 8
+  }
+ },
+ {
+  "id": "lullaby",
+  "name": "子守唄 / 童謡風",
+  "tempo": 72,
+  "key": "G major",
+  "desc": "単純で優しい旋律、3 度と 6 度の重なり、I-IV-V 中心、左手はワルツ風でなく 4 拍の揺れ",
+  "counts": {
+   "progressions": 12,
+   "lh": 16,
+   "rh": 30,
+   "fills": 8
+  }
+ },
+ {
+  "id": "wafu",
+  "name": "和風 (ペンタトニック)",
+  "tempo": 84,
+  "key": "D minor",
+  "desc": "ヨナ抜き音階と都節音階、空虚 5 度、左手は持続低音と 4 度、静かな装飾",
+  "counts": {
+   "progressions": 12,
+   "lh": 16,
+   "rh": 30,
+   "fills": 8
+  }
+ }
+]

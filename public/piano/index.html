@@ -41,7 +41,6 @@
       <button id="btn-export-wav" class="gbtn tiny" title="WAV 書き出し">WAV</button>
       <button id="btn-thanks" class="gbtn tiny" title="この楽器について (Salamander への感謝)">♥</button>
       <button id="btn-settings" class="gbtn tiny" title="設定 (API キー / モデル)">⚙</button>
-      <a class="gbtn tiny" href="../" title="BLUE GARAGE STUDIO (フルのシーケンサー)">STUDIO</a>
     </div>
   </div>
 </header>
@@ -51,14 +50,15 @@
     <div id="proll-head">
       <span id="proll-title" class="song-title">—</span>
       <span class="legend"><i class="sw r"></i>右手 <i class="sw l"></i>左手 <i class="sw lit"></i>鳴っている音</span>
-      <span id="proll-hint">クリック=追加 / ドラッグ=移動 / 右端=長さ / ⌥クリック=削除 / ⌘ドラッグ=範囲選択 / 1〜5=指 / L R=手 / P=ペダル / ⌘C ⌘V ⌘D / ←→↑↓</span>
+      <button id="btn-help" class="gbtn tiny" title="操作のしかた">?</button>
     </div>
     <div id="proll-wrap" class="view view-active"><canvas id="proll"></canvas></div>
 
     <!-- お題 → 即興 / 作曲 -->
     <div id="prompt-bar">
       <div class="mode-tabs">
-        <button class="mtab on" data-mode="jam">即興</button>
+        <button class="mtab on" data-mode="songs">既存の曲</button>
+        <button class="mtab" data-mode="jam">即興</button>
         <button class="mtab" data-mode="compose">作曲</button>
       </div>
       <input id="inp-theme" type="text" placeholder="お題 (例: 雨の日の午後、静かで少し切ない曲。坂本龍一みたいに)" />
@@ -70,7 +70,7 @@
       <button id="btn-go" class="gbtn accent">▶ 始める</button>
       <button id="btn-cancel" class="gbtn small hidden">止める</button>
     </div>
-    <div id="status-bar"><span id="status-text">お題を入れて「始める」。即興はすぐ弾き始め、弾きながらお題に合う手札を作って切り替えます。作曲は 2〜8 分かけて 1 曲を仕上げます。</span></div>
+    <div id="status-bar"><span id="status-text"></span></div>
   </main>
 
   <aside id="aipanel">
@@ -100,6 +100,19 @@
   </div>
   <div id="lib-list" class="lib-list"></div>
   <div class="dlg-foot"><button id="btn-songs-close" class="gbtn small">閉じる</button></div>
+</dialog>
+
+<dialog id="dlg-help">
+  <h3>操作のしかた</h3>
+  <div class="thanks">
+    <p><b>曲を選ぶ</b>：右上の「曲を選ぶ」か、下の「既存の曲」。同梱の名曲と、作った曲が並びます。</p>
+    <p><b>即興</b>：お題を入れて「即興を始める」。すぐ弾き始め、お題に合う手札ができたら切り替わります。もう一度押すか ■ で止まります。</p>
+    <p><b>作曲</b>：お題を入れて「作曲する」。2〜8 分で 1 曲を仕上げて弾きます。モデルと作り込みを選べます。</p>
+    <p><b>舞台</b>：全体はドラッグで回転、ホイールで寄り引き。全体 / 横 / 上 / 目線、全画面 (Esc で戻る)。</p>
+    <p><b>ピアノロール</b>：クリックで音を置く、ドラッグで動かす、右端で長さ、⌥クリックで消す、⌘ドラッグで範囲選択。選んだ音に 1〜5 で指、L / R で手、P でペダル。⌘C ⌘V ⌘D、矢印で移動。横スワイプで横に、縦スワイプで上下に動きます。</p>
+    <p><b>Space</b> 再生 / 停止、<b>Home</b> 先頭、<b>M</b> メトロノーム、<b>⌘Z</b> 取り消し。</p>
+  </div>
+  <div class="dlg-foot"><button id="btn-help-close" class="gbtn small">閉じる</button></div>
 </dialog>
 
 <dialog id="dlg-thanks" class="wide">
