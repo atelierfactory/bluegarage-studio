@@ -34,6 +34,9 @@
 - 中身：`piano.js` は 1 トラック（piano）のピアノロール + チャット（`PIANO_CHAT_TOOLS` / `SYSTEM_CHAT_PIANO`、prompts.js 末尾）+ 生成パイプライン（設計図 → `buildPianoRequest` を 16 小節ごとに continue → `analyzePiano`（critic.js 末尾）→ revise）。`scene.js` は three.js（`public/vendor/three/` に同梱、importmap）でグランドピアノ・骨組み（BVH と同じ骨名）・`buildRobot`（3D_model の balance_mimic_v1.html と同じ部品）・指付きの手・2 本骨 IK・鍵の沈み・ペダルの足・体の揺れ・カメラ 2 つ（上：全景、下：手のアップ。1 キャンバスを scissor で 2 分割）
 - データ：音符に `h`（L/R）と `f`（1〜5）、`song.pedal = [{s, d}]`（拍）。ペダル中の音は `state.js` の `noteEndBeat` で終わりを伸ばす（audio.js の再生・オフライン共通）。MIDI は CC64。ピアノロールは手で色分け・指番号・PEDAL 帯。キー：1〜5 指、L/R 手、P ペダル
 - 検証済み（2026-09-08）：ページ表示・3D 舞台・手動で置いた音符での再生（手が鍵へ動く・鍵が沈む・ペダル表示・ペダルで音が伸びる）。チャットからの作曲（Opus 5、16 小節）は実行中に HANDOFF を書いた → 結果は git log / この節の更新を見る
+- 2026-09-08 夜の追加（さとるん要望）：UI を黒・白・銀に（点灯だけ金。pianoroll.js / arrange.js に THEME / ARR_THEME を追加し piano.js で上書き）。首と胴のつなぎ直し・上画面を VESPER の目線カメラに・ペダルと右足の小窓（3 つ目のビューポート）・肘の向き（IK の pole を外・下・手前に）・指と鍵の一致（指の並びを world x 基準に、押す角度を幾何で計算）・鍵の沈み 1cm・ハンマー / ダンパーの動き。グランドピアノを作り直し（Shape 押し出しのリム・響板・鋳鉄フレーム・弦 ≒230 本を InstancedMesh・チューニングピン・駒・ダンパー・ハンマー・屋根・譜面台・脚・リラ・銘板）。銘板と ♥ の窓に Salamander への感謝（一次資料は samples_src/salamander/README.md）。
+- JAM（即興）：`public/piano/jam.js`。手札（進行 / 左手の型 / 右手のモチーフ / フィル、度数書き）を Claude が 1 回作り localStorage に保存、`Improviser.next8` が 8 小節ずつ音符にして `audio.appendNotes` で再生中に足す。既定の手札 DEFAULT_BANK で API 無しでも鳴る。JAM ボタン / J キー / chat の jam tool
+- レパートリー：`public/piano/repertoire/`（Mutopia Project の Public Domain 版 MIDI 4 曲：The Entertainer, Für Elise, Clair de Lune, Chopin Trois Nouvelles Études No.1。index.json に出典とライセンス）。`public/js/midiread.js`（SMF 読み込み）+ `public/js/fingering.js`（ルールで手と指）。自分の MIDI は ☰ → MIDI 読み込み。**著作権のある曲（ビートルズ・久石譲・坂本龍一・ゲーム音楽・千本桜など）は同梱しない・生成もしない**（さとるん指示「権利的にアウトなことは絶対にしない」）
 - 次に良くすること：手の見た目（今は箱と円柱。指はもう少し細く長く）、親指くぐりの動き、和音のロール、カメラの寄り引き、左手の跳躍先読み、鍵盤の反射・ホコリ・照明の作り込み、VESPER の顔の表情（バイザーの光は既に強弱で変わる）
 
 ## 1. 現在地（事実）

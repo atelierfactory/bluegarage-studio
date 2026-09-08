@@ -1,49 +1,89 @@
-/* ═══════════ VESPER PIANO — 黒い漆のグランドピアノの色 ═══════════ */
+/* ═══════════ VESPER PIANO — 黒・白・銀。点灯するものだけ金 ═══════════ */
 body.piano-app {
-  --ink: #0a0806;
-  --ink-2: #14100c;
-  --ink-3: #1c1611;
-  --panel: #120e0a;
-  --panel-2: #1b1510;
-  --line: #3a2d20;
-  --line-2: #5a4630;
-  --blue: #c9a24a;          /* 金 (アクセントとして流用) */
-  --blue-hi: #e6c46b;
-  --blue-neon: #f0d48a;
-  --blue-deep: #7a5f24;
-  --tape: #f3e9d2;
-  --txt: #efe6d4;
-  --txt-dim: #9c8a6c;
-  background:
-    radial-gradient(1000px 420px at 70% -10%, rgba(201, 162, 74, .12), transparent 60%),
-    radial-gradient(800px 380px at 10% 110%, rgba(240, 212, 138, .06), transparent 60%),
-    var(--ink);
+  --ink: #050505; --ink-2: #0c0c0c; --ink-3: #141414;
+  --panel: #0a0a0a; --panel-2: #121212;
+  --line: #262626; --line-2: #3a3a3a;
+  --blue: #8c8c8c;            /* 銀 (アクセント) */
+  --blue-hi: #cfcfcf;
+  --blue-neon: #f2f2f2;       /* 白 */
+  --blue-deep: #2e2e2e;
+  --tape: #f3f3f3; --txt: #f0f0f0; --txt-dim: #8a8a8a;
+  --lit: #e0b95a;             /* 点灯 (金) */
+  --warn: #e0b95a; --ok: #e6e6e6; --danger: #f0f0f0;
+  background: radial-gradient(1000px 420px at 70% -10%, rgba(255,255,255,.05), transparent 60%), var(--ink);
 }
-body.piano-app .logo span { color: var(--blue-neon); }
-body.piano-app #grain { opacity: .04; }
-body.piano-app #topbar { background: linear-gradient(180deg, #171310, #0d0a08); border-bottom: 1px solid var(--line-2); box-shadow: 0 2px 20px rgba(0,0,0,.6); }
-body.piano-app .tbtn.play { color: var(--blue-neon); }
-body.piano-app .tbtn.active { background: var(--blue-deep); border-color: var(--blue); }
-body.piano-app .lcd { color: var(--blue-neon); text-shadow: 0 0 8px rgba(240,212,138,.5); }
+body.piano-app #grain { opacity: .035; }
+body.piano-app .logo { color: #fff; } body.piano-app .logo span { color: #9a9a9a; }
+body.piano-app .logo-sub { color: #6f6f6f; }
+body.piano-app #topbar { background: linear-gradient(180deg, #121212, #070707); border-bottom: 1px solid #3a3a3a; box-shadow: 0 2px 20px rgba(0,0,0,.7); }
+body.piano-app .tbtn { background: #0e0e0e; border-color: #3a3a3a; color: #d0d0d0; }
+body.piano-app .tbtn:hover { border-color: #8c8c8c; color: #fff; }
+body.piano-app .tbtn.play { color: #fff; }
+body.piano-app .tbtn.active, body.piano-app .tbtn.rec.active, body.piano-app .tbtn.met.active, body.piano-app .tbtn.jam.active { background: var(--lit); color: #000; border-color: var(--lit); box-shadow: 0 0 14px rgba(224,185,90,.55); animation: none; }
+body.piano-app .tbtn.rec { color: #d0d0d0; }
+body.piano-app .tbtn.jam { font-family: var(--font-display); letter-spacing: 2px; font-size: 12px; width: 52px; }
+body.piano-app .lcd { color: #f2f2f2; text-shadow: none; background: #000; border: 1px solid #3a3a3a; }
+body.piano-app .lcd-dim { color: #8a8a8a; }
+body.piano-app .tfield { color: #8a8a8a; }
+body.piano-app .tfield input, body.piano-app .tfield select { background: #000; color: #f0f0f0; border-color: #3a3a3a; }
+body.piano-app .tfield input:focus, body.piano-app .tfield select:focus { border-color: #8c8c8c; }
+body.piano-app .tfield.master input[type="range"] { accent-color: #cfcfcf; }
+body.piano-app .gbtn { background: #0e0e0e; color: #d0d0d0; border-color: #3a3a3a; }
+body.piano-app .gbtn:hover { border-color: #cfcfcf; color: #fff; box-shadow: none; }
+body.piano-app .gbtn.accent { background: #f0f0f0; color: #000; border-color: #f0f0f0; box-shadow: none; }
+body.piano-app .gbtn.accent:hover { background: #fff; box-shadow: 0 0 12px rgba(255,255,255,.35); }
+body.piano-app .btn-group { border-color: #3a3a3a; } body.piano-app .btn-group .gbtn { border-right-color: #3a3a3a; }
+body.piano-app .btn-group .gbtn:hover { box-shadow: inset 0 0 12px rgba(255,255,255,.12); }
 body.piano-app #center { background: var(--ink); }
-body.piano-app #proll-wrap { background: #0b0907; }
-body.piano-app #aipanel { width: 34%; min-width: 380px; background: var(--panel); border-left: 1px solid var(--line-2); display: flex; flex-direction: column; position: relative; }
+body.piano-app #arrange-wrap { border-bottom: 1px solid #262626; }
+body.piano-app #proll-head { background: #0a0a0a; border-bottom: 1px solid #262626; }
+body.piano-app #proll-title { color: #cfcfcf; }
+body.piano-app #proll-wrap { background: #050505; }
+body.piano-app #aipanel { width: 34%; min-width: 380px; background: var(--panel); border-left: 1px solid #3a3a3a; display: flex; flex-direction: column; position: relative; }
 body.piano-app #tracklist { display: none; }
+body.piano-app .panel-head { background: #0a0a0a; border-bottom: 1px solid #262626; color: #cfcfcf; }
+body.piano-app .panel-head.blue { color: #f2f2f2; }
+body.piano-app .ai-badge { background: #1a1a1a; color: #cfcfcf; border: 1px solid #3a3a3a; }
+body.piano-app #chat-log { background: #050505; }
+body.piano-app .msg.user { background: #1c1c1c; color: #f0f0f0; border: 1px solid #333; }
+body.piano-app .msg.assistant { background: #0f0f0f; color: #e6e6e6; border: 1px solid #262626; }
+body.piano-app .msg.note { background: #000; border-color: #262626; color: #8a8a8a; }
+body.piano-app .msg.note.ok { color: #cfcfcf; } body.piano-app .msg.note.err { color: #f0f0f0; border-color: #555; }
+body.piano-app .msg.tool { background: #0c0c0c; border-color: #262626; }
+body.piano-app .msg.tool.running { border-color: var(--lit); box-shadow: 0 0 10px rgba(224,185,90,.3); }
+body.piano-app .msg.tool .tool-head { color: #cfcfcf; }
+body.piano-app .spinner-sm { border-color: #3a3a3a; border-top-color: var(--lit); }
+body.piano-app .msg.tool:not(.running) .spinner-sm { background: #cfcfcf; }
+body.piano-app #chat-input-wrap { background: #0a0a0a; border-top: 1px solid #262626; }
+body.piano-app #chat-input { background: #000; color: #f0f0f0; border-color: #3a3a3a; }
+body.piano-app #chat-input:focus { border-color: #cfcfcf; box-shadow: none; }
+body.piano-app .spinner { border-color: #3a3a3a; border-top-color: var(--lit); }
+body.piano-app .loader-inner { background: #111; border-color: #3a3a3a; color: #f0f0f0; box-shadow: none; }
+body.piano-app #toast { background: #f0f0f0; color: #000; box-shadow: 0 4px 30px rgba(0,0,0,.6); transform: translateX(-50%); }
+body.piano-app #toast.err { background: #2a2a2a; color: #fff; border: 1px solid #555; }
+body.piano-app dialog { background: #0e0e0e; border-color: #3a3a3a; box-shadow: 0 10px 60px rgba(0,0,0,.8); }
+body.piano-app dialog h3 { color: #f0f0f0; }
+body.piano-app .lib-row { border-color: #262626; } body.piano-app .lib-row.current { border-color: var(--lit); box-shadow: inset 0 0 12px rgba(224,185,90,.2); }
+body.piano-app .dlg-body.form input, body.piano-app .dlg-body.form select { background: #000; border-color: #3a3a3a; }
 #chatwrap { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 #chatwrap.hidden { display: none; }
-#proll-head .legend { font-family: var(--font-mono); font-size: 10px; color: var(--txt-dim); margin-left: 8px; display: inline-flex; gap: 6px; align-items: center; }
+#proll-head .legend { font-family: var(--font-mono); font-size: 10px; color: #8a8a8a; margin-left: 8px; display: inline-flex; gap: 6px; align-items: center; }
 .legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
-.legend .sw.r { background: #5ea2ff; } .legend .sw.l { background: #ff8f5e; } .legend .sw.p { background: #ffc857; }
-.tfield.hand select { accent-color: var(--blue); }
+.legend .sw.r { background: #f2f2f2; } .legend .sw.l { background: #8c8c8c; } .legend .sw.p { background: #4a4a4a; } .legend .sw.lit { background: #e0b95a; }
 a.gbtn { text-decoration: none; display: inline-flex; align-items: center; }
+.thanks { max-width: 720px; line-height: 1.8; font-size: 13px; }
+.thanks p { margin-bottom: 10px; }
+.thanks b { color: #fff; }
 
 /* ── VESPER stage (右側) ── */
 #stage { position: absolute; inset: 0; background: #000; display: flex; flex-direction: column; }
 #stage.hidden { display: none; }
 #stage-canvas { width: 100%; height: 100%; display: block; }
-#stage-hud { position: absolute; top: 8px; left: 10px; right: 10px; display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; color: var(--blue-neon); text-shadow: 0 0 6px rgba(0,0,0,.9); pointer-events: none; }
-#stage-title { font-family: var(--font-display); letter-spacing: 3px; font-size: 14px; }
-#stage-pedal { position: absolute; right: 12px; bottom: 12px; font-family: var(--font-display); letter-spacing: 3px; font-size: 11px; color: #5a4630; border: 1px solid #3a2d20; padding: 3px 10px; border-radius: 4px; background: rgba(0,0,0,.5); transition: all .12s; }
-#stage-pedal.on { color: #ffc857; border-color: #ffc857; box-shadow: 0 0 12px rgba(255,200,87,.7); }
+#stage-hud { position: absolute; top: 8px; left: 10px; right: 10px; display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; color: #e6e6e6; text-shadow: 0 0 6px rgba(0,0,0,.9); pointer-events: none; }
+#stage-title { font-family: var(--font-display); letter-spacing: 3px; font-size: 14px; color: #fff; }
+#stage-pedal { position: absolute; right: 12px; bottom: 12px; font-family: var(--font-display); letter-spacing: 3px; font-size: 11px; color: #4a4a4a; border: 1px solid #333; padding: 3px 10px; border-radius: 4px; background: rgba(0,0,0,.6); transition: all .12s; }
+#stage-pedal.on { color: #000; background: var(--lit); border-color: var(--lit); box-shadow: 0 0 12px rgba(224,185,90,.7); }
 #btn-stage-chat { position: absolute; left: 12px; bottom: 12px; }
-#stage .divider { position: absolute; left: 0; right: 0; top: 58%; height: 1px; background: rgba(240,212,138,.25); pointer-events: none; }
+#stage .divider { position: absolute; left: 0; right: 0; top: 58%; height: 1px; background: rgba(255,255,255,.18); pointer-events: none; }
+#stage-jam { position: absolute; left: 12px; top: 30px; font-family: var(--font-mono); font-size: 10px; color: #cfcfcf; background: rgba(0,0,0,.55); padding: 2px 6px; border-radius: 3px; display: none; }
+#stage-jam.on { display: block; }

@@ -420,6 +420,15 @@ function scheduleClick() {
   clickPart.start(0);
 }
 
+/** 再生中に音符を足す (JAM: 先を作り足しながら弾き続ける)。track.notes には呼び出し側が足しておく */
+export async function appendNotes(track, notes) {
+  const eng = engines.get(track.id);
+  if (!eng || !state.playing || !eng.part) return;
+  if (eng.inst.ensure) await Promise.all(notes.map((n) => eng.inst.ensure(n.p, n.v).catch(() => {})));
+  const base = track.notes.length;
+  notes.forEach((n, k) => eng.part.add(beatToSec(n.s), { n, i: base + k }));
+}
+
 /** 再生中に拍位置を秒にした値 (録音用) */
 export function currentBeat() { return state.playing ? secToBeat(Tone.Transport.seconds) : state.playheadBeat; }
 

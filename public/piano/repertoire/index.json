@@ -1,0 +1,6 @@
+[
+  { "file": "entertainer.mid", "title": "The Entertainer", "composer": "Scott Joplin", "year": "1902", "source": "https://www.mutopiaproject.org/ftp/JoplinS/entertainer/", "typesetter": "Chris Sawer", "license": "Public Domain (composition 1902; typeset placed in the public domain, Mutopia Project)" },
+  { "file": "fur_Elise_WoO59.mid", "title": "Für Elise (WoO 59)", "composer": "Ludwig van Beethoven", "year": "1810", "source": "https://www.mutopiaproject.org/ftp/BeethovenLv/WoO59/fur_Elise_WoO59/", "typesetter": "Stelios Samelis", "license": "Public Domain (typeset placed in the public domain, Mutopia Project)" },
+  { "file": "debussy_Ste_Bergamesq_Clair.mid", "title": "Clair de Lune (Suite Bergamasque)", "composer": "Claude Debussy", "year": "1905", "source": "https://www.mutopiaproject.org/ftp/DebussyC/L75/debussy_Ste_Bergamesq_Clair/", "typesetter": "Keith OHara", "license": "Public Domain (typeset placed in the public domain, Mutopia Project)" },
+  { "file": "TroisNouvellesEtudes_Chopin_n1.mid", "title": "Trois Nouvelles Études No. 1 (F minor)", "composer": "Frédéric Chopin", "year": "1839", "source": "https://www.mutopiaproject.org/ftp/ChopinFF/B130/TroisNouvellesEtudes_Chopin_n1/", "typesetter": "Romain Behar", "license": "Public Domain (typeset placed in the public domain, Mutopia Project)" }
+]

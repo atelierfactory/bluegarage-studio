@@ -1,7 +1,10 @@
 // ═══════════ VESPER-01 がグランドピアノを弾く 3D 舞台 (three.js) ═══════════
-// 上の画面: ピアノ全体と座った VESPER。下の画面: 鍵盤と両手のアップ。
-// 音符 (p, s, d, v, h, f) とペダル区間から、手の位置・指の押し込み・鍵の沈み・体の揺れ・足のペダルを毎フレーム計算する。
+// 3 つの画面: 上 = VESPER の目線 (自分の手と鍵盤、開いた屋根の中の弦を見下ろす)、
+//             下 = 鍵盤と両手のアップ、上の左下 = ペダルと右足の小窓。
+// 音符 (p, s, d, v, h, f) とペダル区間から、手の位置・指の押し込み・鍵の沈み・ハンマー・ダンパー・体の揺れ・足のペダルを毎フレーム計算する。
 // ロボットの見た目は product/toys/3D_model の VESPER-01 (buildRobot) と同じ部品構成。
+// ピアノは「Salamander Grand Piano」(Alexander Holm 氏がヤマハ C5 を録音した無料音源) に敬意を込めて、
+// 特定メーカーの意匠を写さない一般的なコンサートグランドとして、弦の一本一本まで組み立てる。
 
 import * as THREE from "three";
 
@@ -10,24 +13,22 @@ const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const lerp = (a, b, t) => a + (b - a) * t;
 
 /* ─────────── 鍵盤の寸法 (m) ─────────── */
-const WHITE_W = 0.0235, WHITE_L = 0.148, BLACK_W = 0.0135, BLACK_L = 0.092, KEY_H = 0.012;
+const WHITE_W = 0.0235, WHITE_L = 0.150, BLACK_W = 0.0135, BLACK_L = 0.095, KEY_H = 0.013;
 const LOW = 21, HIGH = 108;
 const isBlack = (p) => [1, 3, 6, 8, 10].includes(p % 12);
-// 白鍵の番号 (A0=0) と x 座標
 const whiteIndex = (p) => { let k = 0; for (let q = LOW; q < p; q++) if (!isBlack(q)) k++; return k; };
-const N_WHITE = whiteIndex(HIGH) + 1;
-const KEYS_X0 = -(N_WHITE * WHITE_W) / 2;
+const N_WHITE = whiteIndex(HIGH) + 1;                 // 52
+const KEYS_X0 = -(N_WHITE * WHITE_W) / 2;             // -0.611
 export function keyX(p) {
   if (!isBlack(p)) return KEYS_X0 + (whiteIndex(p) + 0.5) * WHITE_W;
-  // 黒鍵: 左隣の白鍵と右隣の白鍵の境目を基準に、実物に合わせて少しずらす
   const boundary = KEYS_X0 + (whiteIndex(p - 1) + 1) * WHITE_W;
   const shift = { 1: -0.12, 3: 0.12, 6: -0.18, 8: 0, 10: 0.18 }[p % 12] * WHITE_W;
   return boundary + shift;
 }
-const KEY_TOP_Y = 0.735;   // 白鍵の上面の高さ
-const KEY_FRONT_Z = 0.0;   // 鍵盤の手前の縁 (奏者側が +z)
+const KEY_TOP_Y = 0.735;   // 白鍵の上面
+const KEY_DIP = 0.010;     // 鍵の沈み (手前で約 1cm)
 
-/* ─────────── ロボット (VESPER-01) の材質 ─────────── */
+/* ─────────── 材質 ─────────── */
 const M = {
   shell: new THREE.MeshPhysicalMaterial({ color: 0xdfe4ec, roughness: 0.28, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0.1 }),
   carbon: new THREE.MeshPhysicalMaterial({ color: 0x111318, roughness: 0.45, metalness: 0.65 }),
@@ -38,18 +39,24 @@ const M = {
   visor: new THREE.MeshPhysicalMaterial({ color: 0x030507, roughness: 0.05, metalness: 0.2, clearcoat: 1, emissive: 0x1de0ff, emissiveIntensity: 2.0 }),
 };
 const P = {
-  lacquer: new THREE.MeshPhysicalMaterial({ color: 0x0a0a0c, roughness: 0.12, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.05 }),
-  lacquerIn: new THREE.MeshPhysicalMaterial({ color: 0x141416, roughness: 0.3, metalness: 0.05, clearcoat: 0.6 }),
-  ivory: new THREE.MeshPhysicalMaterial({ color: 0xf4efe2, roughness: 0.35, metalness: 0, clearcoat: 0.4 }),
-  ebony: new THREE.MeshPhysicalMaterial({ color: 0x141210, roughness: 0.3, metalness: 0.1, clearcoat: 0.8 }),
-  gold: new THREE.MeshPhysicalMaterial({ color: 0xd8b25a, roughness: 0.25, metalness: 1.0 }),
-  felt: new THREE.MeshStandardMaterial({ color: 0x7a1f2b, roughness: 0.95 }),
-  brass: new THREE.MeshPhysicalMaterial({ color: 0xb08d3a, roughness: 0.3, metalness: 1 }),
-  wood: new THREE.MeshStandardMaterial({ color: 0x6b3a1e, roughness: 0.6 }),
-  string: new THREE.MeshStandardMaterial({ color: 0xc9c9c9, roughness: 0.4, metalness: 0.9 }),
-  floor: new THREE.MeshPhysicalMaterial({ color: 0x1a120c, roughness: 0.35, metalness: 0.05, clearcoat: 0.8, clearcoatRoughness: 0.2 }),
-  bench: new THREE.MeshPhysicalMaterial({ color: 0x0c0c0e, roughness: 0.2, clearcoat: 1 }),
-  cushion: new THREE.MeshStandardMaterial({ color: 0x3a1c22, roughness: 0.9 }),
+  lacquer: new THREE.MeshPhysicalMaterial({ color: 0x08080a, roughness: 0.10, metalness: 0.08, clearcoat: 1, clearcoatRoughness: 0.04, reflectivity: 0.9 }),
+  lacquerMatte: new THREE.MeshPhysicalMaterial({ color: 0x101012, roughness: 0.35, metalness: 0.05, clearcoat: 0.5 }),
+  ivory: new THREE.MeshPhysicalMaterial({ color: 0xf6f2e8, roughness: 0.32, metalness: 0, clearcoat: 0.45, clearcoatRoughness: 0.25 }),
+  ebony: new THREE.MeshPhysicalMaterial({ color: 0x151311, roughness: 0.28, metalness: 0.1, clearcoat: 0.85, clearcoatRoughness: 0.08 }),
+  plate: new THREE.MeshPhysicalMaterial({ color: 0xb8933e, roughness: 0.45, metalness: 0.85 }),          // 鋳鉄フレーム (金色の塗装)
+  plateDark: new THREE.MeshPhysicalMaterial({ color: 0x7e6428, roughness: 0.6, metalness: 0.7 }),
+  steel: new THREE.MeshPhysicalMaterial({ color: 0xd8dadc, roughness: 0.3, metalness: 1.0 }),           // 鋼の弦
+  copper: new THREE.MeshPhysicalMaterial({ color: 0xb3672f, roughness: 0.42, metalness: 0.95 }),         // 巻線 (低音)
+  spruce: new THREE.MeshStandardMaterial({ color: 0xd9b57a, roughness: 0.62 }),                          // 響板 (スプルース)
+  maple: new THREE.MeshStandardMaterial({ color: 0x9c6a3a, roughness: 0.55 }),                           // 駒・ピン板
+  feltRed: new THREE.MeshStandardMaterial({ color: 0x8a1f2a, roughness: 0.95 }),
+  feltWhite: new THREE.MeshStandardMaterial({ color: 0xe9e4d6, roughness: 0.95 }),
+  hammerWood: new THREE.MeshStandardMaterial({ color: 0x6b4a2b, roughness: 0.7 }),
+  brass: new THREE.MeshPhysicalMaterial({ color: 0xc9a656, roughness: 0.28, metalness: 1 }),
+  silver: new THREE.MeshPhysicalMaterial({ color: 0xcfcfd2, roughness: 0.25, metalness: 1 }),
+  floor: new THREE.MeshPhysicalMaterial({ color: 0x141312, roughness: 0.3, metalness: 0.05, clearcoat: 0.9, clearcoatRoughness: 0.15 }),
+  bench: new THREE.MeshPhysicalMaterial({ color: 0x0a0a0c, roughness: 0.18, clearcoat: 1 }),
+  cushion: new THREE.MeshStandardMaterial({ color: 0x1c1c1e, roughness: 0.9 }),
 };
 
 function shadowed(m) { m.castShadow = true; m.receiveShadow = true; return m; }
@@ -69,11 +76,11 @@ function strip(holder, len, r, mat, angle = 0, w = 0.16, thick = 0.05) {
   m.position.set(Math.sin(angle) * r, 0, Math.cos(angle) * r); m.rotation.y = angle; holder.add(m); return m;
 }
 
-/* ─────────── 骨組み (BVH と同じ名前・単位は「ロボット単位」。全体を ROBOT_SCALE で m に) ─────────── */
+/* ─────────── 骨組み (BVH と同じ名前・ロボット単位。全体を ROBOT_SCALE で m に) ─────────── */
 const ROBOT_SCALE = 0.061;
 const SKELETON = {
   Hips: [0, 0, 0],
-  LowerBack: [0, 0.4, 0], Spine: [0, 2.0, 0], Spine1: [0, 2.3, 0], Neck1: [0, 2.7, 0], Head: [0, 1.4, 0], HeadEnd: [0, 2.4, 0],
+  LowerBack: [0, 0.4, 0], Spine: [0, 2.0, 0], Spine1: [0, 2.3, 0], Neck1: [0, 1.85, 0], Head: [0, 1.15, 0], HeadEnd: [0, 2.4, 0],
   LeftShoulder: [1.0, 2.2, 0], LeftArm: [2.2, 0, 0], LeftForeArm: [5.4, 0, 0], LeftHand: [4.9, 0, 0], LeftHandEnd: [1.4, 0, 0],
   RightShoulder: [-1.0, 2.2, 0], RightArm: [-2.2, 0, 0], RightForeArm: [-5.4, 0, 0], RightHand: [-4.9, 0, 0], RightHandEnd: [-1.4, 0, 0],
   LeftUpLeg: [1.7, -0.9, 0], LeftLeg: [0, -7.4, 0], LeftFoot: [0, -7.0, 0], LeftToeBase: [0, -0.9, 2.0], LeftToeEnd: [0, 0, 1.2],
@@ -93,7 +100,7 @@ function buildSkeleton() {
   return bones;
 }
 
-// 3D_model/balance_mimic_v1.html の buildRobot と同じ部品 (手だけはピアノ用に指付きに差し替え)
+// 3D_model/balance_mimic_v1.html の buildRobot と同じ部品 (手はピアノ用に指付き、首は胴とつながるように調整)
 function buildRobot(B, hands) {
   const child = (b) => b.children.find((c) => c.isBone);
   const off = (name) => child(B[name]) ? child(B[name]).position.clone() : V(0, 0, 0);
@@ -163,7 +170,9 @@ function buildRobot(B, hands) {
     const heel = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.25, 0.3), M.glowO); heel.position.set(0, -0.3, -0.55); Ft.add(heel);
     box(T, V(0, -0.2, 0.5), V(1.0, 0.4, 1.0), M.shell);
   });
-  limb(B.Neck1, V(0, 0, 0), off("Neck1"), 0.4, 0.5, M.carbon, 16);
+  // 首: 胴 (襟) の中から頭までを太めの 2 段でつなぐ
+  limb(B.Neck1, V(0, -0.6, 0), off("Neck1"), 0.5, 0.42, M.carbon, 16);
+  const neckRing = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.06, 8, 32), M.glow); neckRing.rotation.x = Math.PI / 2; neckRing.position.y = 0.45; B.Neck1.add(neckRing);
   const hd = B.Head; const hl = L("Head");
   const skull = new THREE.Mesh(new THREE.SphereGeometry(1.2, 32, 24), M.shell); skull.scale.set(0.95, 1.08, 1.0); skull.position.set(0, hl * 0.55, 0.05); shadowed(skull); hd.add(skull);
   const face = new THREE.Mesh(new THREE.SphereGeometry(1.15, 32, 24, Math.PI * 0.62, Math.PI * 0.76, Math.PI * 0.28, Math.PI * 0.5), M.carbon);
@@ -174,84 +183,170 @@ function buildRobot(B, hands) {
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.05, 8, 24), M.glow); ring.rotation.y = Math.PI / 2; ring.position.set(sgn * 1.28, hl * 0.6, 0); hd.add(ring); });
   const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 1.4, 8), M.chrome); ant.position.set(-0.75, hl * 1.3, -0.2); ant.rotation.z = 0.35; hd.add(ant);
   const antTip = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 10), M.glowO); antTip.position.set(-1.0, hl * 1.72, -0.2); hd.add(antTip);
-  return { visor, core };
+  // 目 (カメラの位置)
+  const eye = new THREE.Object3D(); eye.position.set(0, hl * 0.62, 1.15); hd.add(eye);
+  return { visor, core, eye };
 }
 
-// ピアノ用の手: 手のひら + 5 本の指 (2 関節)。手の骨の +x (左手) / -x (右手) 方向に指が伸びる
-// 指の並びは手のひらの幅方向 (骨の z 軸) に沿う。親指 (1) は体の内側。
-const FINGER_LEN = [1.3, 2.0, 2.2, 2.0, 1.6];   // 親指→小指 (ロボット単位)
-const FINGER_Z = [-0.9, -0.45, 0, 0.45, 0.9];    // 手のひら上の位置 (右手基準。左手は反転)
-export const FINGER_SPREAD_M = FINGER_Z.map((z) => z * ROBOT_SCALE); // m
+// 手: 手のひら + 5 本の指 (2 関節)。指は手の骨の +x*sgn 方向、手のひらの幅は骨の z 軸。
+// 指の並び (world x): 右手は親指が一番左、左手は親指が一番右。
+const FINGER_LEN = [1.3, 2.0, 2.2, 2.0, 1.6];       // 親指→小指 (ロボット単位)
+const FINGER_Z = [-0.9, -0.45, 0, 0.45, 0.9];        // 右手基準の並び (world x 方向 = z*sgn なので左手は自動で鏡になる)
+const FINGER_OFFSET_M = FINGER_Z.map((z) => z * ROBOT_SCALE);
+export function fingerOffsetX(hand, fingerIdx) { return FINGER_OFFSET_M[fingerIdx] * (hand === "R" ? 1 : -1); }
 function buildHand(H, sgn) {
-  // sgn = +1 左手 (骨は +x に伸びる), -1 右手
   const palm = box(H, V(sgn * 0.85, 0, 0), V(1.5, 0.34, 2.0), M.carbon);
   box(H, V(sgn * 0.85, 0.2, 0), V(1.25, 0.14, 1.8), M.shell);
   const fingers = [];
   for (let i = 0; i < 5; i++) {
-    const root = new THREE.Object3D(); root.position.set(sgn * (i === 0 ? 1.2 : 1.75), i === 0 ? -0.15 : 0, FINGER_Z[i] * sgn); H.add(root);
+    const root = new THREE.Object3D(); root.position.set(sgn * (i === 0 ? 1.15 : 1.7), i === 0 ? -0.1 : 0, FINGER_Z[i]); H.add(root);
     const len = FINGER_LEN[i];
-    const seg1 = limb(root, V(0, 0, 0), V(sgn * len * 0.55, 0, 0), 0.14, 0.12, M.shell, 10, true);
+    limb(root, V(0, 0, 0), V(sgn * len * 0.55, 0, 0), 0.14, 0.12, M.shell, 10, true);
     const joint = new THREE.Object3D(); joint.position.set(sgn * len * 0.55, 0, 0); root.add(joint);
-    const seg2 = limb(joint, V(0, 0, 0), V(sgn * len * 0.45, 0, 0), 0.115, 0.09, M.gun, 10, true);
+    limb(joint, V(0, 0, 0), V(sgn * len * 0.45, 0, 0), 0.115, 0.09, M.gun, 10, true);
     const tip = new THREE.Object3D(); tip.position.set(sgn * len * 0.45, -0.1, 0); joint.add(tip);
-    fingers.push({ root, joint, tip, len, press: 0, target: 0 });
+    fingers.push({ root, joint, tip, len, lenM: len * ROBOT_SCALE, press: 0, spread: 0 });
   }
   return { bone: H, sgn, fingers, palm };
 }
 
-/* ─────────── グランドピアノ ─────────── */
+/* ─────────── グランドピアノ (一般的なコンサートグランド。弦 1 本ずつ) ─────────── */
+const RIM_H = 0.27, TOP_Y = 0.99;
+const CASE_FRONT = -0.20, CASE_TAIL = -2.05, HALF_W = 0.76;
+// 平面図の輪郭。Shape の (x, y) を後で (x, -z) に回す。y が大きいほど奥。
+function outline(inset = 0) {
+  const w = HALF_W - inset, front = -CASE_FRONT + inset, tail = -CASE_TAIL - inset;
+  const s = new THREE.Shape();
+  s.moveTo(-w, front);
+  s.lineTo(w, front);
+  s.lineTo(w, front + 0.62);                                              // 高音側の直線
+  s.bezierCurveTo(w, front + 1.05, w * 0.35, front + 1.2, -w * 0.05, front + 1.42);   // 曲げ側板 (S 字)
+  s.bezierCurveTo(-w * 0.35, front + 1.58, -w * 0.62, front + 1.72, -w * 0.72, tail - 0.05);
+  s.quadraticCurveTo(-w, tail, -w, tail - 0.32);                          // 尾の丸み
+  s.lineTo(-w, front);
+  return s;
+}
+function extrudeOutline(shape, depth, mat, holeShape = null) {
+  if (holeShape) shape.holes.push(holeShape);
+  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 48 });
+  g.rotateX(-Math.PI / 2);   // (x, y, +z) → (x, +z→+y, y→-z)
+  return shadowed(new THREE.Mesh(g, mat));
+}
+function textPlate(text, w, h, opts = {}) {
+  const cv = document.createElement("canvas"); cv.width = 1024; cv.height = Math.round(1024 * h / w);
+  const c = cv.getContext("2d");
+  c.fillStyle = opts.bg ?? "#c9a656"; c.fillRect(0, 0, cv.width, cv.height);
+  c.strokeStyle = opts.line ?? "#6b5320"; c.lineWidth = 8; c.strokeRect(14, 14, cv.width - 28, cv.height - 28);
+  c.fillStyle = opts.fg ?? "#3b2c0c"; c.textAlign = "center"; c.textBaseline = "middle";
+  const lines = text.split("\n");
+  const size = opts.size ?? Math.min(72, Math.floor(cv.height / (lines.length + 1.2)));
+  c.font = `${opts.weight ?? "600"} ${size}px 'IBM Plex Mono', monospace`;
+  lines.forEach((ln, i) => c.fillText(ln, cv.width / 2, cv.height / 2 + (i - (lines.length - 1) / 2) * size * 1.25));
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+  return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshPhysicalMaterial({ map: tex, roughness: 0.35, metalness: 0.8 }));
+}
+
 function buildPiano(scene) {
   const g = new THREE.Group();
-  const W = 1.52, DEPTH = 1.95, RIM_H = 0.26, TOP_Y = 0.98;     // 本体
-  // 胴体 (ケース): 手前は真っ直ぐ、奥は丸い → 箱 + 円柱で近似
-  const body = shadowed(new THREE.Mesh(new THREE.BoxGeometry(W, RIM_H, DEPTH * 0.62), P.lacquer)); body.position.set(0, TOP_Y - RIM_H / 2, -0.16 - DEPTH * 0.31); g.add(body);
-  const tail = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(W * 0.42, W * 0.42, RIM_H, 48, 1, false, Math.PI, Math.PI), P.lacquer)); tail.position.set(-W * 0.08, TOP_Y - RIM_H / 2, -0.16 - DEPTH * 0.62); tail.rotation.y = Math.PI; g.add(tail);
-  const bass = shadowed(new THREE.Mesh(new THREE.BoxGeometry(W * 0.5, RIM_H, DEPTH * 0.35), P.lacquer)); bass.position.set(-W * 0.25, TOP_Y - RIM_H / 2, -0.16 - DEPTH * 0.62 - DEPTH * 0.1); g.add(bass);
-  // 響板 (内側) と弦
-  const board = new THREE.Mesh(new THREE.BoxGeometry(W - 0.08, 0.02, DEPTH * 0.6), P.wood); board.position.set(0, TOP_Y - RIM_H + 0.06, -0.16 - DEPTH * 0.31); g.add(board);
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(W - 0.2, 0.015, DEPTH * 0.55), P.gold); frame.position.set(0, TOP_Y - RIM_H + 0.09, -0.16 - DEPTH * 0.3); g.add(frame);
-  for (let i = 0; i < 60; i++) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.0015, 0.0015, DEPTH * (0.3 + 0.28 * (1 - i / 60))), P.string); s.position.set(-W * 0.44 + i * (W * 0.88 / 60), TOP_Y - RIM_H + 0.12, -0.16 - DEPTH * 0.18 - DEPTH * (0.14 * (1 - i / 60))); g.add(s); }
-  // 屋根 (lid) — 開いている
-  const lid = shadowed(new THREE.Mesh(new THREE.BoxGeometry(W, 0.03, DEPTH * 0.92), P.lacquer)); lid.position.set(0, TOP_Y + 0.015, -0.16 - DEPTH * 0.46);
-  const lidPivot = new THREE.Object3D(); lidPivot.position.set(W / 2, TOP_Y, -0.16 - DEPTH * 0.46); lidPivot.rotation.z = -0.95; lid.position.set(-W / 2, 0.015, 0); lidPivot.add(lid); g.add(lidPivot);
-  const prop = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.62, 10), P.lacquer); prop.position.set(-W * 0.32, TOP_Y + 0.3, -0.16 - DEPTH * 0.55); prop.rotation.z = 0.3; g.add(prop);
-  // 鍵盤の棚 (keybed) と手前の腕木
-  const keybed = shadowed(new THREE.Mesh(new THREE.BoxGeometry(W, 0.06, 0.42), P.lacquer)); keybed.position.set(0, KEY_TOP_Y - KEY_H - 0.03, -0.05); g.add(keybed);
-  [-1, 1].forEach((s) => { const cheek = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.2, 0.44), P.lacquer)); cheek.position.set(s * (W / 2 - 0.055), KEY_TOP_Y + 0.05, -0.05); g.add(cheek); });
-  const fallboard = shadowed(new THREE.Mesh(new THREE.BoxGeometry(W - 0.22, 0.26, 0.05), P.lacquer)); fallboard.position.set(0, KEY_TOP_Y + 0.12, -0.19); g.add(fallboard);
-  const logo = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.03, 0.003), P.gold); logo.position.set(0, KEY_TOP_Y + 0.17, -0.163); g.add(logo);
-  const desk = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.28, 0.02), P.lacquer)); desk.position.set(0, TOP_Y + 0.16, -0.45); desk.rotation.x = -0.25; g.add(desk);
-  const lip = shadowed(new THREE.Mesh(new THREE.BoxGeometry(W - 0.22, 0.03, 0.04), P.lacquer)); lip.position.set(0, KEY_TOP_Y - 0.02, 0.09); g.add(lip);
-  // 脚 3 本 + キャスター
-  for (const [x, z] of [[W / 2 - 0.1, 0.05], [-W / 2 + 0.1, 0.05], [-W * 0.15, -0.16 - DEPTH * 0.9]]) {
-    const leg = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.11, KEY_TOP_Y - 0.1, 0.11), P.lacquer)); leg.position.set(x, (KEY_TOP_Y - 0.1) / 2, z); g.add(leg);
-    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.04, 16), P.brass); wheel.rotation.z = Math.PI / 2; wheel.position.set(x, 0.035, z); g.add(wheel);
+  const rim = extrudeOutline(outline(0), RIM_H, P.lacquer, outline(0.032)); rim.position.y = TOP_Y - RIM_H; g.add(rim);
+  const bottom = extrudeOutline(outline(0.02), 0.02, P.lacquerMatte); bottom.position.y = TOP_Y - RIM_H; g.add(bottom);
+  const board = extrudeOutline(outline(0.035), 0.012, P.spruce); board.position.y = TOP_Y - RIM_H + 0.08; g.add(board);
+  for (let i = 0; i < 9; i++) { const rib = new THREE.Mesh(new THREE.BoxGeometry(1.2 - i * 0.05, 0.006, 0.02), P.maple); rib.position.set(-0.05 - i * 0.02, TOP_Y - RIM_H + 0.075, -0.55 - i * 0.16); rib.rotation.y = -0.35; g.add(rib); }
+  const plate = extrudeOutline(outline(0.06), 0.02, P.plate); plate.position.y = TOP_Y - RIM_H + 0.10; g.add(plate);
+  const struts = [[-0.55, -0.35, -0.62, -1.75], [-0.2, -0.35, -0.36, -1.85], [0.15, -0.35, -0.12, -1.55], [0.45, -0.35, 0.25, -1.15], [0.68, -0.35, 0.62, -0.75]];
+  for (const [x0, z0, x1, z1] of struts) { const len = Math.hypot(x1 - x0, z1 - z0); const bar = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.05, len), P.plateDark)); bar.position.set((x0 + x1) / 2, TOP_Y - RIM_H + 0.145, (z0 + z1) / 2); bar.rotation.y = Math.atan2(x1 - x0, -(z1 - z0)); g.add(bar); }
+  const pinblock = shadowed(new THREE.Mesh(new THREE.BoxGeometry(HALF_W * 2 - 0.08, 0.05, 0.14), P.plateDark)); pinblock.position.set(0, TOP_Y - RIM_H + 0.13, -0.30); g.add(pinblock);
+  // ── 弦
+  const strings = [], pins = [];
+  for (let p = LOW; p <= HIGH; p++) {
+    const t = (p - LOW) / (HIGH - LOW);
+    const nStr = p < 28 ? 1 : p < 41 ? 2 : 3;
+    const wound = p < 41;
+    const x = keyX(p);
+    const len = wound ? 1.95 - (p - LOW) * 0.028 : 1.35 * Math.pow(2, -(p - 41) / 13.5) + 0.05;
+    const gap = wound ? 0.0055 : 0.0026;
+    for (let k = 0; k < nStr; k++) {
+      const x0 = x + (k - (nStr - 1) / 2) * gap + (wound ? -0.12 : 0);
+      const z0 = -0.30;
+      const ang = wound ? 0.30 : -0.06 * t;
+      const x1 = x0 - Math.sin(ang) * len, z1 = z0 - Math.cos(ang) * len;
+      strings.push({ p, x0, z0, x1, z1, wound, r: wound ? 0.0018 + (41 - p) * 0.00008 : 0.0008 + (1 - t) * 0.0005, y: wound ? TOP_Y - RIM_H + 0.215 : TOP_Y - RIM_H + 0.19 });
+      pins.push({ x: x0, z: z0 + 0.02, y: TOP_Y - RIM_H + 0.16 });
+    }
   }
-  // ペダル (リラ)
-  const lyre = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.5, 0.05), P.lacquer)); lyre.position.set(0, 0.3, 0.02); g.add(lyre);
-  const pedalBase = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.03, 0.14), P.lacquer); pedalBase.position.set(0, 0.04, 0.1); g.add(pedalBase);
-  const pedals = [];
-  [-0.08, 0, 0.08].forEach((x) => { const pv = new THREE.Object3D(); pv.position.set(x, 0.06, 0.05); const pd = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.012, 0.11), P.brass); pd.position.set(0, 0, 0.055); pv.add(pd); g.add(pv); pedals.push(pv); });
-  // 鍵盤
+  const strGeo = new THREE.CylinderGeometry(1, 1, 1, 6, 1); strGeo.rotateX(Math.PI / 2);
+  const steelMesh = new THREE.InstancedMesh(strGeo, P.steel, strings.filter((s) => !s.wound).length);
+  const copperMesh = new THREE.InstancedMesh(strGeo, P.copper, strings.filter((s) => s.wound).length);
+  const tmp = new THREE.Object3D(); let is = 0, ic = 0;
+  for (const s of strings) {
+    const len = Math.hypot(s.x1 - s.x0, s.z1 - s.z0);
+    tmp.position.set((s.x0 + s.x1) / 2, s.y, (s.z0 + s.z1) / 2); tmp.rotation.set(0, Math.atan2(s.x1 - s.x0, -(s.z1 - s.z0)), 0); tmp.scale.set(s.r * 1.6, s.r * 1.6, len); tmp.updateMatrix();
+    if (s.wound) copperMesh.setMatrixAt(ic++, tmp.matrix); else steelMesh.setMatrixAt(is++, tmp.matrix);
+  }
+  steelMesh.castShadow = true; copperMesh.castShadow = true; g.add(steelMesh, copperMesh);
+  const pinMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.0035, 0.0035, 0.06, 8), P.silver, pins.length);
+  pins.forEach((pn, i) => { tmp.position.set(pn.x, pn.y, pn.z); tmp.rotation.set(0, 0, 0); tmp.scale.set(1, 1, 1); tmp.updateMatrix(); pinMesh.setMatrixAt(i, tmp.matrix); });
+  g.add(pinMesh);
+  // ── 駒
+  const bridgePts = strings.filter((s) => !s.wound && s.p % 4 === 1).map((s) => ({ x: s.x1 + (s.x0 - s.x1) * 0.06, z: s.z1 + (s.z0 - s.z1) * 0.06 }));
+  for (let i = 1; i < bridgePts.length; i++) { const a = bridgePts[i - 1], b = bridgePts[i]; const len = Math.hypot(b.x - a.x, b.z - a.z); const seg = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.028, len + 0.006), P.maple); seg.position.set((a.x + b.x) / 2, TOP_Y - RIM_H + 0.165, (a.z + b.z) / 2); seg.rotation.y = Math.atan2(b.x - a.x, -(b.z - a.z)); g.add(seg); }
+  const bassPts = strings.filter((s) => s.wound && s.p % 3 === 0).map((s) => ({ x: s.x1 + (s.x0 - s.x1) * 0.05, z: s.z1 + (s.z0 - s.z1) * 0.05 }));
+  for (let i = 1; i < bassPts.length; i++) { const a = bassPts[i - 1], b = bassPts[i]; const len = Math.hypot(b.x - a.x, b.z - a.z); const seg = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.03, len + 0.006), P.maple); seg.position.set((a.x + b.x) / 2, TOP_Y - RIM_H + 0.19, (a.z + b.z) / 2); seg.rotation.y = Math.atan2(b.x - a.x, -(b.z - a.z)); g.add(seg); }
+  // ── ダンパーとハンマー (鍵ごと)
+  const N_KEYS = HIGH - LOW + 1;
+  const dampers = new THREE.InstancedMesh(new THREE.BoxGeometry(0.016, 0.012, 0.028), P.feltWhite, N_KEYS);
+  const damperHead = new THREE.InstancedMesh(new THREE.BoxGeometry(0.012, 0.03, 0.012), P.hammerWood, N_KEYS);
+  const hammers = new THREE.InstancedMesh(new THREE.BoxGeometry(0.010, 0.018, 0.026), P.feltWhite, N_KEYS);
+  const hammerShank = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.003, 0.003, 0.09, 6), P.hammerWood, N_KEYS);
+  g.add(dampers, damperHead, hammers, hammerShank);
+  const DAMPER_Z = -0.50, HAMMER_Z = -0.42, STRING_Y = TOP_Y - RIM_H + 0.19;
   const keys = {};
   for (let p = LOW; p <= HIGH; p++) {
     const black = isBlack(p);
     const pivot = new THREE.Object3D();
-    pivot.position.set(keyX(p), black ? KEY_TOP_Y + 0.004 : KEY_TOP_Y - KEY_H / 2, -WHITE_L + 0.005); // 奥側を支点に沈む
-    const geo = black ? new THREE.BoxGeometry(BLACK_W, KEY_H * 0.9, BLACK_L) : new THREE.BoxGeometry(WHITE_W - 0.0012, KEY_H, WHITE_L);
+    pivot.position.set(keyX(p), black ? KEY_TOP_Y + 0.004 : KEY_TOP_Y - KEY_H / 2, -WHITE_L - 0.02);
+    const geo = black ? new THREE.BoxGeometry(BLACK_W, KEY_H * 0.95, BLACK_L) : new THREE.BoxGeometry(WHITE_W - 0.0012, KEY_H, WHITE_L + 0.02);
     const mesh = shadowed(new THREE.Mesh(geo, black ? P.ebony : P.ivory));
-    mesh.position.set(0, black ? KEY_H * 0.45 : 0, black ? BLACK_L / 2 : WHITE_L / 2);
+    mesh.position.set(0, black ? KEY_H * 0.48 : 0, black ? BLACK_L / 2 + 0.02 : (WHITE_L + 0.02) / 2);
     pivot.add(mesh); g.add(pivot);
-    keys[p] = { pivot, mesh, black, press: 0 };
+    keys[p] = { pivot, mesh, black, press: 0, target: 0, idx: p - LOW, hasDamper: p <= 89, dirty: true };
   }
-  // 椅子
-  const bench = new THREE.Group();
-  const seat = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.05, 0.34), P.bench)); seat.position.set(0, 0.47, 0.62); bench.add(seat);
-  const cushion = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.035, 0.3), P.cushion)); cushion.position.set(0, 0.51, 0.62); bench.add(cushion);
-  for (const [x, z] of [[-0.27, 0.48], [0.27, 0.48], [-0.27, 0.76], [0.27, 0.76]]) { const bl = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.45, 0.04), P.bench)); bl.position.set(x, 0.225, z); bench.add(bl); }
-  g.add(bench);
+  // ── 鍵盤まわり
+  const keybed = shadowed(new THREE.Mesh(new THREE.BoxGeometry(HALF_W * 2, 0.07, 0.46), P.lacquer)); keybed.position.set(0, KEY_TOP_Y - KEY_H - 0.04, -0.08); g.add(keybed);
+  [-1, 1].forEach((s) => { const cheek = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.115, 0.22, 0.46), P.lacquer)); cheek.position.set(s * (HALF_W - 0.0575), KEY_TOP_Y + 0.055, -0.08); g.add(cheek); });
+  const keyslip = shadowed(new THREE.Mesh(new THREE.BoxGeometry(HALF_W * 2 - 0.23, 0.028, 0.02), P.lacquer)); keyslip.position.set(0, KEY_TOP_Y - 0.018, 0.10); g.add(keyslip);
+  const nameboardFelt = new THREE.Mesh(new THREE.BoxGeometry(HALF_W * 2 - 0.23, 0.01, 0.012), P.feltRed); nameboardFelt.position.set(0, KEY_TOP_Y + 0.006, -WHITE_L - 0.03); g.add(nameboardFelt);
+  const fallboard = shadowed(new THREE.Mesh(new THREE.BoxGeometry(HALF_W * 2 - 0.23, 0.026, 0.19), P.lacquer)); fallboard.position.set(0, KEY_TOP_Y + 0.135, -0.28); fallboard.rotation.x = 0.06; g.add(fallboard);
+  const nameboard = shadowed(new THREE.Mesh(new THREE.BoxGeometry(HALF_W * 2 - 0.23, 0.15, 0.03), P.lacquer)); nameboard.position.set(0, KEY_TOP_Y + 0.075, -WHITE_L - 0.05); g.add(nameboard);
+  const plaque = textPlate("SALAMANDER GRAND PIANO V3\nsampled by Alexander Holm · 16 velocity layers · 48 kHz / 24 bit\nSFZ by kinwie · given to the world for free — thank you", 0.44, 0.078, { size: 30 });
+  plaque.position.set(0, KEY_TOP_Y + 0.078, -WHITE_L - 0.034); g.add(plaque);
+  const desk = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.30, 0.018), P.lacquer)); desk.position.set(0, TOP_Y + 0.17, -0.52); desk.rotation.x = -0.28; g.add(desk);
+  const deskLip = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.02, 0.05), P.lacquer)); deskLip.position.set(0, TOP_Y + 0.035, -0.49); g.add(deskLip);
+  // ── 屋根 (低音側の蝶番で開く)
+  const lidPivot = new THREE.Object3D(); lidPivot.position.set(-HALF_W, TOP_Y + 0.005, 0); lidPivot.rotation.z = 0.92; g.add(lidPivot);
+  const lid = extrudeOutline(outline(-0.01), 0.026, P.lacquer); lid.position.set(HALF_W, 0, 0); lidPivot.add(lid);
+  const lidInner = extrudeOutline(outline(0.04), 0.004, P.lacquerMatte); lidInner.position.set(HALF_W, -0.004, 0); lidPivot.add(lidInner);
+  const prop = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.62, 0.05), P.lacquer)); prop.position.set(0.08, TOP_Y + 0.29, -1.05); prop.rotation.z = -0.22; prop.rotation.x = 0.08; g.add(prop);
+  const hinge1 = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.1, 10), P.brass); hinge1.position.set(-HALF_W, TOP_Y + 0.005, -0.5); hinge1.rotation.x = Math.PI / 2; g.add(hinge1);
+  const hinge2 = hinge1.clone(); hinge2.position.z = -1.3; g.add(hinge2);
+  // ── 脚・キャスター・リラ・ペダル
+  for (const [x, z] of [[HALF_W - 0.12, -0.25], [-HALF_W + 0.12, -0.25], [-0.32, -1.82]]) {
+    const leg = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.07, KEY_TOP_Y - 0.12, 12), P.lacquer)); leg.position.set(x, (KEY_TOP_Y - 0.12) / 2 + 0.06, z); g.add(leg);
+    const cap = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.06, 0.15), P.lacquer)); cap.position.set(x, KEY_TOP_Y - 0.09, z); g.add(cap);
+    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.036, 16), P.brass); wheel.rotation.z = Math.PI / 2; wheel.position.set(x, 0.038, z + 0.02); g.add(wheel);
+    const fork = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.03), P.brass); fork.position.set(x, 0.07, z); g.add(fork);
+  }
+  const lyre = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.52, 0.045), P.lacquer)); lyre.position.set(0, 0.33, -0.16); g.add(lyre);
+  [-0.09, 0.09].forEach((x) => { const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 8), P.brass); rod.position.set(x, 0.33, -0.12); g.add(rod); });
+  const pedalBase = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.03, 0.16), P.lacquer)); pedalBase.position.set(0, 0.035, -0.08); g.add(pedalBase);
+  const pedals = [];
+  [-0.085, 0, 0.085].forEach((x) => { const pv = new THREE.Object3D(); pv.position.set(x, 0.055, -0.14); const pd = new THREE.Mesh(new THREE.BoxGeometry(0.028, 0.012, 0.12), P.brass); pd.position.set(0, 0, 0.06); pv.add(pd); const foot = new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.008, 0.03), P.brass); foot.position.set(0, 0.004, 0.115); pv.add(foot); g.add(pv); pedals.push(pv); });
+  // ── 椅子
+  const seat = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.05, 0.36), P.bench)); seat.position.set(0, 0.47, 0.64); g.add(seat);
+  const cushion = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.60, 0.035, 0.32), P.cushion)); cushion.position.set(0, 0.51, 0.64); g.add(cushion);
+  for (const [x, z] of [[-0.28, 0.5], [0.28, 0.5], [-0.28, 0.78], [0.28, 0.78]]) { const bl = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.026, 0.45, 10), P.bench)); bl.position.set(x, 0.225, z); g.add(bl); }
   scene.add(g);
-  return { group: g, keys, pedals, lidPivot };
+  return { group: g, keys, pedals, lidPivot, dampers, damperHead, hammers, hammerShank, DAMPER_Z, HAMMER_Z, STRING_Y, tmp };
 }
 
 /* ─────────── 舞台 ─────────── */
@@ -261,23 +356,18 @@ export class PianoStage {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
     this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.0;
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x07060a);
-    this.scene.fog = new THREE.Fog(0x07060a, 6, 14);
-    // 光: 暖かいキー光 + 青いリム + 環境
-    this.scene.add(new THREE.HemisphereLight(0x8a7a66, 0x0a0806, 0.55));
-    const key = new THREE.SpotLight(0xffe2b8, 90, 12, 0.6, 0.6, 1.4); key.position.set(1.8, 3.6, 2.2); key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -0.0003; this.scene.add(key); this.scene.add(key.target);
-    const rim = new THREE.SpotLight(0x3fbfff, 40, 10, 0.7, 0.7, 1.4); rim.position.set(-2.2, 2.6, -1.8); this.scene.add(rim);
-    const fill = new THREE.PointLight(0xffd9a0, 6, 5, 1.6); fill.position.set(0.4, 1.6, 1.4); this.scene.add(fill);
-    const handLamp = new THREE.PointLight(0xfff2d8, 5, 2.2, 1.8); handLamp.position.set(0, 1.35, 0.25); this.scene.add(handLamp);
-    // 床
-    const floor = shadowed(new THREE.Mesh(new THREE.CircleGeometry(6, 64), P.floor)); floor.rotation.x = -Math.PI / 2; this.scene.add(floor);
-    const ring = new THREE.Mesh(new THREE.RingGeometry(3.2, 3.24, 96), new THREE.MeshBasicMaterial({ color: 0xc9a24a, transparent: true, opacity: 0.35 })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.002; this.scene.add(ring);
-    // ピアノ
+    this.scene.background = new THREE.Color(0x050505);
+    this.scene.fog = new THREE.Fog(0x050505, 7, 16);
+    this.scene.add(new THREE.HemisphereLight(0x9a9a9a, 0x0a0a0a, 0.5));
+    const key = new THREE.SpotLight(0xfff1dc, 110, 12, 0.55, 0.55, 1.4); key.position.set(1.6, 3.8, 1.6); key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -0.0003; this.scene.add(key); this.scene.add(key.target); key.target.position.set(0, 0.8, -0.3);
+    const rim = new THREE.SpotLight(0xbfd8ff, 35, 10, 0.7, 0.7, 1.4); rim.position.set(-2.4, 2.8, -2.0); this.scene.add(rim);
+    const fill = new THREE.PointLight(0xffe6c4, 5, 5, 1.6); fill.position.set(0.6, 1.5, 1.6); this.scene.add(fill);
+    const inside = new THREE.PointLight(0xffe9c8, 3.5, 2.6, 1.6); inside.position.set(0.1, 1.25, -0.9); this.scene.add(inside);
+    const handLamp = new THREE.PointLight(0xffffff, 4, 2.0, 1.8); handLamp.position.set(0, 1.35, 0.3); this.scene.add(handLamp);
+    const floor = shadowed(new THREE.Mesh(new THREE.CircleGeometry(7, 64), P.floor)); floor.rotation.x = -Math.PI / 2; this.scene.add(floor);
     this.piano = buildPiano(this.scene);
-    key.target.position.set(0, 0.8, 0);
-    // ロボット
     this.bones = buildSkeleton();
     this.hands = {};
     this.robotParts = buildRobot(this.bones, this.hands);
@@ -285,13 +375,14 @@ export class PianoStage {
     this.robot.add(this.bones.Hips);
     this.scene.add(this.robot);
     this.poseSeated();
-    // カメラ
-    this.camMain = new THREE.PerspectiveCamera(38, 1, 0.05, 30);
-    this.camHands = new THREE.PerspectiveCamera(34, 1, 0.02, 10);
-    this.t = 0; this.energy = 0; this.pedalDown = false; this.pedalAmt = 0;
-    this.handState = { L: { x: keyX(48), y: 0, z: 0, ready: 0 }, R: { x: keyX(72), y: 0, z: 0, ready: 0 } };
+    this.camEye = new THREE.PerspectiveCamera(62, 1, 0.03, 30);
+    this.camHands = new THREE.PerspectiveCamera(32, 1, 0.02, 10);
+    this.camPedal = new THREE.PerspectiveCamera(40, 1, 0.02, 10);
+    this.t = 0; this.energy = 0; this.pedalDown = false; this.pedalAmt = 0; this._lastPedalAmt = -1; this._damperInit = false;
+    this.handState = { L: { x: keyX(48), y: KEY_TOP_Y + 0.05, z: 0.115 }, R: { x: keyX(72), y: KEY_TOP_Y + 0.05, z: 0.115 } };
     this.notesRef = []; this.pedalRef = [];
-    this.headNod = 0; this.lastAccentT = -10;
+    this.headNod = 0;
+    this._eyeLook = new THREE.Vector3(0, KEY_TOP_Y, -0.05);
     this._resize();
     new ResizeObserver(() => this._resize()).observe(canvas.parentElement);
   }
@@ -302,41 +393,34 @@ export class PianoStage {
     this.renderer.setSize(w, h, false);
     this.w = w; this.h = h;
     this.split = Math.round(h * 0.58);
-    this.camMain.aspect = w / this.split; this.camMain.updateProjectionMatrix();
+    this.camEye.aspect = w / this.split; this.camEye.updateProjectionMatrix();
     this.camHands.aspect = w / (h - this.split); this.camHands.updateProjectionMatrix();
+    this.pip = { w: Math.round(w * 0.30), h: Math.round(h * 0.19) };
+    this.camPedal.aspect = this.pip.w / this.pip.h; this.camPedal.updateProjectionMatrix();
   }
 
-  /* ── 座った姿勢: 骨盤を椅子に、脚を曲げ、腕を鍵盤の上へ ── */
   poseSeated() {
     const B = this.bones;
-    this.robot.position.set(0, 0.5 + 1.0 * ROBOT_SCALE, 0.62);   // 骨盤 (椅子の高さ + 少し)
-    this.robot.rotation.y = Math.PI;                              // -z (ピアノ) を向く
+    this.robot.position.set(0, 0.5 + 1.0 * ROBOT_SCALE, 0.64);
+    this.robot.rotation.y = Math.PI;
     B.Hips.rotation.set(0, 0, 0);
-    B.LowerBack.rotation.set(0.06, 0, 0);
-    B.Spine.rotation.set(0.05, 0, 0);
-    B.Spine1.rotation.set(0.02, 0, 0);
-    B.Neck1.rotation.set(-0.05, 0, 0);
-    B.Head.rotation.set(0.15, 0, 0);
-    // 脚: 腿を前 (ロボットの +z が前), 膝を曲げ, 足を床へ
     for (const s of ["Left", "Right"]) {
-      B[s + "UpLeg"].rotation.set(-Math.PI / 2 + 0.05, 0, (s === "Left" ? -1 : 1) * 0.08);
-      B[s + "Leg"].rotation.set(Math.PI / 2 - 0.35, 0, 0);
-      B[s + "Foot"].rotation.set(0.35 - 0.05, 0, 0);
+      B[s + "UpLeg"].rotation.set(-Math.PI / 2 + 0.08, 0, (s === "Left" ? -1 : 1) * 0.10);
+      B[s + "Leg"].rotation.set(Math.PI / 2 - 0.42, 0, 0);
+      B[s + "Foot"].rotation.set(0.42 - 0.08, 0, 0);
     }
-    // 腕は毎フレーム IK。肩の基準
+    B.RightUpLeg.rotation.z = 0.06;
     B.LeftShoulder.rotation.set(0, 0, -0.05); B.RightShoulder.rotation.set(0, 0, 0.05);
     this.robot.updateMatrixWorld(true);
     this.armLen = { upper: SKELETON.LeftForeArm[0] * ROBOT_SCALE, fore: SKELETON.LeftHand[0] * ROBOT_SCALE };
   }
 
-  /* ── 曲を渡す (ノートは絶対拍 s, d, p, v, h, f) ── */
   setSong(notes, pedal) {
     this.notesRef = notes.slice().sort((a, b) => a.s - b.s);
     this.pedalRef = pedal ?? [];
-    this.cursor = 0;
   }
 
-  /* ── 2 本の骨の IK: 肩から手首の目標へ ── */
+  /* ── 2 本骨 IK。肘は「外・下・体側 (手前)」へ ── */
   _solveArm(side, target, dt) {
     const B = this.bones;
     const sgn = side === "Left" ? 1 : -1;
@@ -346,143 +430,164 @@ export class PianoStage {
     const D = target.clone().sub(S);
     let d = D.length(); const maxD = (a + b) * 0.985; if (d > maxD) { D.multiplyScalar(maxD / d); d = maxD; }
     d = Math.max(d, Math.abs(a - b) + 0.01);
-    // 肘の角度 (余弦定理)
     const cosE = clamp((a * a + d * d - b * b) / (2 * a * d), -1, 1);
     const angE = Math.acos(cosE);
     const dirN = D.clone().normalize();
-    // 肘を外・下・後ろへ向ける基準ベクトル (ピアニストは肘を少し外に)
-    const pole = new THREE.Vector3(sgn * 0.55, -1, 0.35).normalize();
-    const side1 = new THREE.Vector3().crossVectors(dirN, pole).normalize();
-    const perp = new THREE.Vector3().crossVectors(side1, dirN).normalize().negate(); // pole 側
+    const outward = Math.sign(S.x) || 1;
+    const pole = new THREE.Vector3(outward * 0.55, -0.85, 0.75).normalize();
+    const perp = pole.clone().sub(dirN.clone().multiplyScalar(pole.dot(dirN)));
+    if (perp.lengthSq() < 1e-6) perp.set(0, -1, 0); perp.normalize();
     const E = S.clone().add(dirN.clone().multiplyScalar(a * Math.cos(angE))).add(perp.multiplyScalar(a * Math.sin(angE)));
-    // 上腕: 親 (Shoulder) 座標で local +x*sgn を (E-S) へ
     const setBone = (bone, from, to, restAxis) => {
       const parent = bone.parent; parent.updateWorldMatrix(true, false);
       const pq = new THREE.Quaternion(); parent.getWorldQuaternion(pq);
-      const dirWorld = to.clone().sub(from).normalize();
-      const dirLocal = dirWorld.applyQuaternion(pq.clone().invert());
+      const dirLocal = to.clone().sub(from).normalize().applyQuaternion(pq.clone().invert());
       const q = new THREE.Quaternion().setFromUnitVectors(restAxis, dirLocal);
-      bone.quaternion.slerp(q, Math.min(1, dt * 22));
+      bone.quaternion.slerp(q, Math.min(1, dt * 24));
       bone.updateMatrixWorld(true);
     };
     setBone(shoulder, S, E, new THREE.Vector3(sgn, 0, 0));
     const Ew = new THREE.Vector3(); elbow.getWorldPosition(Ew);
     setBone(elbow, Ew, target, new THREE.Vector3(sgn, 0, 0));
-    // 手: 手のひらを下・指をピアノ (world -z) へ。手首の world 向きを直接決める
     hand.updateWorldMatrix(true, false);
     const pq = new THREE.Quaternion(); hand.parent.getWorldQuaternion(pq);
-    // 手の local: 指は +x*sgn 方向。world で -z (ピアノへ) にしたい。手の local +y は world +y。
     const m = new THREE.Matrix4();
-    const xAxis = new THREE.Vector3(0, 0, -sgn);      // local x → world (指の方向 = -z を sgn で符号)
-    const yAxis = new THREE.Vector3(0, 1, 0);
+    const xAxis = new THREE.Vector3(0, 0, -sgn), yAxis = new THREE.Vector3(0, 1, 0);
     const zAxis = new THREE.Vector3().crossVectors(xAxis, yAxis);
     m.makeBasis(xAxis, yAxis, zAxis);
     const wq = new THREE.Quaternion().setFromRotationMatrix(m);
-    const lq = pq.clone().invert().multiply(wq);
-    hand.quaternion.slerp(lq, Math.min(1, dt * 18));
+    hand.quaternion.slerp(pq.clone().invert().multiply(wq), Math.min(1, dt * 20));
   }
 
-  /* ── 毎フレーム ── */
+  _placeMechanics(k, swing, lift) {
+    const pn = this.piano, tmp = pn.tmp, x = keyX(k.idx + LOW);
+    tmp.position.set(x, pn.STRING_Y - 0.075 + swing * 0.06, pn.HAMMER_Z); tmp.rotation.set(-0.9 + swing * 0.85, 0, 0); tmp.scale.set(1, 1, 1); tmp.updateMatrix(); pn.hammers.setMatrixAt(k.idx, tmp.matrix);
+    tmp.position.set(x, pn.STRING_Y - 0.12 + swing * 0.03, pn.HAMMER_Z + 0.03); tmp.rotation.set(-0.7 + swing * 0.85, 0, 0); tmp.updateMatrix(); pn.hammerShank.setMatrixAt(k.idx, tmp.matrix);
+    tmp.position.set(x, pn.STRING_Y + 0.008 + lift, pn.DAMPER_Z); tmp.rotation.set(0, 0, 0); tmp.updateMatrix(); pn.dampers.setMatrixAt(k.idx, tmp.matrix);
+    tmp.position.set(x, pn.STRING_Y + 0.03 + lift, pn.DAMPER_Z); tmp.updateMatrix(); pn.damperHead.setMatrixAt(k.idx, tmp.matrix);
+  }
+
   update(beat, beatToSec, dt, playing) {
     this.t += dt;
-    const B = this.bones;
-    const notes = this.notesRef;
+    const B = this.bones; const pn = this.piano;
     const nowSec = beatToSec(beat);
-    // 進行中・直近の音を拾う (拍で ±)
-    const LOOK = 0.35; // 秒: 先読み
+    const LOOK = 0.35;
     const active = { L: [], R: [] }, upcoming = { L: [], R: [] };
     let accent = 0;
-    for (const n of notes) {
+    for (const n of this.notesRef) {
       const s = beatToSec(n.s), e = beatToSec(n.s + n.d);
       if (e < nowSec - 0.3) continue;
       if (s > nowSec + LOOK + 0.2) break;
       const h = n.h === "L" ? "L" : "R";
-      if (s <= nowSec && nowSec < Math.max(e, s + 0.08)) { active[h].push(n); if (nowSec - s < 0.06) accent = Math.max(accent, n.v / 127); }
+      if (s <= nowSec && nowSec < Math.max(e, s + 0.09)) { active[h].push(n); if (nowSec - s < 0.06) accent = Math.max(accent, n.v / 127); }
       else if (s > nowSec && s <= nowSec + LOOK) upcoming[h].push(n);
     }
-    // 鍵の沈み
-    for (const k of Object.values(this.piano.keys)) k.target = 0;
-    for (const h of ["L", "R"]) for (const n of active[h]) { const k = this.piano.keys[n.p]; if (k) k.target = 0.6 + 0.4 * (n.v / 127); }
-    for (const k of Object.values(this.piano.keys)) { k.press = lerp(k.press, k.target ?? 0, Math.min(1, dt * (k.target ? 40 : 14))); k.pivot.rotation.x = k.press * (k.black ? 0.05 : 0.045); }
-    // ペダル
-    const pd = this.pedalRef.some((p) => beat >= p.s - 1e-6 && beat < p.s + p.d - 1e-6) && playing;
+    // ペダルと右足
+    const pd = playing && this.pedalRef.some((p) => beat >= p.s - 1e-6 && beat < p.s + p.d - 1e-6);
     this.pedalDown = pd;
     this.pedalAmt = lerp(this.pedalAmt, pd ? 1 : 0, Math.min(1, dt * 14));
-    this.piano.pedals[2].rotation.x = this.pedalAmt * 0.16;
-    B.RightFoot.rotation.x = 0.3 + this.pedalAmt * 0.16 - 0.05;
-    // 体の揺れ: 音のエネルギーを追う
+    pn.pedals[2].rotation.x = this.pedalAmt * 0.14;
+    B.RightFoot.rotation.x = 0.42 - 0.08 + this.pedalAmt * 0.14;
+    // 鍵・ハンマー・ダンパー
+    for (const k of Object.values(pn.keys)) k.target = 0;
+    for (const h of ["L", "R"]) for (const n of active[h]) { const k = pn.keys[n.p]; if (k) k.target = 0.7 + 0.3 * (n.v / 127); }
+    const pedalChanged = Math.abs(this.pedalAmt - this._lastPedalAmt) > 1e-3;
+    let mechDirty = false;
+    for (const k of Object.values(pn.keys)) {
+      const prev = k.press;
+      k.press = lerp(k.press, k.target, Math.min(1, dt * (k.target ? 60 : 16)));
+      const moving = Math.abs(k.press - prev) > 1e-4 || k.press > 1e-3;
+      if (!moving && !k.dirty && !pedalChanged) continue;
+      k.dirty = moving;
+      k.pivot.rotation.x = Math.atan(KEY_DIP / (k.black ? BLACK_L : WHITE_L)) * k.press;
+      const swing = Math.min(1, k.press * 1.4);
+      const lift = k.hasDamper ? Math.max(k.press, this.pedalAmt) * 0.012 : 0.02;
+      this._placeMechanics(k, swing, lift);
+      mechDirty = true;
+    }
+    if (!this._damperInit) { for (const k of Object.values(pn.keys)) this._placeMechanics(k, 0, k.hasDamper ? 0 : 0.02); this._damperInit = true; mechDirty = true; }
+    if (mechDirty) pn.hammers.instanceMatrix.needsUpdate = pn.hammerShank.instanceMatrix.needsUpdate = pn.dampers.instanceMatrix.needsUpdate = pn.damperHead.instanceMatrix.needsUpdate = true;
+    this._lastPedalAmt = this.pedalAmt;
+    // 体
     const density = active.L.length + active.R.length;
     this.energy = lerp(this.energy, clamp(density / 4 + accent * 0.6, 0, 1.2), Math.min(1, dt * 2.5));
-    if (accent > 0.72) { this.lastAccentT = this.t; this.headNod = Math.max(this.headNod, accent); }
+    if (accent > 0.72) this.headNod = Math.max(this.headNod, accent);
     this.headNod = lerp(this.headNod, 0, Math.min(1, dt * 4));
     const sway = Math.sin(this.t * 0.9) * 0.03 * (0.4 + this.energy) + Math.sin(this.t * 0.37) * 0.015;
-    const lean = 0.06 + this.energy * 0.12;
+    const lean = 0.10 + this.energy * 0.12;
     B.LowerBack.rotation.set(lean * 0.5, 0, sway * 0.5);
     B.Spine.rotation.set(lean * 0.4, sway * 0.3, sway * 0.5);
     B.Spine1.rotation.set(lean * 0.2, 0, sway * 0.3);
-    B.Head.rotation.set(0.12 + this.headNod * 0.22 + Math.sin(this.t * 1.3) * 0.02, -sway * 1.2, -sway * 0.6);
+    const cx = (this.handState.L.x + this.handState.R.x) / 2;
+    B.Neck1.rotation.set(0.1, 0, 0);
+    B.Head.rotation.set(0.42 + this.headNod * 0.18 + Math.sin(this.t * 1.3) * 0.015, clamp(cx * 0.9, -0.5, 0.5), -sway * 0.5);
     this.robotParts.visor.emissiveIntensity = 1.6 + this.energy * 1.4 + this.headNod * 2;
     this.robotParts.core.material.emissiveIntensity = 3 + Math.sin(this.t * 3) * 0.6 + this.energy * 2;
     this.robot.updateMatrixWorld(true);
 
-    // 手: 目標 (指ごとに鍵 x)。掌の x は「押している/次に押す指の鍵 x - 指のオフセット」の平均
+    // 手と指
     for (const h of ["L", "R"]) {
       const st = this.handState[h];
       const side = h === "L" ? "Left" : "Right";
       const hand = this.hands[side];
-      const sgn = hand.sgn;
       const list = active[h].length ? active[h] : upcoming[h];
-      let palmX = st.x, palmZ = 0.115, targetY = KEY_TOP_Y + 0.055;
+      let palmX = st.x, palmZ = 0.115;
       if (list.length) {
-        // 指のオフセット: 右手 親指 = 一番左 (-x)。左手 親指 = 一番右 (+x)
-        const offs = list.map((n) => { const fi = clamp((n.f ?? 3) - 1, 0, 4); const off = FINGER_SPREAD_M[fi] * (h === "R" ? 1 : -1); return keyX(n.p) - off; });
+        const offs = list.map((n) => keyX(n.p) - fingerOffsetX(h, clamp((n.f ?? 3) - 1, 0, 4)));
         palmX = offs.reduce((a, b) => a + b, 0) / offs.length;
-        // 黒鍵が多いなら奥へ
         const blackRatio = list.filter((n) => isBlack(n.p)).length / list.length;
-        palmZ = 0.115 - blackRatio * 0.035;
-      } else if (playing) {
-        palmX = lerp(st.x, h === "L" ? keyX(48) : keyX(72), 0.002);
-      }
-      const rate = active[h].length ? 26 : 14;
-      st.x = lerp(st.x, palmX, Math.min(1, dt * rate));
-      st.z = lerp(st.z || palmZ, palmZ, Math.min(1, dt * 10));
-      st.y = lerp(st.y || targetY, targetY, Math.min(1, dt * 10));
-      const wristTarget = new THREE.Vector3(st.x + (h === "R" ? -0.05 : 0.05), st.y, st.z + 0.12);
-      this._solveArm(side, wristTarget, dt);
-      // 指: 押している指は曲げて沈める
+        palmZ = 0.115 - blackRatio * 0.04;
+      } else if (playing) palmX = lerp(st.x, h === "L" ? keyX(48) : keyX(72), 0.002);
+      st.x = lerp(st.x, palmX, Math.min(1, dt * (active[h].length ? 28 : 14)));
+      st.z = lerp(st.z, palmZ, Math.min(1, dt * 10));
+      const palmY = KEY_TOP_Y + 0.05;
+      st.y = palmY;
+      this._solveArm(side, new THREE.Vector3(st.x, st.y, st.z + 0.85 * ROBOT_SCALE), dt);
       const pressing = new Map();
-      for (const n of active[h]) pressing.set(clamp((n.f ?? 3) - 1, 0, 4), n.v / 127);
-      const upcomingF = new Set(upcoming[h].map((n) => clamp((n.f ?? 3) - 1, 0, 4)));
+      for (const n of active[h]) { const i = clamp((n.f ?? 3) - 1, 0, 4); pressing.set(i, n); }
+      const nextByF = new Map();
+      for (const n of upcoming[h]) { const i = clamp((n.f ?? 3) - 1, 0, 4); if (!nextByF.has(i)) nextByF.set(i, n); }
       hand.fingers.forEach((f, i) => {
-        const p = pressing.has(i) ? 1 : upcomingF.has(i) ? 0.25 : 0;
-        f.press = lerp(f.press, p, Math.min(1, dt * (p ? 45 : 16)));
-        // 指の曲げ: 根元を下げ、第二関節を少し曲げる (押す = 指先が下がる)
-        const base = i === 0 ? 0.15 : 0.32, curl = i === 0 ? 0.25 : 0.45;
-        f.root.rotation.z = sgn * -(base + f.press * 0.35);   // 下向き
-        f.joint.rotation.z = sgn * -(curl * 0.6 + f.press * 0.3);
-        // 横の広がり: 押す鍵に合わせて指を少し開く
-        const n = active[h].find((q) => clamp((q.f ?? 3) - 1, 0, 4) === i) ?? upcoming[h].find((q) => clamp((q.f ?? 3) - 1, 0, 4) === i);
-        let spreadTarget = 0;
-        if (n) { const want = keyX(n.p) - st.x; const have = FINGER_SPREAD_M[i] * (h === "R" ? 1 : -1); spreadTarget = clamp((want - have) / 0.03, -0.6, 0.6); }
-        f.spread = lerp(f.spread ?? 0, spreadTarget, Math.min(1, dt * 14));
-        f.root.rotation.y = (h === "R" ? -1 : 1) * f.spread * 0.5 * (i === 0 ? 1.4 : 1);
+        const n = pressing.get(i) ?? nextByF.get(i);
+        const p = pressing.has(i) ? 1 : nextByF.has(i) ? 0.3 : 0;
+        f.press = lerp(f.press, p, Math.min(1, dt * (p === 1 ? 50 : 16)));
+        const keyTop = n && isBlack(n.p) ? KEY_TOP_Y + 0.012 : KEY_TOP_Y;
+        const restDrop = clamp((palmY - keyTop - 0.018) / f.lenM, 0, 0.95), pressDrop = clamp((palmY - keyTop + 0.006) / f.lenM, 0, 0.98);
+        const ang = Math.asin(lerp(restDrop, pressDrop, f.press));
+        f.root.rotation.z = hand.sgn * -(ang * 0.75);
+        f.joint.rotation.z = hand.sgn * -(ang * 0.45 + 0.1);
+        let shift = 0;
+        if (n) shift = keyX(n.p) - (st.x + fingerOffsetX(h, i));
+        const target = clamp(shift / Math.max(0.03, f.lenM * 0.9), -0.8, 0.8);
+        f.spread = lerp(f.spread, target, Math.min(1, dt * 18));
+        f.root.rotation.y = -Math.asin(f.spread);
       });
     }
 
-    // カメラ: 上 = 右斜め後ろからゆっくり回る。下 = 鍵盤の真上に近い所から両手を追う
-    const cx = (this.handState.L.x + this.handState.R.x) / 2;
-    const orbit = this.t * 0.05;
-    this.camMain.position.set(1.55 + Math.sin(orbit) * 0.35, 1.55 + Math.sin(this.t * 0.11) * 0.06, 1.75 + Math.cos(orbit) * 0.25);
-    this.camMain.lookAt(-0.15, 0.9, -0.15);
-    this.camHands.position.set(lerp(this.camHands.position.x || cx, cx * 0.8, Math.min(1, dt * 2)), 1.22, 0.6);
-    this.camHands.lookAt(this.camHands.position.x * 0.85, KEY_TOP_Y - 0.03, -0.08);
+    // カメラ 1: VESPER の目線
+    const eyePos = new THREE.Vector3(); this.robotParts.eye.getWorldPosition(eyePos);
+    const eyeTarget = new THREE.Vector3(clamp(cx * 0.6, -0.35, 0.35), KEY_TOP_Y - 0.02, -0.18);
+    this._eyeLook.lerp(eyeTarget, Math.min(1, dt * 3));
+    this.camEye.position.set(eyePos.x, eyePos.y + 0.02, eyePos.z + 0.02);
+    this.camEye.lookAt(this._eyeLook);
+    this.camEye.rotateZ(-sway * 0.35);
+    // カメラ 2: 鍵盤と両手のアップ
+    // (頭の前・上から見下ろす。頭は z≈0.6 にあるので、その手前 z=0.3 に置く)
+    const hx = lerp(this.camHands.position.x || cx, cx * 0.8, Math.min(1, dt * 2));
+    this.camHands.position.set(hx, 1.12, 0.30);
+    this.camHands.lookAt(hx * 0.85, KEY_TOP_Y - 0.02, -0.07);
+    // カメラ 3: ペダルと右足
+    this.camPedal.position.set(0.42, 0.26, 0.55);
+    this.camPedal.lookAt(0.06, 0.07, -0.06);
   }
 
   render() {
     const r = this.renderer; const w = this.w, h = this.h, sp = this.split;
     r.setScissorTest(true);
-    r.setViewport(0, h - sp, w, sp); r.setScissor(0, h - sp, w, sp); r.render(this.scene, this.camMain);
+    r.setViewport(0, h - sp, w, sp); r.setScissor(0, h - sp, w, sp); r.render(this.scene, this.camEye);
     r.setViewport(0, 0, w, h - sp); r.setScissor(0, 0, w, h - sp); r.render(this.scene, this.camHands);
+    const pw = this.pip.w, ph = this.pip.h;
+    r.setViewport(8, h - sp + 8, pw, ph); r.setScissor(8, h - sp + 8, pw, ph); r.render(this.scene, this.camPedal);
     r.setScissorTest(false);
   }
 }

@@ -18,6 +18,27 @@ import { initSettings } from "../js/settings.js";
 import { initChat } from "../js/chat.js";
 import * as lib from "../js/library.js";
 import { PianoStage } from "./scene.js";
+import { THEME } from "../js/pianoroll.js";
+import { ARR_THEME } from "../js/arrange.js";
+import { parseMidi } from "../js/midiread.js";
+import { autoFinger } from "../js/fingering.js";
+import { DEFAULT_BANK, Improviser, buildJamBankRequest } from "./jam.js";
+
+// 色: 黒・白・銀。点灯 (鳴っている音・再生位置・ペダル ON) だけ金
+Object.assign(THEME, {
+  rowBlack: "#070707", rowWhite: "#0b0b0b", rowLineC: "#2a2a2a", rowLine: "#151515", gridBar: "#3a3a3a", gridBeat: "#1c1c1c", gridSub: "#121212",
+  rulerBg: "#0a0a0a", rulerText: "#9a9a9a", chord: "#cfcfcf", rulerLine: "#3a3a3a",
+  keyBlack: "#111", keyWhite: "#ececec", keyLabelOnBlack: "#fff", keyLabelOnWhite: "#000",
+  playhead: "#e0b95a", hint: "#8a8a8a", hint2: "#4a4a4a",
+  handL: "#8c8c8c", handR: "#f2f2f2", fingerText: "rgba(0,0,0,.85)",
+  pedal: "rgba(120,120,120,.35)", pedalEdge: "rgba(200,200,200,.9)", pedalText: "#8a8a8a",
+  boxFill: "rgba(255,255,255,.08)", boxStroke: "rgba(255,255,255,.6)", selected: "#e0b95a", lit: "#e0b95a",
+});
+Object.assign(ARR_THEME, {
+  sections: ["rgba(255,255,255,.05)", "rgba(255,255,255,.09)", "rgba(255,255,255,.05)", "rgba(255,255,255,.09)", "rgba(255,255,255,.05)"],
+  sectionLine: "rgba(255,255,255,.25)", sectionText: "#e6e6e6", gridMajor: "#2a2a2a", gridMinor: "#171717", barNum: "#7a7a7a", chord: "#9a9a9a", rulerLine: "#3a3a3a",
+  laneSel: "rgba(255,255,255,.04)", laneLine: "#1c1c1c", laneText: "#9a9a9a", laneTextSel: "#fff", playhead: "#e0b95a", empty: "#4a4a4a", noteColor: "#d0d0d0",
+});
 
 const $ = (s) => document.querySelector(s);
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, Number.isFinite(+x) ? +x : lo));
@@ -58,7 +79,7 @@ on("song", () => { syncTransportFields(); if (stage) { const tr = selectedTrack(
 /* ─────────── stage (VESPER) ─────────── */
 let stage = null;
 let stageVisible = false;
-function ensureStage() { if (!stage) { stage = new PianoStage($("#stage-canvas")); const d = document.createElement("div"); d.className = "divider"; $("#stage").appendChild(d); } return stage; }
+function ensureStage() { if (!stage) { stage = new PianoStage($("#stage-canvas")); window.vesperStage = stage; const d = document.createElement("div"); d.className = "divider"; $("#stage").appendChild(d); const j = document.createElement("div"); j.id = "stage-jam"; $("#stage").appendChild(j); } return stage; }
 function showStage(show) {
   stageVisible = show;
   $("#stage").classList.toggle("hidden", !show);
@@ -79,6 +100,71 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 $("#btn-stage-show").addEventListener("click", () => showStage(true));
+
+/* ─────────── JAM (即興: 手札を混ぜて弾き続ける) ─────────── */
+const JAM_LS = "vesper:jam:banks:v1";
+let jam = null;   // { imp, timer, bank, style, ahead }
+function loadBanks() { try { return JSON.parse(localStorage.getItem(JAM_LS) || "{}"); } catch { return {}; } }
+function saveBank(style, bank) { const b = loadBanks(); b[style] = bank; try { localStorage.setItem(JAM_LS, JSON.stringify(b)); } catch {} }
+function bankFor(style) { const b = loadBanks(); return b[style] ?? (Object.values(b)[0] ?? DEFAULT_BANK); }
+async function makeBank(style, key, tempo, progress) {
+  const req = buildJamBankRequest({ style, key, tempo });
+  const { data } = await generateStructured({ ...req, maxTokens: 24000, onProgress: (p) => progress?.(`手札を作り中… ${((p.chars ?? 0) / 1000).toFixed(1)}k`) });
+  if (!data.progressions?.length || !data.lhPatterns?.length || !data.rhMotifs?.length) throw new Error("手札が空でした");
+  data.fills = data.fills?.length ? data.fills : DEFAULT_BANK.fills;
+  saveBank(style, data);
+  return data;
+}
+async function jamStart({ style, key, tempo, density = 1 } = {}) {
+  if (jam) jamStop();
+  const bank = bankFor(style ?? "default");
+  // 今の曲はライブラリに残し、即興は新しい曲として始める
+  await lib.saveSong(ensureSongId(), state.song).catch(() => {});
+  state.songId = lib.newId();
+  const song = pianoSong();
+  song.title = `JAM — ${style ?? bank.style ?? "session"}`; song.key = key ?? state.song.key ?? "C major"; song.tempo = tempo ?? state.song.tempo ?? 96;
+  song.sections = [{ name: "JAM", bars: 8, description: "" }];
+  resetSong(song); const tr = pianoTrack(); emit("selection");
+  const imp = new Improviser(bank, { density });
+  jam = { imp, bank, style: style ?? bank.style, timer: null, ahead: 0, notesTotal: 0 };
+  // 先に 16 小節作る
+  for (let i = 0; i < 2; i++) jamAppend(tr, imp.next8(jam.ahead * 4));
+  showStage(true);
+  await audio.play(0, (m) => (m ? showLoader(m) : hideLoader()));
+  $("#btn-jam").classList.add("active");
+  $("#stage-jam")?.classList.add("on");
+  jam.timer = setInterval(jamTick, 500);
+  return `JAM を始めました (${jam.style}, ${song.key}, ${song.tempo} BPM, 手札: 進行 ${bank.progressions.length} / 伴奏 ${bank.lhPatterns.length} / モチーフ ${bank.rhMotifs.length})。止めるときは jam stop`;
+}
+function jamAppend(tr, part) {
+  const notes = part.notes.map((n) => ({ id: uid(), ...n }));
+  tr.notes.push(...notes); tr.notes.sort((a, b) => a.s - b.s);
+  state.song.pedal.push(...part.pedal);
+  state.song.sections[0].bars = (jam.ahead + 8);
+  for (const c of part.chords) state.song.chordProgression.push({ bar: Math.floor(c.beat / 4), beat: c.beat % 4, chord: c.sym });
+  jam.ahead += 8; jam.notesTotal += notes.length; jam.info = part.info;
+  if (state.playing) audio.appendNotes(tr, notes);
+  if (stage) stage.setSong(tr.notes, state.song.pedal);
+  emit("notes"); emit("tracks");
+  const el = $("#stage-jam"); if (el) el.textContent = `JAM · ${part.info}`;
+}
+function jamTick() {
+  if (!jam) return;
+  if (!state.playing) { jamStop(); return; }
+  const ts = state.song.timeSig;
+  const remainBars = jam.ahead - audio.currentBeat() / ts;
+  if (remainBars < 10) jamAppend(pianoTrack(), jam.imp.next8(jam.ahead * 4));
+}
+function jamStop() {
+  if (!jam) return;
+  clearInterval(jam.timer); jam = null;
+  $("#btn-jam").classList.remove("active");
+  $("#stage-jam")?.classList.remove("on");
+  if (state.playing) audio.stop();
+  pushUndo();
+}
+$("#btn-jam").addEventListener("click", () => { if (jam) jamStop(); else jamStart({ style: pianoTrack().stylePrompt || undefined }).catch((e) => toast(e.message, true)); });
+on("transport", () => { if (!state.playing && jam) jamStop(); });
 $("#btn-stage-chat").addEventListener("click", () => showStage(false));
 
 /* ─────────── transport ─────────── */
@@ -111,6 +197,7 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "Space") { e.preventDefault(); togglePlay(); return; }
   if (e.key === "Home") audio.seek(0);
   if (e.key === "m" && !e.metaKey && !e.ctrlKey) $("#btn-met").click();
+  if (e.key === "j" && !e.metaKey && !e.ctrlKey) $("#btn-jam").click();
   if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
   if ((e.metaKey || e.ctrlKey) && (e.key === "Z" || (e.shiftKey && e.key === "z"))) { e.preventDefault(); redo(); }
   // 1〜5 = 指, L/R = 手, P = 選択範囲にペダル
@@ -158,6 +245,46 @@ async function exportWav(onProgress) {
 $("#btn-export-wav").addEventListener("click", () => exportWav().catch((e) => toast(e.message, true)));
 $("#btn-export-json").addEventListener("click", () => { const blob = new Blob([JSON.stringify({ song: state.song }, null, 2)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${state.song.title || "piano"}.vesper.json`; a.click(); $("#dlg-menu").close(); });
 $("#inp-import-json").addEventListener("change", async (e) => { const f = e.target.files[0]; if (!f) return; try { const data = JSON.parse(await f.text()); if (!data?.song?.tracks) throw new Error("形式が違います"); state.songId = lib.newId(); resetSong(data.song); pianoTrack(); toast("OK"); } catch (err) { toast(err.message, true); } $("#dlg-menu").close(); });
+
+/* ─────────── MIDI 読み込み・レパートリー・感謝 ─────────── */
+function loadMidiIntoSong(buffer, title) {
+  const m = parseMidi(buffer);
+  if (!m.notes.length) throw new Error("音符が見つかりません");
+  const notes = autoFinger(m.notes.filter((n) => n.p >= 21 && n.p <= 108).map((n) => ({ p: n.p, s: +n.s.toFixed(4), d: +Math.max(0.05, n.d).toFixed(4), v: Math.max(1, Math.min(127, n.v)), track: n.track })), { tracks: m.tracks });
+  const song = pianoSong();
+  song.title = title; song.tempo = Math.round(m.tempo); song.timeSig = m.timeSig.den === 8 ? (m.timeSig.num === 6 ? 6 : 3) : m.timeSig.num;
+  song.timeSig = [3, 4, 6].includes(song.timeSig) ? song.timeSig : 4;
+  const bars = Math.ceil(Math.max(...notes.map((n) => n.s + n.d)) / song.timeSig);
+  song.sections = [{ name: title, bars, description: "" }];
+  song.tempoMap = m.tempos.length > 1 ? m.tempos.map((t) => ({ beat: t.beat, tempo: Math.round(t.tempo * 10) / 10 })) : [];
+  song.pedal = [];
+  song.tracks[0].notes = notes.map((n) => ({ id: uid(), p: n.p, s: n.s, d: n.d, v: n.v, h: n.h, f: n.f }));
+  state.songId = lib.newId();
+  resetSong(song); pianoTrack(); emit("selection");
+  const a = checkNow();
+  return `「${title}」を読み込みました (${notes.length}音、${bars}小節、${song.tempo} BPM)。手と指は自動で付けました。検査: ${describeAnalysis(a)}`;
+}
+$("#inp-import-midi").addEventListener("change", async (e) => { const f = e.target.files[0]; if (!f) return; try { const msg = loadMidiIntoSong(await f.arrayBuffer(), f.name.replace(/\.midi?$/i, "")); log(msg, "ok"); toast("OK"); } catch (err) { toast(err.message, true); } $("#dlg-menu").close(); e.target.value = ""; });
+let repertoireCache = null;
+async function listRepertoire() { if (repertoireCache) return repertoireCache; try { const r = await fetch("repertoire/index.json", { cache: "no-cache" }); repertoireCache = r.ok ? await r.json() : []; } catch { repertoireCache = []; } return repertoireCache; }
+async function playRepertoire(item) {
+  const r = await fetch(`repertoire/${item.file}`); if (!r.ok) throw new Error("楽譜が読めません");
+  const msg = loadMidiIntoSong(await r.arrayBuffer(), `${item.title} — ${item.composer}`);
+  return msg;
+}
+async function renderRepertoire() {
+  const list = await listRepertoire(); const el = $("#rep-list"); el.innerHTML = "";
+  for (const it of list) {
+    const row = document.createElement("div"); row.className = "lib-row";
+    row.innerHTML = `<div><div class="lib-title">${esc(it.title)}</div><div class="lib-meta">${esc(it.composer)} · ${esc(it.year)} · ${esc(it.license)}</div></div><button class="gbtn small lib-open">弾く</button><span></span><span></span><span></span>`;
+    row.querySelector(".lib-open").addEventListener("click", async () => { try { log(await playRepertoire(it), "ok"); $("#dlg-repertoire").close(); showStage(true); await audio.play(0, (m) => (m ? showLoader(m) : hideLoader())); } catch (err) { toast(err.message, true); } });
+    el.appendChild(row);
+  }
+}
+$("#btn-repertoire").addEventListener("click", async () => { await renderRepertoire(); $("#dlg-repertoire").showModal(); });
+$("#btn-rep-close").addEventListener("click", () => $("#dlg-repertoire").close());
+$("#btn-thanks").addEventListener("click", () => $("#dlg-thanks").showModal());
+$("#btn-thanks-close").addEventListener("click", () => $("#dlg-thanks").close());
 
 /* ─────────── library ─────────── */
 const dlg = $("#dlg-menu");
@@ -354,6 +481,23 @@ const actions = {
     if (action === "delete") { const m = await lib.findByTitle(name); if (!m) throw new Error(`「${name}」は無い`); if (m.id === state.songId) throw new Error("開いている曲は消せません"); await lib.deleteSong(m.id); return `「${m.title}」を削除しました`; }
     if (action === "new") { state.songId = lib.newId(); resetSong(pianoSong()); pianoTrack(); emit("selection"); return "新しい空のピアノ曲にしました"; }
     throw new Error(`未対応: ${action}`);
+  },
+  async repertoire({ action, name }) {
+    const list = await listRepertoire();
+    if (action === "list" || !name) return list.length ? "同梱の曲 (すべてパブリックドメイン):\n" + list.map((it) => `- ${it.title} — ${it.composer} (${it.year})`).join("\n") + "\n自分の MIDI は ☰ → MIDI 読み込み。" : "同梱の曲はありません";
+    const q = String(name).toLowerCase();
+    const it = list.find((x) => x.title.toLowerCase().includes(q) || x.composer.toLowerCase().includes(q)) ?? list.find((x) => q.includes(x.title.toLowerCase().split(" ")[0]));
+    if (!it) throw new Error(`「${name}」は同梱されていません (著作権のある曲は弾けません)。あるのは: ${list.map((x) => x.title).join(" / ")}`);
+    const msg = await playRepertoire(it);
+    showStage(true); await audio.play(0, (m) => (m ? showLoader(m) : hideLoader()));
+    return `${msg}\n再生中 (VESPER が弾いています)`;
+  },
+  async jam({ action, style, key, tempo, density }, progress) {
+    if (action === "stop") { jamStop(); return "JAM を止めました (曲はライブラリに残っています)"; }
+    if (action === "new_bank") { const st = style || "jazz ballad"; await makeBank(st, key ?? state.song.key, tempo ?? state.song.tempo, progress); return `「${st}」の手札を作りました。jam start で始められます`; }
+    const st = style || "default";
+    if (style && !loadBanks()[style]) { progress?.("手札を作り中…"); try { await makeBank(style, key ?? state.song.key, tempo ?? state.song.tempo, progress); } catch (e) { log(`手札の生成に失敗: ${e.message} → 既定の手札で始めます`, "err"); } }
+    return await jamStart({ style: st, key, tempo, density });
   },
   async get_song_details() {
     const song = state.song; const tr = pianoTrack(); const out = [songStateText()];

@@ -636,6 +636,8 @@ export const SYSTEM_CHAT_PIANO = `あなたは VESPER PIANO (ロボットのピ�
 - 曲のイメージを言われたら、確認を挟まずに compose_piano で設計図から全部作る。細かい指定が無い所はプロとして埋める。
 - 「もっと静かに」「サビを作り直して」は regenerate (範囲と direction) で該当部分だけ。
 - テンポ・キー・タイトルは update_song。移調や強弱の一括変更は edit_notes。テンポの揺れは set_tempo_map。再生は transport。書き出しは export_file。曲の管理は project。
+- 「エンターテイナー弾いて」「エリーゼのために」など既存の曲は repertoire (同梱はパブリックドメインの名曲だけ。著作権のある曲 (ビートルズ、久石譲、坂本龍一、ゲーム音楽など) は作れないし弾けない。代わりに「その曲の雰囲気で新しい曲」なら compose_piano で作れる、と案内する)。
+- 「ずっと弾いていて」「即興で」「ジャムして」は jam start (style を書く)。手札を新しく作るのは jam new_bank。
 - 曲は 1 トラックのピアノ。音符ごとに手 (L/R) と指 (1〜5)、ペダル区間を持つ。生成後は自動検査 (片手 5 音・指の重複・広がり・交差・指順) と手直しが入る。
 - 道具の結果を受け取ったら 1〜4 文で短く報告する。道具の結果に「変更済み」「生成しました」とあれば完了。同じ変更を繰り返さない。
 - ユーザーの言語で話す。中学生でも分かる言葉で。音楽用語は使ってよい。
@@ -652,4 +654,6 @@ export const PIANO_CHAT_TOOLS = [
   { name: "export_file", description: "書き出し。midi=SMF (運指はテキストイベント、ペダルは CC64)、wav=オーディオ、json=プロジェクト", input_schema: { type: "object", properties: { format: { type: "string", enum: ["midi", "wav", "json"] } }, required: ["format"] } },
   { name: "project", description: "曲の管理。list=一覧、open=曲名で開く(name)、save_as=別名で保存(name)、rename=改名(name)、delete=削除(name)、new=空の新曲", input_schema: { type: "object", properties: { action: { type: "string", enum: ["list", "open", "save_as", "rename", "delete", "new"] }, name: { type: "string" } }, required: ["action"] } },
   { name: "get_song_details", description: "曲の詳しい情報 (構成の説明、コード進行、演奏メモ、運指の検査結果、小節ごとの音数)", input_schema: { type: "object", properties: {} } },
+  { name: "repertoire", description: "同梱の著作権切れ (パブリックドメイン) の名曲や、ユーザーが読み込んだ MIDI を VESPER に弾かせる。list=一覧、play=name で開いて再生 (自動で手と指を付ける)", input_schema: { type: "object", properties: { action: { type: "string", enum: ["list", "play"] }, name: { type: "string", description: "曲名の一部" } }, required: ["action"] } },
+  { name: "jam", description: "即興モード。start=手札 (定番の進行・伴奏型・モチーフ) を混ぜながら VESPER が弾き続ける (今の曲は保存され、即興は別の曲になる)。new_bank=そのスタイルの手札を Claude が作り直す (1〜2 分)。stop=止める。", input_schema: { type: "object", properties: { action: { type: "string", enum: ["start", "stop", "new_bank"] }, style: { type: "string", description: "スタイル (例: ジャズバラード, ボサノバ, ポップス, 坂本龍一風ミニマル)" }, key: { type: "string" }, tempo: { type: "number" }, density: { type: "number", description: "音の多さ 0.5〜1" } }, required: ["action"] } },
 ];

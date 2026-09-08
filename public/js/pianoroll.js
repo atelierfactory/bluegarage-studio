@@ -11,6 +11,18 @@ const GM_DRUM_NAMES = {
 };
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const BLACK = new Set([1, 3, 6, 8, 10]);
+// 色は差し替え可能 (ピアノ版は黒・白・銀、点灯だけ金)
+export const THEME = {
+  rowBlack: "#0a1120", rowWhite: "#0d1526", rowDrum: "#0f1c33", rowLineC: "#1d3054", rowLine: "#111c30",
+  gridBar: "#27407a", gridBeat: "#15233f", gridSub: "#0f1a30",
+  rulerBg: "#0a1224", rulerText: "#7d93bd", chord: "#ffc857", rulerLine: "#27407a",
+  keyBlack: "#1a2846", keyWhite: "#dfe9fb", keyLabelOnBlack: "#fff", keyLabelOnWhite: "#0a1224", keyDrumBg: "#14264a", keyDrumText: "#9db8e8",
+  playhead: "#38c3ff", hint: "#7d93bd", hint2: "#3c5580",
+  handL: "#ff8f5e", handR: "#5ea2ff", fingerText: "rgba(255,255,255,.9)",
+  pedal: "rgba(255,200,87,.28)", pedalEdge: "rgba(255,200,87,.9)", pedalText: "#ffc857",
+  boxFill: "rgba(56,195,255,.12)", boxStroke: "rgba(56,195,255,.8)", selected: "#ffffff", lit: null,
+};
+
 function hexA(hex, a) { const m = hex.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i); if (!m) return hex; return `rgba(${parseInt(m[1],16)},${parseInt(m[2],16)},${parseInt(m[3],16)},${a})`; }
 
 export class PianoRoll {
@@ -312,10 +324,10 @@ export class PianoRoll {
       if (p < 0 || p > 127) continue;
       const y = this.pitchToY(p);
       const pc = p % 12;
-      ctx.fillStyle = BLACK.has(pc) ? "#0a1120" : "#0d1526";
-      if (isDrum && GM_DRUM_NAMES[p]) ctx.fillStyle = "#0f1c33";
+      ctx.fillStyle = BLACK.has(pc) ? THEME.rowBlack : THEME.rowWhite;
+      if (isDrum && GM_DRUM_NAMES[p]) ctx.fillStyle = THEME.rowDrum;
       ctx.fillRect(this.keyW, y, w - this.keyW, this.rowH);
-      ctx.strokeStyle = pc === 11 ? "#1d3054" : "#111c30";
+      ctx.strokeStyle = pc === 11 ? THEME.rowLineC : THEME.rowLine;
       ctx.beginPath(); ctx.moveTo(this.keyW, y + this.rowH + 0.5); ctx.lineTo(w, y + this.rowH + 0.5); ctx.stroke();
     }
 
@@ -326,13 +338,13 @@ export class PianoRoll {
       if (b < 0) continue;
       const x = this.beatToX(b);
       const isBar = b % ts === 0;
-      ctx.strokeStyle = isBar ? "#27407a" : "#15233f";
+      ctx.strokeStyle = isBar ? THEME.gridBar : THEME.gridBeat;
       ctx.lineWidth = isBar ? 1.4 : 1;
       ctx.beginPath(); ctx.moveTo(x + 0.5, this.rulerH); ctx.lineTo(x + 0.5, h); ctx.stroke();
       // サブディビジョン
       const snap = this.getSnap();
       if (snap && this.pxPerBeat * snap > 7 && snap < 1) {
-        ctx.strokeStyle = "#0f1a30";
+        ctx.strokeStyle = THEME.gridSub;
         for (let sb = snap; sb < 1; sb += snap) {
           const sx = this.beatToX(b + sb);
           ctx.beginPath(); ctx.moveTo(sx + 0.5, this.rulerH); ctx.lineTo(sx + 0.5, h); ctx.stroke();
@@ -350,8 +362,9 @@ export class PianoRoll {
         if (x + nw < this.keyW || x > w || y < this.rulerH - this.rowH || y > h) continue;
         const sel = this.selection.has(n.id);
         const alpha = 0.35 + (n.v / 127) * 0.65;
-        const handColor = n.h === "L" ? "#ff8f5e" : n.h === "R" ? "#5ea2ff" : color;
-        ctx.fillStyle = sel ? "#ffffff" : handColor;
+        const lit = THEME.lit && state.playing && state.playheadBeat >= n.s && state.playheadBeat < n.s + Math.max(n.d, 0.12);
+        const handColor = lit ? THEME.lit : n.h === "L" ? THEME.handL : n.h === "R" ? THEME.handR : color;
+        ctx.fillStyle = sel ? THEME.selected : handColor;
         if (!sel && n.v2 != null && n.v2 !== n.v && nw > 6) {
           // v2 (終わりの強さ): 濃さのグラデーションで表示
           const g = ctx.createLinearGradient(x, 0, x + nw, 0);
@@ -370,26 +383,26 @@ export class PianoRoll {
           ctx.fillRect(x + 2, y + this.rowH - 4, (nw - 4) * (n.v / 127), 2);
         }
         // 指番号 (ピアノ独奏)
-        if (n.f != null && nw >= 12 && this.rowH >= 11) { ctx.fillStyle = sel ? "#000" : "rgba(255,255,255,.9)"; ctx.font = "bold 8px 'IBM Plex Mono'"; ctx.fillText(String(n.f), x + 3, y + this.rowH - 3); }
+        if (n.f != null && nw >= 12 && this.rowH >= 11) { ctx.fillStyle = sel || lit ? "#000" : THEME.fingerText; ctx.font = "bold 8px 'IBM Plex Mono'"; ctx.fillText(String(n.f), x + 3, y + this.rowH - 3); }
       }
     }
 
     // ルーラー
-    ctx.fillStyle = "#0a1224";
+    ctx.fillStyle = THEME.rulerBg;
     ctx.fillRect(0, 0, w, this.rulerH);
-    ctx.strokeStyle = "#27407a";
+    ctx.strokeStyle = THEME.rulerLine;
     ctx.beginPath(); ctx.moveTo(0, this.rulerH + 0.5); ctx.lineTo(w, this.rulerH + 0.5); ctx.stroke();
     ctx.font = "10px 'IBM Plex Mono'";
     for (let b = beat0; b <= beatN; b++) {
       if (b < 0 || b % ts !== 0) continue;
       const x = this.beatToX(b);
-      ctx.fillStyle = "#7d93bd";
+      ctx.fillStyle = THEME.rulerText;
       ctx.fillText(String(b / ts + 1), x + 4, 11);
       // コード名
       const ch = chordAtBeat(b);
       if (ch) {
         const prev = b - ts >= 0 ? chordAtBeat(b - ts) : null;
-        ctx.fillStyle = "#ffc857";
+        ctx.fillStyle = THEME.chord;
         // 同じコードが続く場合も小節頭に薄く表示
         ctx.globalAlpha = ch === prev ? 0.35 : 1;
         ctx.fillText(ch, x + 4, 23);
@@ -401,7 +414,7 @@ export class PianoRoll {
       if (c.beat > 0) {
         const b = c.bar * ts + c.beat;
         if (b >= beat0 && b <= beatN) {
-          ctx.fillStyle = "#ffc857"; ctx.globalAlpha = 0.8;
+          ctx.fillStyle = THEME.chord; ctx.globalAlpha = 0.8;
           ctx.fillText(c.chord, this.beatToX(b) + 2, 23);
           ctx.globalAlpha = 1;
         }
@@ -409,7 +422,7 @@ export class PianoRoll {
     }
 
     // 鍵盤
-    ctx.fillStyle = "#0d1526";
+    ctx.fillStyle = THEME.rowWhite;
     ctx.fillRect(0, this.rulerH, this.keyW, h - this.rulerH);
     for (let p = this.scrollY; p >= this.yToPitch(h); p--) {
       if (p < 0 || p > 127) continue;
@@ -417,23 +430,23 @@ export class PianoRoll {
       const pc = p % 12;
       if (isDrum) {
         const name = GM_DRUM_NAMES[p];
-        ctx.fillStyle = name ? "#14264a" : "#0a1120";
+        ctx.fillStyle = name ? THEME.keyDrumBg : THEME.rowBlack;
         ctx.fillRect(0, y, this.keyW - 1, this.rowH - 1);
         if (name) {
-          ctx.fillStyle = "#9db8e8"; ctx.font = "8.5px 'IBM Plex Mono'";
+          ctx.fillStyle = THEME.keyDrumText; ctx.font = "8.5px 'IBM Plex Mono'";
           ctx.fillText(name, 4, y + this.rowH - 4);
         }
       } else {
-        ctx.fillStyle = BLACK.has(pc) ? "#1a2846" : "#dfe9fb";
+        ctx.fillStyle = BLACK.has(pc) ? THEME.keyBlack : THEME.keyWhite;
         ctx.fillRect(0, y, this.keyW - 1, this.rowH - 1);
         if (pc === 0) {
-          ctx.fillStyle = BLACK.has(pc) ? "#fff" : "#0a1224";
+          ctx.fillStyle = BLACK.has(pc) ? THEME.keyLabelOnBlack : THEME.keyLabelOnWhite;
           ctx.font = "9px 'IBM Plex Mono'";
           ctx.fillText(`C${Math.floor(p / 12) - 1}`, this.keyW - 22, y + this.rowH - 4);
         }
       }
     }
-    ctx.strokeStyle = "#27407a";
+    ctx.strokeStyle = THEME.rulerLine;
     ctx.beginPath(); ctx.moveTo(this.keyW + 0.5, 0); ctx.lineTo(this.keyW + 0.5, h); ctx.stroke();
 
     // ペダル区間 (下端の帯)
@@ -441,16 +454,17 @@ export class PianoRoll {
       for (const pd of state.song.pedal) {
         const x0 = this.beatToX(pd.s), x1 = this.beatToX(pd.s + pd.d);
         if (x1 < this.keyW || x0 > w) continue;
-        ctx.fillStyle = "rgba(255,200,87,.28)"; ctx.fillRect(Math.max(this.keyW, x0), h - 8, Math.min(w, x1) - Math.max(this.keyW, x0), 8);
-        ctx.fillStyle = "rgba(255,200,87,.9)"; ctx.fillRect(Math.max(this.keyW, x0), h - 8, 2, 8);
+        const on = THEME.lit && state.playing && state.playheadBeat >= pd.s && state.playheadBeat < pd.s + pd.d;
+        ctx.fillStyle = on ? THEME.lit : THEME.pedal; ctx.globalAlpha = on ? 0.6 : 1; ctx.fillRect(Math.max(this.keyW, x0), h - 8, Math.min(w, x1) - Math.max(this.keyW, x0), 8); ctx.globalAlpha = 1;
+        ctx.fillStyle = on ? THEME.lit : THEME.pedalEdge; ctx.fillRect(Math.max(this.keyW, x0), h - 8, 2, 8);
       }
-      ctx.fillStyle = "#ffc857"; ctx.font = "8px 'IBM Plex Mono'"; ctx.fillText("PEDAL", this.keyW + 4, h - 10);
+      ctx.fillStyle = THEME.pedalText; ctx.font = "8px 'IBM Plex Mono'"; ctx.fillText("PEDAL", this.keyW + 4, h - 10);
     }
 
     // 範囲選択の枠
     if (this.drag?.mode === "box" && this.drag.moved) {
       const d = this.drag;
-      ctx.fillStyle = "rgba(56,195,255,.12)"; ctx.strokeStyle = "rgba(56,195,255,.8)";
+      ctx.fillStyle = THEME.boxFill; ctx.strokeStyle = THEME.boxStroke;
       ctx.fillRect(Math.min(d.startX, d.x), Math.min(d.startY, d.y), Math.abs(d.x - d.startX), Math.abs(d.y - d.startY));
       ctx.strokeRect(Math.min(d.startX, d.x) + 0.5, Math.min(d.startY, d.y) + 0.5, Math.abs(d.x - d.startX), Math.abs(d.y - d.startY));
     }
@@ -458,18 +472,18 @@ export class PianoRoll {
     // プレイヘッド
     const px = this.beatToX(state.playheadBeat);
     if (px >= this.keyW && px <= w) {
-      ctx.strokeStyle = "#38c3ff"; ctx.lineWidth = 1.5;
-      ctx.shadowColor = "#38c3ff"; ctx.shadowBlur = 6;
+      ctx.strokeStyle = THEME.playhead; ctx.lineWidth = 1.5;
+      ctx.shadowColor = THEME.playhead; ctx.shadowBlur = 6;
       ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, h); ctx.stroke();
       ctx.shadowBlur = 0; ctx.lineWidth = 1;
     }
 
     // 空トラックのヒント
     if (!t) {
-      ctx.fillStyle = "#7d93bd"; ctx.font = "13px 'Zen Kaku Gothic New'";
+      ctx.fillStyle = THEME.hint; ctx.font = "13px 'Zen Kaku Gothic New'";
       ctx.fillText("トラックを選択してください", this.keyW + 30, this.rulerH + 40);
     } else if (!t.notes.length) {
-      ctx.fillStyle = "#3c5580";
+      ctx.fillStyle = THEME.hint2;
       ctx.font = "12px 'Zen Kaku Gothic New'";
       ctx.fillText("クリックでノートを置くか、右のAIパネルから生成 →", this.beatToX(this.scrollX) + 30, this.rulerH + 40);
     }

@@ -47,6 +47,10 @@ Songs are saved automatically to a browser-side library (IndexedDB). Open ☰ to
 
 `public/piano/` is a **piano-only** tool built from the same parts. The left two thirds are a single-track piano roll; the right side is the chat, and when you press ▶ it becomes a 3D stage where the robot pianist VESPER-01 (three.js) plays a grand piano.
 Claude composes with **a hand (L/R), a finger (1-5) and sustain-pedal segments for every note**; `analyzePiano` in `critic.js` checks playability (max 5 notes per hand, duplicate fingers, spans over a 9th, hand crossing, finger order) and sends problems back for revision. The pedal is consistent across playback (notes sustain), MIDI (CC64) and the stage (right foot). In the piano roll the right hand is blue, the left hand orange, finger numbers are drawn on notes, and a PEDAL lane runs along the bottom. Keys 1-5 set the finger, L/R the hand and P toggles a pedal segment for the selection.
+The UI is black, white and silver; only things that are "lit" (sounding notes, the playhead, the pedal) turn gold. The upper view is VESPER's own eyes, the lower view a close-up of the hands, and a small inset shows the pedal and right foot. The piano is a generic concert grand built down to every string, hammer, damper, the cast-iron plate and a plaque (no manufacturer's design is copied).
+**JAM**: endless improvisation from a "hand" of stock progressions, left-hand patterns and right-hand motifs. Claude writes the hand once (cached in the browser); the mixing happens locally, so it plays for hours without API calls.
+**Repertoire** (♪): public-domain classics (The Entertainer, Für Elise, Clair de Lune, Chopin's Trois Nouvelles Études No. 1 — Mutopia Project public-domain editions) and your own MIDI files, with hands and fingers assigned automatically. Copyrighted works are neither bundled nor generated.
+**♥**: the story of, and thanks to, the Salamander Grand Piano.
 Live: https://atelierfactory.github.io/bluegarage-studio/piano/
 
 ## How it gets the music right (v2)

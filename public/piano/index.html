@@ -25,6 +25,7 @@
     <button id="btn-stop" class="tbtn" title="停止">■</button>
     <button id="btn-loop" class="tbtn" title="ループ">⟲</button>
     <button id="btn-met" class="tbtn met" title="メトロノーム (M)">♩</button>
+    <button id="btn-jam" class="tbtn jam" title="JAM: 手札を混ぜて即興で弾き続ける (J)">JAM</button>
     <div class="lcd"><span id="pos-display">001.1</span><span class="lcd-dim" id="time-display">0:00.0</span></div>
     <label class="tfield"><span>BPM</span><input id="inp-tempo" type="number" min="30" max="300" step="1" value="90" /></label>
     <label class="tfield"><span>拍子</span><select id="inp-timesig"><option value="4">4/4</option><option value="3">3/4</option><option value="6">6/8*</option></select></label>
@@ -43,7 +44,9 @@
       <button id="btn-export" class="gbtn tiny" title="MIDI 書き出し (ペダル CC64 付き)">MIDI</button>
       <button id="btn-export-wav" class="gbtn tiny" title="WAV 書き出し">WAV</button>
       <button id="btn-save" class="gbtn tiny" title="保存">保存</button>
+      <button id="btn-repertoire" class="gbtn tiny" title="レパートリー (著作権切れの名曲 / 自分の MIDI)">♪</button>
       <button id="btn-menu" class="gbtn tiny" title="曲の管理">☰</button>
+      <button id="btn-thanks" class="gbtn tiny" title="この楽器について (Salamander Grand Piano への感謝)">♥</button>
       <button id="btn-settings" class="gbtn tiny" title="設定 (API キー / モデル / 言語)">⚙</button>
       <a class="gbtn tiny" href="../" title="BLUE GARAGE STUDIO (フルのシーケンサー)">STUDIO</a>
     </div>
@@ -55,7 +58,7 @@
     <div id="arrange-wrap"><canvas id="arrange"></canvas></div>
     <div id="proll-head">
       <span id="proll-title">PIANO ROLL</span>
-      <span class="legend"><i class="sw r"></i>右手 <i class="sw l"></i>左手 <i class="sw p"></i>ペダル</span>
+      <span class="legend"><i class="sw r"></i>右手 <i class="sw l"></i>左手 <i class="sw p"></i>ペダル <i class="sw lit"></i>いま鳴っている音</span>
       <span id="proll-hint">クリック=追加 / ドラッグ=移動 / 右端=長さ / ⌥クリック=削除 / ⌘ドラッグ=範囲選択 / 1〜5=指 / L R=手 / P=選択範囲にペダル / ⌘C ⌘V ⌘D / ←→↑↓</span>
     </div>
     <div id="proll-wrap" class="view view-active"><canvas id="proll"></canvas></div>
@@ -91,9 +94,28 @@
     <button id="btn-save-as" class="gbtn small">名前を付けて保存 (複製)</button>
     <button id="btn-export-json" class="gbtn small">JSON 書き出し</button>
     <label class="gbtn small file-label"><span>JSON 読み込み</span><input id="inp-import-json" type="file" accept=".json" hidden /></label>
+    <label class="gbtn small file-label"><span>MIDI 読み込み (自動で手と指を付ける)</span><input id="inp-import-midi" type="file" accept=".mid,.midi" hidden /></label>
   </div>
   <div id="lib-list" class="lib-list"></div>
   <div class="dlg-foot"><button id="btn-menu-close" class="gbtn small">閉じる</button></div>
+</dialog>
+
+<dialog id="dlg-repertoire" class="wide">
+  <h3>レパートリー</h3>
+  <p class="dim">著作権が切れている (パブリックドメインの) 名曲を同梱しています。楽譜データは The Mutopia Project の Public Domain 版。自分の MIDI ファイルも「☰ → MIDI 読み込み」で弾かせられます (手と指は自動で付きます)。</p>
+  <div id="rep-list" class="lib-list"></div>
+  <div class="dlg-foot"><button id="btn-rep-close" class="gbtn small">閉じる</button></div>
+</dialog>
+
+<dialog id="dlg-thanks" class="wide">
+  <h3>この楽器について — Salamander Grand Piano への感謝</h3>
+  <div class="thanks">
+    <p>VESPER が弾いているピアノの音は、<b>Salamander Grand Piano</b> です。Alexander Holm さんが、ヤマハ C5 というグランドピアノを 1 鍵ずつ、16 段階の強さで、48kHz / 24bit で録音し、ハンマーの音や弦の共鳴、ペダルの音まで含めて、<b>誰でも自由に使えるように無料で公開</b>してくれた音源です。マイクは AKG C414 を 2 本、弦の上 12cm に置いて録られました。</p>
+    <p>公開以来、世界中の無料ピアノ音源の「定番」になり、数えきれない曲・アプリ・学習教材の中で鳴ってきました。V3 は kinwie さんが SFZ 形式に整え直したもので、このツールもその版を使っています。ライセンスは CC-BY 3.0、そして 2022 年 3 月 4 日に作者本人がパブリックドメインを宣言しました。</p>
+    <p>ピアノを 1 台まるごと録音して手放す、というのは、ふつうはお金を取る仕事です。それを贈り物にしてくれた Alexander Holm さんと、それを今の形に整えた kinwie さん、そして Mutopia Project のように楽譜を自由にしてきた人たちのおかげで、ロボットのピアニストが今日ここで弾いています。心からの感謝を込めて。3D のピアノの銘板にも、その名前を刻んであります。</p>
+    <p class="dim">Salamander Grand Piano V3 — Alexander Holm (recording) / kinwie (SFZ) — CC-BY 3.0, declared public domain 2022-03-04. Source: archive.org/details/SalamanderGrandPianoV3 · github.com/sfzinstruments/SalamanderGrandPiano</p>
+  </div>
+  <div class="dlg-foot"><button id="btn-thanks-close" class="gbtn small">閉じる</button></div>
 </dialog>
 
 <dialog id="dlg-settings">
