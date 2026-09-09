@@ -171,3 +171,9 @@ window.vesperInterpret({ model: 'claude-fable-5-1', bars: 8, extraDirection: '�
 - したがって **更新は music_app を `git push origin main` するだけ**（GitHub Pages が 1〜2 分で更新 → atelierfactory.jp 側も同時に変わる）。会社サイトの deploy.sh は不要。deploy.sh の jukebox 同梱は止めてある（rule と二重になるため）。
 - 確認済み：/device/jukebox → 301 → /device/jukebox/ → piano/ へ。piano.js / repertoire/index.json / samples/piano/index.json が 200。CSP（会社サイトの `**` パターン）の中でそのまま動く。ブラウザで「祭囃子オーバードライブ」を選択 → ▶ で 327 音・音抜け 0。コンソールの 404 は /api/config と config.json（静的サイトでは無いのが正常）。
 - 公開版で動くもの：既存の曲 6 曲、お題なしの即興（既定の手札）。**作曲・お題つき即興は AWS 中継（apps/jukebox、未 apply）ができるまで動かない**。中継ができたら `config.json` を GitHub Pages 側の public/ に置く（proxyUrl）＋会社サイトの CSP `connect-src` に中継の住所を足す（`/device/jukebox/**` のパターンで）。
+
+## 12. HTML 1 枚の配布版（2026-09-09 夕方・さとるん要望「このhtmlだけ渡せば大丈夫」）
+- `tools/build-single.mjs <perf.json> <出力.html> [タイトル]` が、piano/index.html + CSS + フォント(data:) + Tone.js + esbuild で 1 本にした JS（three.js 込み）+ 曲 + その曲で使う音源だけ（base64）を 1 ファイルにする。`fetch()` を差し替えて埋め込みを返すので file:// で開ける。
+- 革命版: `~/Desktop/VESPER_PIANO_革命.html`（42.4 MB、音源 215 ファイル 24.7 MB、JS 0.7 MB）。手元の http 経由で動作確認済み（読み込み・▶・鍵の沈み）。
+- 事故: `String.replace` の置き換え文字列は `$'` `$&` を特別扱いする → JS が壊れて `Unexpected token 'void'`。必ず関数で渡す（直した）。inline `<script>` の中の `</script` はエスケープ。
+- 配布版でできないこと: 作曲・お題つき即興（API 無し）。「作った曲」は開いたブラウザごとの保存。
