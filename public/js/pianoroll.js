@@ -242,9 +242,11 @@ export class PianoRoll {
       }
       if (e.shiftKey) {
         this.scrollX = Math.max(0, this.scrollX + e.deltaY / this.pxPerBeat);
+        this.markUserScroll();
       } else if (Math.abs(e.deltaX) >= Math.abs(e.deltaY)) {
         // 横スワイプ (トラックパッド): 横だけ動かす。縦のわずかな揺れは無視
         this.scrollX = Math.max(0, this.scrollX + e.deltaX / this.pxPerBeat);
+        this.markUserScroll();
       } else {
         this.scrollY = Math.max(12, Math.min(126, this.scrollY + (e.deltaY > 0 ? -1 : 1)));
       }
@@ -503,12 +505,14 @@ export class PianoRoll {
     this.draw();
   }
 
-  // プレイヘッド追従
+  // プレイヘッド追従 (ユーザーが動かした直後は追わない。しばらく触らなければまた追う)
   followPlayhead() {
+    if (this.userScrollUntil && performance.now() < this.userScrollUntil) return;
     const px = this.beatToX(state.playheadBeat);
     if (px > this.w - 60 || px < this.keyW) {
       this.scrollX = Math.max(0, state.playheadBeat - 2);
       this.draw();
     }
   }
+  markUserScroll(ms = 5000) { this.userScrollUntil = performance.now() + ms; }
 }

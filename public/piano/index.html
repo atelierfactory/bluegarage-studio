@@ -27,20 +27,15 @@
     <button id="btn-met" class="tbtn met" title="メトロノーム (M)">♩</button>
     <div class="lcd"><span id="pos-display">001.1</span><span class="lcd-dim" id="time-display">0:00.0</span></div>
     <label class="tfield"><span>BPM</span><input id="inp-tempo" type="number" min="30" max="300" step="1" value="90" /></label>
-    <label class="tfield"><span>拍子</span><select id="inp-timesig"><option value="4">4/4</option><option value="3">3/4</option><option value="6">6/8*</option></select></label>
-    <label class="tfield"><span>キー</span><input id="inp-key" type="text" value="C major" size="8" /></label>
-    <label class="tfield"><span>スナップ</span><select id="inp-snap"><option value="1">1/4</option><option value="0.5">1/8</option><option value="0.25" selected>1/16</option><option value="0.125">1/32</option><option value="0.3333">1/8T</option><option value="0">OFF</option></select></label>
-    <label class="tfield hand"><span>手</span><select id="inp-hand" title="新しく置く音符の手"><option value="R">右 R</option><option value="L">左 L</option></select></label>
+    <span class="hidden"><select id="inp-timesig"><option value="4">4/4</option><option value="3">3/4</option><option value="6">6/8*</option></select><input id="inp-key" type="text" value="C major" /><select id="inp-snap"><option value="0.25" selected>1/16</option></select><select id="inp-hand"><option value="R">R</option><option value="L">L</option></select></span>
   </div>
   <div class="topbar-right">
     <label class="tfield master"><span>VOL</span><input id="inp-master" type="range" min="-40" max="6" step="0.5" value="-4" /></label>
     <div class="btn-group">
-      <button id="btn-songs" class="gbtn tiny" title="曲を選ぶ (名曲 / 作った曲 / MIDI)">曲を選ぶ</button>
-      <button id="btn-check" class="gbtn tiny" title="運指を検査 (弾けるか)">検査</button>
-      <button id="btn-export" class="gbtn tiny" title="MIDI 書き出し">MIDI</button>
-      <button id="btn-export-wav" class="gbtn tiny" title="WAV 書き出し">WAV</button>
+      <button id="btn-songs" class="gbtn tiny accent" title="曲を選ぶ">♪ 曲を選ぶ</button>
+      <button id="btn-export" class="gbtn tiny" title="MIDI で保存">MIDI</button>
+      <button id="btn-export-wav" class="gbtn tiny" title="音声 (WAV) で保存">WAV</button>
       <button id="btn-thanks" class="gbtn tiny" title="この楽器について (Salamander への感謝)">♥</button>
-      <button id="btn-settings" class="gbtn tiny" title="設定 (API キー / モデル)">⚙</button>
     </div>
   </div>
 </header>
@@ -49,24 +44,18 @@
   <main id="center">
     <div id="proll-head">
       <span id="proll-title" class="song-title">—</span>
-      <span class="legend"><i class="sw r"></i>右手 <i class="sw l"></i>左手 <i class="sw lit"></i>鳴っている音</span>
-      <button id="btn-help" class="gbtn tiny" title="操作のしかた">?</button>
+
     </div>
     <div id="proll-wrap" class="view view-active"><canvas id="proll"></canvas></div>
 
     <!-- お題 → 即興 / 作曲 -->
     <div id="prompt-bar">
       <div class="mode-tabs">
-        <button class="mtab on" data-mode="songs">既存の曲</button>
-        <button class="mtab" data-mode="jam">即興</button>
+        <button class="mtab on" data-mode="jam">即興</button>
         <button class="mtab" data-mode="compose">作曲</button>
       </div>
-      <input id="inp-theme" type="text" placeholder="お題 (例: 雨の日の午後、静かで少し切ない曲。坂本龍一みたいに)" />
-      <select id="sel-model" title="作曲に使うモデル"></select>
-      <select id="sel-effort" title="作り込み">
-        <option value="quick">ふつう (2〜3 分)</option>
-        <option value="deep">超作り込み (5〜8 分)</option>
-      </select>
+      <input id="inp-theme" type="text" placeholder="お題 (例: 雨の日の午後、静かで少し切ない曲)" />
+      <span class="hidden"><select id="sel-model"></select><select id="sel-effort"><option value="deep" selected>deep</option></select></span>
       <button id="btn-go" class="gbtn accent">▶ 始める</button>
       <button id="btn-cancel" class="gbtn small hidden">止める</button>
     </div>
@@ -102,18 +91,7 @@
   <div class="dlg-foot"><button id="btn-songs-close" class="gbtn small">閉じる</button></div>
 </dialog>
 
-<dialog id="dlg-help">
-  <h3>操作のしかた</h3>
-  <div class="thanks">
-    <p><b>曲を選ぶ</b>：右上の「曲を選ぶ」か、下の「既存の曲」。同梱の名曲と、作った曲が並びます。</p>
-    <p><b>即興</b>：お題を入れて「即興を始める」。すぐ弾き始め、お題に合う手札ができたら切り替わります。もう一度押すか ■ で止まります。</p>
-    <p><b>作曲</b>：お題を入れて「作曲する」。2〜8 分で 1 曲を仕上げて弾きます。モデルと作り込みを選べます。</p>
-    <p><b>舞台</b>：全体はドラッグで回転、ホイールで寄り引き。全体 / 横 / 上 / 目線、全画面 (Esc で戻る)。</p>
-    <p><b>ピアノロール</b>：クリックで音を置く、ドラッグで動かす、右端で長さ、⌥クリックで消す、⌘ドラッグで範囲選択。選んだ音に 1〜5 で指、L / R で手、P でペダル。⌘C ⌘V ⌘D、矢印で移動。横スワイプで横に、縦スワイプで上下に動きます。</p>
-    <p><b>Space</b> 再生 / 停止、<b>Home</b> 先頭、<b>M</b> メトロノーム、<b>⌘Z</b> 取り消し。</p>
-  </div>
-  <div class="dlg-foot"><button id="btn-help-close" class="gbtn small">閉じる</button></div>
-</dialog>
+
 
 <dialog id="dlg-thanks" class="wide">
   <h3>この楽器について — Salamander Grand Piano への感謝</h3>
@@ -126,6 +104,7 @@
   <div class="dlg-foot"><button id="btn-thanks-close" class="gbtn small">閉じる</button></div>
 </dialog>
 
+<button id="btn-settings" class="hidden"></button>
 <dialog id="dlg-settings">
   <h3 data-i18n="dlg.settings">設定</h3>
   <div class="dlg-body form">

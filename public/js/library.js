@@ -2,9 +2,11 @@
 // IndexedDB に 1 曲 = 1 レコードで保存する (localStorage の 5MB 制限を避ける)。
 // IndexedDB が使えない環境では localStorage に退避する。
 
-const DB = "bluegarage";
+let DB = "bluegarage";
 const STORE = "songs";
-const LS_FALLBACK = "bluegarage:library:v1";
+let LS_FALLBACK = "bluegarage:library:v1";
+// アプリごとに別の保管庫を使う (ピアノは "vesper")
+export function configureLibrary(name) { DB = name; LS_FALLBACK = `${name}:library:v1`; dbPromise = null; }
 
 let dbPromise = null;
 function openDb() {
@@ -35,7 +37,7 @@ export const newId = () => `song_${Date.now().toString(36)}_${Math.random().toSt
 
 function meta(rec) {
   const s = rec.song;
-  return { id: rec.id, title: s?.title ?? "(無題)", updatedAt: rec.updatedAt, tempo: s?.tempo, key: s?.key, tracks: s?.tracks?.length ?? 0, notes: (s?.tracks ?? []).reduce((a, t) => a + (t.notes?.length ?? 0), 0), bars: (s?.sections ?? []).reduce((a, x) => a + x.bars, 0) };
+  return { id: rec.id, kind: s?.kind ?? "composed", title: s?.title ?? "(無題)", updatedAt: rec.updatedAt, tempo: s?.tempo, key: s?.key, tracks: s?.tracks?.length ?? 0, notes: (s?.tracks ?? []).reduce((a, t) => a + (t.notes?.length ?? 0), 0), bars: (s?.sections ?? []).reduce((a, x) => a + x.bars, 0) };
 }
 
 export async function listSongs() {

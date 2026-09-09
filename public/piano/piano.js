@@ -17,6 +17,7 @@ import { analyzePiano, describeAnalysis } from "../js/critic.js";
 import { t, setLang, detectLang, applyDom } from "../js/i18n.js";
 import { initSettings } from "../js/settings.js";
 import * as lib from "../js/library.js";
+lib.configureLibrary("vesper"); // ピアノ専用の保管庫 (STUDIO とは別)
 import { PianoStage } from "./scene.js";
 import { parseMidi } from "../js/midiread.js";
 import { autoFinger } from "../js/fingering.js";
@@ -72,7 +73,7 @@ on("song", () => { syncTransportFields(); setTitleUi(); const tr = selectedTrack
 
 /* ─────────── stage (VESPER) — 常時表示 ─────────── */
 const stage = new PianoStage($("#stage-canvas"));
-window.vesperStage = stage;
+window.vesperStage = stage; window.vesperRoll = proll;
 { const d = document.createElement("div"); d.className = "divider"; $("#stage").appendChild(d); }
 let lastFrame = performance.now();
 function frame(now) {
@@ -140,7 +141,6 @@ window.addEventListener("keydown", (e) => {
 
 /* ─────────── check / export ─────────── */
 function checkNow() { const tr = pianoTrack(); return analyzePiano({ notes: tr.notes.map((n) => ({ ...n })), pedal: state.song.pedal }, { song: state.song, range: { startBar: 0, bars: totalBars() } }); }
-$("#btn-check").addEventListener("click", () => { const a = checkNow(); status(`検査: ${describeAnalysis(a)} (右手 ${a.stats.right} / 左手 ${a.stats.left} / ペダル ${a.stats.pedalSegments} 区間)${a.issues.length ? " — " + a.issues.join(" / ") : ""}`, a.issues.length ? "" : "lit"); });
 $("#btn-export").addEventListener("click", () => { try { if (!pianoTrack().notes.length) throw new Error("音符がありません"); downloadMidi(state.song); toast("MIDI を書き出しました"); } catch (e) { toast(e.message, true); } });
 $("#btn-export-wav").addEventListener("click", async () => {
   try {
@@ -155,7 +155,7 @@ $("#btn-export-wav").addEventListener("click", async () => {
   } catch (e) { toast(e.message, true); } finally { hideLoader(); }
 });
 $("#btn-export-json").addEventListener("click", () => { const blob = new Blob([JSON.stringify({ song: state.song }, null, 2)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${state.song.title || "piano"}.vesper.json`; a.click(); $("#dlg-songs").close(); });
-$("#inp-import-json").addEventListener("change", async (e) => { const f = e.target.files[0]; if (!f) return; try { const data = JSON.parse(await f.text()); if (!data?.song?.tracks) throw new Error("形式が違います"); state.songId = lib.newId(); resetSong(data.song); pianoTrack(); emit("selection"); toast("OK"); } catch (err) { toast(err.message, true); } $("#dlg-songs").close(); e.target.value = ""; });
+$("#inp-import-json").addEventListener("change", async (e) => { const f = e.target.files[0]; if (!f) return; try { const data = JSON.parse(await f.text()); if (!data?.song?.tracks) throw new Error("形式が違います"); data.song.kind = data.song.kind === "composed" ? "composed" : "imported"; state.songId = lib.newId(); resetSong(data.song); pianoTrack(); emit("selection"); toast("OK"); } catch (err) { toast(err.message, true); } $("#dlg-songs").close(); e.target.value = ""; });
 
 /* ─────────── MIDI 読み込み・同梱の名曲 ─────────── */
 function loadMidiIntoSong(buffer, title, meta = {}) {
@@ -171,6 +171,7 @@ function loadMidiIntoSong(buffer, title, meta = {}) {
   song.pedal = (m.pedal ?? []).map((p) => ({ s: +p.s.toFixed(4), d: +p.d.toFixed(4) }));
   song.concept = meta.credit ?? "";
   song.piece = meta.piece ?? null;
+  song.kind = meta.kind ?? "imported";
   song.tracks[0].notes = notes.map((n) => ({ id: uid(), p: n.p, s: n.s, d: n.d, v: n.v, h: n.h, f: n.f }));
   state.songId = lib.newId();
   resetSong(song); pianoTrack(); emit("selection");
@@ -186,11 +187,12 @@ async function playRepertoire(item) {
     const r = await fetch(`repertoire/${item.perf}`, { cache: "no-cache" }); if (!r.ok) throw new Error("演奏データが読めません");
     const data = await r.json();
     if (state.playing) audio.stop();
+    data.song.kind = "repertoire";
     state.songId = lib.newId(); resetSong(data.song); pianoTrack(); emit("selection");
     return `「${data.song.title}」(${pianoTrack().notes.length}音、${totalBars()}小節) ${item.perfBy ?? ""} の演奏解釈`;
   }
   const r = await fetch(`repertoire/${item.file}`); if (!r.ok) throw new Error("楽譜が読めません");
-  return loadMidiIntoSong(await r.arrayBuffer(), `${item.title} — ${item.composer}`, { credit: `${item.license} · ${item.source}`, piece: { title: item.title, composer: item.composer, year: item.year, note: item.note ?? "" } });
+  return loadMidiIntoSong(await r.arrayBuffer(), `${item.title} — ${item.composer}`, { credit: `${item.license} · ${item.source}`, piece: { title: item.title, composer: item.composer, year: item.year, note: item.note ?? "" }, kind: "repertoire" });
 }
 
 /* ─────────── 演奏解釈: 楽譜はそのまま、弾き方 (強弱・間・切り方・手・指・ペダル) を Claude が決める ─────────── */
@@ -244,7 +246,9 @@ window.vesperInterpret = interpretSong;
 const dlg = $("#dlg-songs");
 let libTimer = null;
 function ensureSongId() { if (!state.songId) state.songId = lib.newId(); return state.songId; }
-onSave(() => { clearTimeout(libTimer); libTimer = setTimeout(() => lib.saveSong(ensureSongId(), state.song).catch(() => {}), 600); });
+const SAVE_KINDS = new Set(["composed", "imported"]);
+function saveable() { return SAVE_KINDS.has(state.song.kind) && state.song.tracks.some((x) => x.notes.length); }
+onSave(() => { clearTimeout(libTimer); libTimer = setTimeout(() => { if (saveable()) lib.saveSong(ensureSongId(), state.song).catch(() => {}); }, 600); });
 function row(title, meta, btnLabel, onOpen, extra = []) {
   const el = document.createElement("div"); el.className = "lib-row";
   el.innerHTML = `<div><div class="lib-title">${esc(title)}</div><div class="lib-meta">${esc(meta)}</div></div><button class="gbtn small lib-open">${esc(btnLabel)}</button>`;
@@ -258,25 +262,27 @@ async function renderSongs() {
   const head = (txt) => { const h = document.createElement("div"); h.className = "lib-head"; h.textContent = txt; el.appendChild(h); };
   head("同梱の名曲 (著作権切れ・Mutopia Project の Public Domain 版)");
   for (const it of await listRepertoire()) el.appendChild(row(it.title, `${it.composer} · ${it.year} · ${it.license}`, "弾く", async () => { try { status(await playRepertoire(it), "lit"); dlg.close(); play(0); } catch (err) { toast(err.message, true); } }));
-  head("作った曲・読み込んだ曲 (このブラウザに保存)");
-  const list = await lib.listSongs();
-  if (!list.length) { const p = document.createElement("p"); p.className = "dim"; p.textContent = "まだありません。作曲や即興で作った曲は自動でここに残ります。"; el.appendChild(p); }
+  const all = await lib.listSongs();
+  const groups = [["作った曲 (作曲したもの)", all.filter((m) => m.kind === "composed")], ["読み込んだ曲 (自分の MIDI / JSON)", all.filter((m) => m.kind === "imported")]];
+  for (const [title, list] of groups) {
+  head(title);
+  if (!list.length) { const p = document.createElement("p"); p.className = "dim"; p.textContent = title.startsWith("作った") ? "まだありません。「作曲」で作った曲がここに残ります。" : "まだありません。上の「MIDI 読み込み」で読めます。"; el.appendChild(p); }
   for (const m of list) {
     el.appendChild(row(`${m.title}${m.id === state.songId ? " (開いている曲)" : ""}`, `${m.tempo ?? "-"} BPM · ${m.key ?? ""} · ${m.bars} 小節 · ${m.notes} 音 · ${new Date(m.updatedAt ?? 0).toLocaleString()}`, "弾く",
       async () => { await openFromLibrary(m.id); dlg.close(); play(0); },
       [["名前", async () => { const name = prompt("曲の名前", m.title); if (!name) return; const song = await lib.loadSong(m.id); if (!song) return; song.title = name; await lib.saveSong(m.id, song); if (m.id === state.songId) { state.song.title = name; setTitleUi(); saveLocal(); } renderSongs(); }],
        ["削除", async () => { if (!confirm(`「${m.title}」を消しますか?`)) return; await lib.deleteSong(m.id); if (m.id === state.songId) state.songId = null; renderSongs(); }, "danger"]]));
   }
+  }
 }
 async function openFromLibrary(id) { const song = await lib.loadSong(id); if (!song) throw new Error("not found"); if (state.playing) audio.stop(); state.songId = id; resetSong(song); pianoTrack(); emit("selection"); }
-$("#btn-songs").addEventListener("click", async () => { await lib.saveSong(ensureSongId(), state.song).catch(() => {}); await renderSongs(); dlg.showModal(); });
+$("#btn-songs").addEventListener("click", async () => { if (saveable()) await lib.saveSong(ensureSongId(), state.song).catch(() => {}); await renderSongs(); dlg.showModal(); });
 $("#btn-songs-close").addEventListener("click", () => dlg.close());
 $("#btn-new-song").addEventListener("click", () => { if (state.playing) audio.stop(); state.songId = lib.newId(); resetSong(pianoSong()); pianoTrack(); emit("selection"); dlg.close(); });
-$("#btn-save-as").addEventListener("click", async () => { const name = prompt("曲の名前", `${state.song.title} (copy)`); if (!name) return; const copy = JSON.parse(JSON.stringify(state.song)); copy.title = name; const id = lib.newId(); await lib.saveSong(id, copy); state.songId = id; state.song.title = name; setTitleUi(); saveLocal(); renderSongs(); });
+$("#btn-save-as").addEventListener("click", async () => { const name = prompt("曲の名前", `${state.song.title} (copy)`); if (!name) return; const copy = JSON.parse(JSON.stringify(state.song)); copy.title = name; copy.kind = copy.kind === "composed" ? "composed" : "imported"; const id = lib.newId(); await lib.saveSong(id, copy); state.songId = id; state.song.title = name; state.song.kind = copy.kind; setTitleUi(); saveLocal(); renderSongs(); });
 $("#btn-thanks").addEventListener("click", () => $("#dlg-thanks").showModal());
 $("#btn-thanks-close").addEventListener("click", () => $("#dlg-thanks").close());
-$("#btn-help").addEventListener("click", () => $("#dlg-help").showModal());
-$("#btn-help-close").addEventListener("click", () => $("#dlg-help").close());
+
 
 /* ─────────── AI: 作曲 (設計図 → 区間ごとに両手 → 検査 → 手直し → 磨き上げ) ─────────── */
 let cancelFlag = false;
@@ -357,20 +363,20 @@ function applyBlueprint(bp) {
 async function compose(theme, { model, deep }) {
   if (state.playing) audio.stop();
   if (jam) jamStop();
-  await lib.saveSong(ensureSongId(), state.song).catch(() => {});
+  if (saveable()) await lib.saveSong(ensureSongId(), state.song).catch(() => {});
   state.songId = lib.newId();
-  resetSong(pianoSong()); pianoTrack(); emit("selection");
-  status(`作曲を始めます (${MODELS.find((m) => m.id === model)?.label ?? model}${deep ? "・超作り込み" : ""})`);
+  const fresh = pianoSong(); fresh.kind = "composed"; fresh.title = "作曲中…";
+  resetSong(fresh); pianoTrack(); emit("selection");
+  status(`作曲を始めます (数分かかります)`);
   const req = buildBlueprintRequest({ prompt: `${theme}\n\n※ ピアノ独奏 (1 台のピアノ、両手) の曲。trackPlan は piano 1 本だけにし、stylePrompt に演奏スタイル (奏法・タッチ・ペダル・参考ピアニスト) を書く。${deep ? "構成は 24〜40 小節で、各セクションの役割と山場を具体的に書く。" : "構成は 16〜32 小節。"}` });
   const { data } = await generateStructured({ ...req, model, maxTokens: 16000, onProgress: (p) => progress(`設計図を考え中… ${((p.chars ?? 0) / 1000).toFixed(1)}k`) });
   if (cancelFlag) throw new Error("止めました");
-  applyBlueprint(data);
-  status(`設計図: 「${data.title}」 ${data.tempo} BPM ${data.key} / ${totalBars()} 小節 — ${data.concept.slice(0, 120)}`);
+  applyBlueprint(data); state.song.kind = "composed";
+  status(`「${data.title}」を作っています (${totalBars()} 小節)`);
   const r = await generatePiano({ startBar: 0, numBars: totalBars(), mode: "new", model, deep, onProgress: progress });
   const issues = r.reports.flatMap((x) => x.analysis.issues);
   saveLocal();
-  status(`「${data.title}」完成 (${r.count}音)。検査: ${r.reports.map((x) => x.passes.join(" → ")).join(" | ")}${issues.length ? " / 残った指摘: " + issues.slice(0, 2).join(" / ") : ""}`, "lit");
-  status(`演奏メモ: ${r.memo.slice(0, 300)}`);
+  status(`「${data.title}」ができました (${r.count}音)。「曲を選ぶ」の「作った曲」にも残ります`, "lit");
   await play(0);
 }
 
@@ -424,7 +430,7 @@ async function jamStart(theme, { model } = {}) {
   const key = style?.key ?? state.song.key ?? "C major", tempo = style?.tempo ?? state.song.tempo ?? 96;
   const song = pianoSong();
   song.title = `即興 — ${style?.name ?? "セッション"}${theme ? ` (${theme.slice(0, 30)})` : ""}`; song.key = key; song.tempo = tempo;
-  song.sections = [{ name: "JAM", bars: 8, description: "" }];
+  song.sections = [{ name: "JAM", bars: 8, description: "" }]; song.kind = "jam";
   resetSong(song); const tr = pianoTrack(); emit("selection");
   const imp = new Improviser(bank, { density: 1 });
   jam = { imp, timer: null, ahead: 0, theme };
@@ -453,16 +459,14 @@ function jamTick() {
 function jamStop() { if (!jam) return; clearInterval(jam.timer); jam = null; if (state.playing) audio.stop(); pushUndo(); setGoUi(false); }
 
 /* ─────────── お題バー ─────────── */
-let mode = "songs";
+const COMPOSE_MODEL = "claude-fable-5-1"; // 作曲は Fable 5.1 の超作り込み一本 (さとるん決定)
+let mode = "jam";
 function applyMode() {
   document.querySelectorAll(".mtab").forEach((x) => x.classList.toggle("on", x.dataset.mode === mode));
-  const ai = mode !== "songs";
-  $("#inp-theme").style.display = ai ? "" : "none"; $("#sel-model").style.display = ai ? "" : "none";
-  $("#sel-effort").style.display = mode === "compose" ? "" : "none";
-  $("#btn-go").textContent = mode === "songs" ? "♪ 曲を選ぶ" : mode === "compose" ? "♪ 作曲する" : "▶ 即興を始める";
+  $("#btn-go").textContent = mode === "compose" ? "♪ 作曲する (数分)" : "▶ 即興を始める";
   $("#inp-theme").placeholder = mode === "compose" ? "お題 (例: 雨の日の午後、静かで少し切ない曲)" : "お題 (空でもすぐ始まります。例: ジャズバラード)";
 }
-document.querySelectorAll(".mtab").forEach((b) => b.addEventListener("click", () => { mode = b.dataset.mode; applyMode(); if (mode === "songs") $("#btn-songs").click(); }));
+document.querySelectorAll(".mtab").forEach((b) => b.addEventListener("click", () => { mode = b.dataset.mode; applyMode(); }));
 $("#sel-model").innerHTML = MODELS.map((m) => `<option value="${m.id}">${m.label}</option>`).join("");
 $("#sel-model").value = settings.get().model ?? MODELS[0].id;
 applyMode();
@@ -475,9 +479,8 @@ $("#btn-go").addEventListener("click", async () => {
   if (tr === "none" && (mode === "compose" || theme)) { await settingsUi.openIfNoKey(); if ((await resolveTransport()) === "none") { status(t("nokey")); return; } }
   cancelFlag = false;
   try {
-    if (mode === "songs") { $("#btn-songs").click(); return; }
     if (mode === "jam") { setGoUi(true); await jamStart(theme, { model }); }
-    else { if (!theme) { toast("お題を入れてください", true); return; } setGoUi(true); await compose(theme, { model, deep: $("#sel-effort").value === "deep" }); setGoUi(false); }
+    else { if (!theme) { toast("お題を入れてください", true); return; } setGoUi(true); await compose(theme, { model: COMPOSE_MODEL, deep: true }); setGoUi(false); }
   } catch (e) { status(`失敗: ${e.message}`); setGoUi(false); }
 });
 $("#btn-cancel").addEventListener("click", () => { cancelFlag = true; if (jam) jamStop(); else status("止めています…"); });
@@ -486,12 +489,18 @@ $("#inp-theme").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#
 /* ─────────── settings / boot ─────────── */
 const settingsUi = initSettings({ onLangChange: () => applyDom(), toast });
 async function boot() {
-  const hasSaved = loadLocal();
-  if (!hasSaved || !state.song.tracks.some((x) => x.instrument === "piano")) { state.songId = lib.newId(); resetSong(pianoSong()); }
+  // v4: 一度だけ、以前の「開いていた曲」を捨てる (即興や検証用の曲が残らないように)
+  let hasSaved = false;
+  try { if (!localStorage.getItem("vesper:reset:v4")) { localStorage.removeItem("bluegarage.project.v1"); localStorage.setItem("vesper:reset:v4", "1"); } else hasSaved = loadLocal(); } catch { hasSaved = loadLocal(); }
+  if (!hasSaved || !state.song.tracks.some((x) => x.instrument === "piano") || !SAVE_KINDS.has(state.song.kind)) {
+    // 何も無ければ、同梱の名曲の 1 曲目 (エンターテイナー) を開いておく
+    state.songId = lib.newId(); resetSong(pianoSong());
+    try { const list = await listRepertoire(); if (list[0]) await playRepertoire(list[0]); } catch {}
+  }
   pianoTrack();
   syncTransportFields(); setTitleUi(); emit("song"); emit("selection");
   const tr = await resolveTransport();
   status(tr === "none" ? "API キーが未設定です (⚙ から入れてください)" : "「曲を選ぶ」で曲を選ぶか、即興・作曲でお題を入れてください");
-  if (state.song.tracks.some((x) => x.notes.length)) lib.saveSong(ensureSongId(), state.song).catch(() => {});
+  if (saveable()) lib.saveSong(ensureSongId(), state.song).catch(() => {});
 }
 boot();

@@ -300,17 +300,21 @@ function buildPiano(scene) {
   const pinblock = shadowed(new THREE.Mesh(new THREE.BoxGeometry(HALF_W * 2 - 0.08, 0.05, 0.14), P.plateDark)); pinblock.position.set(0, TOP_Y - RIM_H + 0.13, -0.30); g.add(pinblock);
   // ── 弦
   const strings = [], pins = [];
+  // 弦の終わりは必ずケースの内側 (外形線から 7cm 内側) に収める: 外形の多角形で内外判定して、はみ出す分だけ短くする
+  const casePts = outline(0.07).getPoints(96).map((q) => ({ x: q.x, z: -q.y }));
+  const insideCase = (x, z) => { let inside = false; for (let i = 0, j = casePts.length - 1; i < casePts.length; j = i++) { const a = casePts[i], b = casePts[j]; if ((a.z > z) !== (b.z > z) && x < (b.x - a.x) * (z - a.z) / (b.z - a.z) + a.x) inside = !inside; } return inside; };
   for (let p = LOW; p <= HIGH; p++) {
     const t = (p - LOW) / (HIGH - LOW);
     const nStr = p < 28 ? 1 : p < 41 ? 2 : 3;
     const wound = p < 41;
     const x = keyX(p);
-    const len = wound ? 1.95 - (p - LOW) * 0.028 : 1.35 * Math.pow(2, -(p - 41) / 13.5) + 0.05;
+    let len = wound ? 1.66 - (p - LOW) * 0.022 : 1.30 * Math.pow(2, -(p - 41) / 13.5) + 0.05;
     const gap = wound ? 0.0055 : 0.0026;
     for (let k = 0; k < nStr; k++) {
-      const x0 = x + (k - (nStr - 1) / 2) * gap + (wound ? -0.12 : 0);
+      const x0 = x + (k - (nStr - 1) / 2) * gap + (wound ? -0.05 : 0);
       const z0 = -0.30;
-      const ang = wound ? 0.30 : -0.06 * t;
+      const ang = wound ? 0.07 : -0.05 * t;   // 低音弦は尾 (低音側の奥) へ少し斜め、高音弦は曲げ側板へ少し斜め
+      while (len > 0.15 && !insideCase(x0 - Math.sin(ang) * len, z0 - Math.cos(ang) * len)) len -= 0.01;
       const x1 = x0 - Math.sin(ang) * len, z1 = z0 - Math.cos(ang) * len;
       strings.push({ p, x0, z0, x1, z1, wound, r: wound ? 0.0018 + (41 - p) * 0.00008 : 0.0008 + (1 - t) * 0.0005, y: wound ? TOP_Y - RIM_H + 0.215 : TOP_Y - RIM_H + 0.19 });
       pins.push({ x: x0, z: z0 + 0.02, y: TOP_Y - RIM_H + 0.16 });
@@ -369,9 +373,8 @@ function buildPiano(scene) {
       const x0 = -fullW / 2, x1 = fullW / 2;
       sh.moveTo(x0, 0); sh.lineTo(x1, 0); sh.lineTo(x1, frontLen); sh.lineTo(x1 - Math.max(0, cutR), frontLen); sh.lineTo(x1 - Math.max(0, cutR), frontLen + backLen); sh.lineTo(x0 + Math.max(0, cutL), frontLen + backLen); sh.lineTo(x0 + Math.max(0, cutL), frontLen); sh.lineTo(x0, frontLen); sh.lineTo(x0, 0);
       geo = new THREE.ExtrudeGeometry(sh, { depth: KEY_H, bevelEnabled: true, bevelThickness: 0.0008, bevelSize: 0.0008, bevelSegments: 2 });
-      geo.rotateX(-Math.PI / 2); // shape の y → -z。奥 (frontLen+backLen) が -z 側になるので反転して手前が +z
-      geo.rotateY(Math.PI);
-      geo.translate(0, -KEY_H / 2, WHITE_L + 0.02);
+      geo.rotateX(-Math.PI / 2);                 // shape の y (奥行き) → -z、押し出し → +y。x はそのまま (左右を裏返さない)
+      geo.translate(0, -KEY_H / 2, WHITE_L + 0.02); // 支点 (奥) から手前へ 0〜L
     }
     const mesh = shadowed(new THREE.Mesh(geo, black ? P.ebony : P.ivory));
     mesh.position.set(0, black ? KEY_H * 0.48 : 0, black ? BLACK_L / 2 + 0.02 : 0);
