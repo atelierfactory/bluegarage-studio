@@ -8,10 +8,15 @@ WorkingDirectory=/opt/vesper
 EnvironmentFile=/etc/bb.env
 Environment=VESPER_PORT=8768
 Environment=VESPER_ORIGINS=https://atelierfactory.jp,https://www.atelierfactory.jp,https://atelierfactory.github.io
+# 1 日の上限 (日本時間 0 時切替): 曲 (設計図) 20 / 音を作る呼び出し 300 / その他 300。IP ごとに 1 分 20 回・1 日 60 回
 Environment=VESPER_SONG_LIMIT=20
 Environment=VESPER_TRACK_LIMIT=300
-Environment=VESPER_OTHER_LIMIT=3000
+Environment=VESPER_OTHER_LIMIT=300
 Environment=VESPER_IP_PER_MINUTE=20
+Environment=VESPER_IP_PER_DAY=60
+# 使えるモデルと出力の長さの上限 (Origin は偽れるので、金額はこちらで抑える)
+Environment=VESPER_MODELS=claude-fable-5-1,claude-sonnet-5,claude-opus-5
+Environment=MAX_TOKENS_CAP=110000
 Environment=VESPER_STATE=/var/lib/vesper/counters.json
 ExecStart=/usr/bin/node /opt/vesper/server.mjs
 Restart=always

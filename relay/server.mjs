@@ -15,9 +15,13 @@ const ORIGINS = String(env.VESPER_ORIGINS ?? "https://atelierfactory.jp,https://
 const LIM = {
   blueprint: Math.max(0, Number(env.VESPER_SONG_LIMIT ?? 20)),
   track: Math.max(0, Number(env.VESPER_TRACK_LIMIT ?? 300)),
-  other: Math.max(0, Number(env.VESPER_OTHER_LIMIT ?? 3000)),
+  other: Math.max(0, Number(env.VESPER_OTHER_LIMIT ?? 300)),
   ip: Math.max(1, Number(env.VESPER_IP_PER_MINUTE ?? 20)),
+  ipDay: Math.max(1, Number(env.VESPER_IP_PER_DAY ?? 60)),
 };
+// Origin ヘッダは curl などでは偽れるので、それだけに頼らない: 使えるモデルを絞り、出力の長さに上限を付け、1 日の回数 (全体・IP ごと) で金額を抑える
+const MODELS = String(env.VESPER_MODELS ?? "claude-fable-5-1,claude-sonnet-5,claude-opus-5").split(",").map((s) => s.trim()).filter(Boolean);
+const MAX_TOKENS_CAP = Math.max(1000, Number(env.MAX_TOKENS_CAP ?? 110000));
 const STATE = env.VESPER_STATE ?? "/var/lib/vesper/counters.json";
 const PASSCODE = env.VESPER_PASSCODE ?? "";
 const TZ_OFF = Number(env.VESPER_TZ_OFFSET ?? 9);
@@ -31,13 +35,26 @@ let state = { day: dayKey(), buckets: { blueprint: 0, track: 0, other: 0 }, ip: 
 try { const s = JSON.parse(fs.readFileSync(STATE, "utf8")); if (s && s.day) state = { ...state, ...s, buckets: { ...state.buckets, ...(s.buckets ?? {}) }, ip: s.ip ?? {} }; } catch {}
 let saveT = null;
 function save() { clearTimeout(saveT); saveT = setTimeout(() => { try { fs.mkdirSync(path.dirname(STATE), { recursive: true }); fs.writeFileSync(STATE, JSON.stringify(state)); } catch (e) { console.error("[relay] save:", e.message); } }, 200); }
-function rollDay() { const d = dayKey(); if (state.day !== d) { state = { day: d, buckets: { blueprint: 0, track: 0, other: 0 }, ip: {} }; save(); } }
+function rollDay() { const d = dayKey(); if (state.day !== d) { state = { day: d, buckets: { blueprint: 0, track: 0, other: 0 }, ip: {}, ipDay: {} }; save(); } }
 function bumpBucket(b) { rollDay(); if (state.buckets[b] >= LIM[b]) return false; state.buckets[b]++; save(); return true; }
 function bumpIp(ip) {
+  rollDay();
   const minute = Math.floor(Date.now() / 60000); const k = `${ip}|${minute}`;
   for (const key of Object.keys(state.ip)) if (Number(key.split("|")[1]) < minute - 2) delete state.ip[key];
-  const n = (state.ip[k] ?? 0) + 1; state.ip[k] = n; save();
-  return n <= LIM.ip;
+  const n = (state.ip[k] ?? 0) + 1; state.ip[k] = n;
+  state.ipDay ??= {}; const d = (state.ipDay[ip] ?? 0) + 1; state.ipDay[ip] = d;
+  save();
+  return n <= LIM.ip && d <= LIM.ipDay;
+}
+// 本文の検査: JSON であること・messages があること・モデルは許可一覧だけ・出力の長さは上限まで
+function checkBody(body) {
+  let b; try { b = JSON.parse(body); } catch { return { error: "本文が JSON ではありません" }; }
+  if (!b || typeof b !== "object" || !Array.isArray(b.messages)) return { error: "messages がありません" };
+  if (env.FORCE_MODEL) b.model = env.FORCE_MODEL;
+  if (!MODELS.includes(String(b.model ?? ""))) return { error: `このモデルは使えません (${MODELS.join(", ")} のみ)` };
+  if (env.EFFORT) b.output_config = { ...(b.output_config ?? {}), effort: env.EFFORT };
+  b.max_tokens = Math.min(Number(b.max_tokens ?? 64000) || 64000, MAX_TOKENS_CAP);
+  return { body: JSON.stringify(b) };
 }
 
 /* ── 返事の道具 ── */
@@ -76,6 +93,12 @@ const server = http.createServer(async (req, res) => {
   if (!ORIGINS.includes(origin)) return err(res, 403, "permission_error", "このサイトからは使えません (origin not allowed)");
   if (PASSCODE && req.headers["x-bluegarage-pass"] !== PASSCODE) return err(res, 401, "access_code_error", "アクセスコードが必要です (access code required)");
   if (!env.ANTHROPIC_API_KEY) return err(res, 500, "api_error", "サーバーに ANTHROPIC_API_KEY が設定されていません");
+  // 本文を先に検査 (形の悪い依頼は数に入れない)。数えるのは Claude に流す直前
+  let body;
+  try { body = await readBody(req, 2_000_000); } catch { return err(res, 413, "invalid_request_error", "request too large"); }
+  const checked = checkBody(body);
+  if (checked.error) return err(res, 400, "invalid_request_error", checked.error);
+  body = checked.body;
   if (!bumpIp(clientIp(req))) return err(res, 429, "rate_limit_error", "リクエストが多すぎます。少し待ってください");
   const kind = String(req.headers["x-bluegarage-kind"] ?? "chat").toLowerCase();
   const bucket = bucketOf(kind);
@@ -84,17 +107,6 @@ const server = http.createServer(async (req, res) => {
       : bucket === "track" ? `今日の生成回数の上限 (${LIM.track}回/日) に達しました。日付が変わるとまた作れます`
       : "今日の利用上限に達しました。日付が変わるとまた使えます";
     return err(res, 429, "daily_limit_error", msg);
-  }
-  let body;
-  try { body = await readBody(req, 2_000_000); } catch { return err(res, 413, "invalid_request_error", "request too large"); }
-  if (env.FORCE_MODEL || env.EFFORT || env.MAX_TOKENS_CAP) {
-    try {
-      const b = JSON.parse(body);
-      if (env.FORCE_MODEL) b.model = env.FORCE_MODEL;
-      if (env.EFFORT) b.output_config = { ...(b.output_config ?? {}), effort: env.EFFORT };
-      if (env.MAX_TOKENS_CAP) b.max_tokens = Math.min(Number(b.max_tokens ?? 64000), Number(env.MAX_TOKENS_CAP));
-      body = JSON.stringify(b);
-    } catch { return err(res, 400, "invalid_request_error", "本文が JSON ではありません"); }
   }
   const ac = new AbortController();
   res.on("close", () => { if (!res.writableFinished) ac.abort(); });
