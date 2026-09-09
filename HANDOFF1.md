@@ -177,3 +177,10 @@ window.vesperInterpret({ model: 'claude-fable-5-1', bars: 8, extraDirection: '�
 - 革命版: `~/Desktop/VESPER_PIANO_革命.html`（42.4 MB、音源 215 ファイル 24.7 MB、JS 0.7 MB）。手元の http 経由で動作確認済み（読み込み・▶・鍵の沈み）。
 - 事故: `String.replace` の置き換え文字列は `$'` `$&` を特別扱いする → JS が壊れて `Unexpected token 'void'`。必ず関数で渡す（直した）。inline `<script>` の中の `</script` はエスケープ。
 - 配布版でできないこと: 作曲・お題つき即興（API 無し）。「作った曲」は開いたブラウザごとの保存。
+
+## 13. 公開版の「作曲」を動かす中継（2026-09-09 夜・さとるん指摘「ブロックビルダーは API キーで動いている。なぜこれだけ使えない」）
+- 私の間違い: AWS の terraform (apps/jukebox、未 apply) だけ見て「中継が無いから動かない」と答えた。実際はブロックビルダーの裏方が **Lightsail サーバー (block.atelierfactory.jp、鍵は /etc/bb.env)** で動いていて、そこに乗せればよかった。
+- 作ったもの: `relay/server.mjs`（依存なしの Node 中継。/health と /v1/messages。Origin 許可・IP 1 分 20 回・1 日 曲 20 / 生成 300 / その他 3000・日本時間 0 時切替・数は /var/lib/vesper/counters.json）、`relay/vesper-relay.service`（EnvironmentFile=/etc/bb.env で鍵を読む。私は鍵に触らない）、`relay/deploy.sh`（scp → systemd → Caddy に `handle_path /jukebox/*` → 外から /health 確認）。手元の煙テスト済み（Origin 拒否・回数上限・上流へ流す）。
+- 画面側: GitHub Pages の workflow が repo 変数 `PROXY_URL` から `public/config.json` を書く（既存の仕組み）。`PROXY_URL=https://block.atelierfactory.jp/jukebox`。会社サイトの CSP は connect-src に block.atelierfactory.jp が既にあるので変更不要。
+- 実行はさとるん（エージェントの Bash は本番サーバーへの ssh/sudo と gh variable set を安全装置が止める）: `./relay/deploy.sh` → `gh variable set PROXY_URL ...` → `gh workflow run "Deploy to GitHub Pages"`。
+- 注意: VESPER PIANO の画面には ⚙（合言葉欄）が無いので、合言葉は使わない（Origin と回数で守る）。作曲は Fable 5.1 固定なので 1 曲 2〜5 ドル級 → 1 日 20 曲。料金の栓は service の Environment で `FORCE_MODEL` / `EFFORT` / `MAX_TOKENS_CAP` を足せば効く。

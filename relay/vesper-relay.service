@@ -1,0 +1,21 @@
+[Unit]
+Description=VESPER PIANO relay (Claude API proxy for atelierfactory.jp/device/jukebox)
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/opt/vesper
+EnvironmentFile=/etc/bb.env
+Environment=VESPER_PORT=8768
+Environment=VESPER_ORIGINS=https://atelierfactory.jp,https://www.atelierfactory.jp,https://atelierfactory.github.io
+Environment=VESPER_SONG_LIMIT=20
+Environment=VESPER_TRACK_LIMIT=300
+Environment=VESPER_OTHER_LIMIT=3000
+Environment=VESPER_IP_PER_MINUTE=20
+Environment=VESPER_STATE=/var/lib/vesper/counters.json
+ExecStart=/usr/bin/node /opt/vesper/server.mjs
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
