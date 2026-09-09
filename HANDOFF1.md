@@ -163,3 +163,11 @@ window.vesperInterpret({ model: 'claude-fable-5-1', bars: 8, extraDirection: '�
 - **公開（push）はしていない**（公開に影響する push は事前に一言、の約束）。ローカルの main にコミットだけ。
 - Für Elise / Clair de Lune の Fable 解釈（各 30〜50 分）。
 - 作曲した曲はこのブラウザの「作った曲」にも 1 つ残っている（IndexedDB。消しても同梱版には影響なし）。
+
+## 11. 公開（2026-09-09 夕方）— https://atelierfactory.jp/device/jukebox/
+
+- さとるん要望：曲を選ぶの「弾く」→「選択」（選ぶだけ。▶ を押してから鳴る）。MIDI 読み込みも自動再生しない。push 済み（a814650）。
+- **公開 URL は https://atelierfactory.jp/device/jukebox/ （開くと piano/ へ移る）。** 仕組み：会社サイト（Amplify）の custom_rule で `/device/jukebox/<*>` を GitHub Pages（`https://atelierfactory.github.io/bluegarage-studio/<*>`）へ 200 rewrite（エジンバラ城と同じ方式）。infra `apps/site/hosting.tf` に 3 行（末尾 / 補いの 301 ×2 と 200 rewrite）。terraform apply はさとるんが実行（エージェントの apply は安全装置で止まる）。infra はローカルコミット b34181a、**未 push**（push はさとるん）。
+- したがって **更新は music_app を `git push origin main` するだけ**（GitHub Pages が 1〜2 分で更新 → atelierfactory.jp 側も同時に変わる）。会社サイトの deploy.sh は不要。deploy.sh の jukebox 同梱は止めてある（rule と二重になるため）。
+- 確認済み：/device/jukebox → 301 → /device/jukebox/ → piano/ へ。piano.js / repertoire/index.json / samples/piano/index.json が 200。CSP（会社サイトの `**` パターン）の中でそのまま動く。ブラウザで「祭囃子オーバードライブ」を選択 → ▶ で 327 音・音抜け 0。コンソールの 404 は /api/config と config.json（静的サイトでは無いのが正常）。
+- 公開版で動くもの：既存の曲 6 曲、お題なしの即興（既定の手札）。**作曲・お題つき即興は AWS 中継（apps/jukebox、未 apply）ができるまで動かない**。中継ができたら `config.json` を GitHub Pages 側の public/ に置く（proxyUrl）＋会社サイトの CSP `connect-src` に中継の住所を足す（`/device/jukebox/**` のパターンで）。
