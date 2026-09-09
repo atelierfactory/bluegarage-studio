@@ -112,14 +112,16 @@ $("#btn-loop").addEventListener("click", (e) => { state.loop = !state.loop; e.cu
 $("#btn-met").addEventListener("click", () => { state.metronome = !state.metronome; $("#btn-met").classList.toggle("active", state.metronome); if (state.playing) { audio.stop(); audio.play(); } });
 on("transport", () => { btnPlay.textContent = state.playing ? "❚❚" : "▶"; btnPlay.classList.toggle("active", state.playing); if (!state.playing && jam) jamStop(); });
 function songEndBeat() { let end = totalBeats(); for (const tr of state.song.tracks) for (const n of tr.notes) end = Math.max(end, n.s + n.d); return end; }
-on("playhead", () => {
+function updateLcd() {
   const ts = state.song.timeSig; const bar = Math.floor(state.playheadBeat / ts) + 1; const beat = Math.floor(state.playheadBeat % ts) + 1;
   $("#pos-display").textContent = `${String(bar).padStart(3, "0")}.${beat}`;
   const sec = beatToSec(state.playheadBeat), total = beatToSec(songEndBeat());
   const mmss = (x, frac) => `${Math.floor(x / 60)}:${frac ? (x % 60).toFixed(1).padStart(4, "0") : String(Math.floor(x % 60)).padStart(2, "0")}`;
   $("#time-display").textContent = `${mmss(sec, true)} / ${mmss(total, false)}`;
   if (state.playing) proll.followPlayhead();
-});
+}
+on("playhead", updateLcd);
+on("song", updateLcd); on("notes", updateLcd);
 window.addEventListener("keydown", (e) => {
   if (e.target.matches("input, textarea, select")) return;
   if (e.code === "Space") { e.preventDefault(); togglePlay(); return; }
