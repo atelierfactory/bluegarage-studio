@@ -25,14 +25,13 @@
     <button id="btn-stop" class="tbtn" title="停止">■</button>
     <button id="btn-loop" class="tbtn" title="ループ">⟲</button>
     <button id="btn-met" class="tbtn met" title="メトロノーム (M)">♩</button>
-    <div class="lcd"><span id="pos-display">001.1</span><span class="lcd-dim" id="time-display">0:00.0</span></div>
+    <div class="lcd"><span id="pos-display">001.1</span><span class="lcd-time" id="time-display">0:00.0 / 0:00</span></div>
     <label class="tfield"><span>BPM</span><input id="inp-tempo" type="number" min="30" max="300" step="1" value="90" /></label>
     <span class="hidden"><select id="inp-timesig"><option value="4">4/4</option><option value="3">3/4</option><option value="6">6/8*</option></select><input id="inp-key" type="text" value="C major" /><select id="inp-snap"><option value="0.25" selected>1/16</option></select><select id="inp-hand"><option value="R">R</option><option value="L">L</option></select></span>
   </div>
   <div class="topbar-right">
     <label class="tfield master"><span>VOL</span><input id="inp-master" type="range" min="-40" max="6" step="0.5" value="-4" /></label>
     <div class="btn-group">
-      <button id="btn-songs" class="gbtn tiny accent" title="曲を選ぶ">♪ 曲を選ぶ</button>
       <button id="btn-export" class="gbtn tiny" title="MIDI で保存">MIDI</button>
       <button id="btn-export-wav" class="gbtn tiny" title="音声 (WAV) で保存">WAV</button>
       <button id="btn-thanks" class="gbtn tiny" title="この楽器について (Salamander への感謝)">♥</button>
@@ -51,12 +50,15 @@
     <!-- お題 → 即興 / 作曲 -->
     <div id="prompt-bar">
       <div class="mode-tabs">
-        <button class="mtab on" data-mode="jam">即興</button>
+        <button class="mtab on" data-mode="play">既存の曲を弾く</button>
+        <button class="mtab" data-mode="jam">即興</button>
         <button class="mtab" data-mode="compose">作曲</button>
       </div>
-      <input id="inp-theme" type="text" placeholder="お題 (例: 雨の日の午後、静かで少し切ない曲)" />
+      <button id="btn-songs" class="gbtn accent" title="曲を選ぶ">♪ 曲を選ぶ</button>
+      <span id="play-hint" class="dim">同梱の名曲・作った曲・読み込んだ曲から選びます</span>
+      <input id="inp-theme" type="text" class="hidden" placeholder="お題 (例: 雨の日の午後、静かで少し切ない曲)" />
       <span class="hidden"><select id="sel-model"></select><select id="sel-effort"><option value="deep" selected>deep</option></select></span>
-      <button id="btn-go" class="gbtn accent">▶ 始める</button>
+      <button id="btn-go" class="gbtn accent hidden">▶ 始める</button>
       <button id="btn-cancel" class="gbtn small hidden">止める</button>
     </div>
     <div id="status-bar"><span id="status-text"></span></div>

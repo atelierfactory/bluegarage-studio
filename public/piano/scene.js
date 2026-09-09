@@ -11,6 +11,13 @@ import * as THREE from "three";
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const lerp = (a, b, t) => a + (b - a) * t;
+// 3x3 の連立方程式 A x = b (クラメルの公式)。解けなければ null
+function solve3(A, b) {
+  const det = (m) => m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+  const D = det(A); if (Math.abs(D) < 1e-12) return null;
+  const col = (k) => A.map((row, r) => row.map((v, c) => (c === k ? b[r] : v)));
+  return [det(col(0)) / D, det(col(1)) / D, det(col(2)) / D];
+}
 
 /* ─────────── 鍵盤の寸法 (m) ─────────── */
 const WHITE_W = 0.0235, WHITE_L = 0.150, BLACK_W = 0.0135, BLACK_L = 0.095, KEY_H = 0.013;
@@ -41,8 +48,8 @@ const M = {
 const P = {
   lacquer: new THREE.MeshPhysicalMaterial({ color: 0x08080a, roughness: 0.10, metalness: 0.08, clearcoat: 1, clearcoatRoughness: 0.04, reflectivity: 0.9 }),
   lacquerMatte: new THREE.MeshPhysicalMaterial({ color: 0x101012, roughness: 0.35, metalness: 0.05, clearcoat: 0.5 }),
-  ivory: new THREE.MeshPhysicalMaterial({ color: 0xf6f2e8, roughness: 0.32, metalness: 0, clearcoat: 0.45, clearcoatRoughness: 0.25 }),
-  ebony: new THREE.MeshPhysicalMaterial({ color: 0x151311, roughness: 0.28, metalness: 0.1, clearcoat: 0.85, clearcoatRoughness: 0.08 }),
+  ivory: new THREE.MeshPhysicalMaterial({ color: 0xece6d8, roughness: 0.24, metalness: 0, clearcoat: 0.6, clearcoatRoughness: 0.18 }),
+  ebony: new THREE.MeshPhysicalMaterial({ color: 0x1a1714, roughness: 0.32, metalness: 0.05, clearcoat: 0.8, clearcoatRoughness: 0.1 }),
   plate: new THREE.MeshPhysicalMaterial({ color: 0xb8933e, roughness: 0.45, metalness: 0.85 }),          // 鋳鉄フレーム (金色の塗装)
   plateDark: new THREE.MeshPhysicalMaterial({ color: 0x7e6428, roughness: 0.6, metalness: 0.7 }),
   steel: new THREE.MeshPhysicalMaterial({ color: 0xd8dadc, roughness: 0.3, metalness: 1.0 }),           // 鋼の弦
@@ -190,16 +197,25 @@ function buildRobot(B, hands) {
 
 // 手: 手のひら + 5 本の指 (2 関節)。指は手の骨の +x*sgn 方向、手のひらの幅は骨の z 軸。
 // 指の並び (world x): 右手は親指が一番左、左手は親指が一番右。
-const FINGER_LEN = [1.3, 2.0, 2.2, 2.0, 1.6];       // 親指→小指 (ロボット単位)
-const FINGER_Z = [-0.9, -0.45, 0, 0.45, 0.9];        // 右手基準の並び (world x 方向 = z*sgn なので左手は自動で鏡になる)
-const FINGER_OFFSET_M = FINGER_Z.map((z) => z * ROBOT_SCALE);
+const FINGER_LEN = [1.65, 2.0, 2.2, 2.0, 1.75];     // 親指→小指 (ロボット単位)。親指と小指は鍵に届くよう少し長め
+// 手の骨のローカル z は、左手では world +x、右手では world -x を向く (どちらも「体の内側」= 親指側)。
+// なので親指の z を + にすれば、右手は親指が左、左手は親指が右になる (実際の手と同じ)。
+const FINGER_Z = [0.9, 0.45, 0, -0.45, -0.9];
+const FINGER_OFFSET_M = [-0.9, -0.45, 0, 0.45, 0.9].map((z) => z * ROBOT_SCALE);   // 右手の world x のずれ (親指→小指)
 export function fingerOffsetX(hand, fingerIdx) { return FINGER_OFFSET_M[fingerIdx] * (hand === "R" ? 1 : -1); }
+// 指先が手の骨から前 (-z) にどれだけ届くか (m)。親指→小指。手の位置 z を決めるのに使う
+const FINGER_REACH_Z = [0.176, 0.210, 0.222, 0.210, 0.195];
+// 手の z を決めるときの重み: 親指は伸ばせないので優先、長い指は曲げて合わせられる
+const FINGER_Z_WEIGHT = [3, 1, 1, 1, 1.5];
+const BLACK_TOP_Y = 0.7514;   // 黒鍵の上面 (KEY_TOP_Y + 0.004 + 0.48*KEY_H + 0.475*KEY_H)
+const TIP_R = 0.0055;         // 指先の丸みの半径 (m)
+const KEY_PIVOT_Z = -0.170;   // 鍵の支点 (奥)
 function buildHand(H, sgn) {
   const palm = box(H, V(sgn * 0.85, 0, 0), V(1.5, 0.34, 2.0), M.carbon);
   box(H, V(sgn * 0.85, 0.2, 0), V(1.25, 0.14, 1.8), M.shell);
   const fingers = [];
   for (let i = 0; i < 5; i++) {
-    const root = new THREE.Object3D(); root.position.set(sgn * (i === 0 ? 1.15 : 1.7), i === 0 ? -0.1 : 0, FINGER_Z[i]); H.add(root);
+    const root = new THREE.Object3D(); root.position.set(sgn * (i === 0 ? 1.45 : 1.7), i === 0 ? -0.18 : 0, FINGER_Z[i]); H.add(root);
     const len = FINGER_LEN[i];
     limb(root, V(0, 0, 0), V(sgn * len * 0.55, 0, 0), 0.14, 0.12, M.shell, 10, true);
     const joint = new THREE.Object3D(); joint.position.set(sgn * len * 0.55, 0, 0); root.add(joint);
@@ -207,7 +223,7 @@ function buildHand(H, sgn) {
     const tip = new THREE.Object3D(); tip.position.set(sgn * len * 0.45, -0.1, 0); joint.add(tip);
     fingers.push({ root, joint, tip, len, lenM: len * ROBOT_SCALE, press: 0, spread: 0 });
   }
-  return { bone: H, sgn, fingers, palm };
+  return { bone: H, sgn, fingers, palm, restPos: H.position.clone() };
 }
 
 /* ─────────── グランドピアノ (一般的なコンサートグランド。弦 1 本ずつ) ─────────── */
@@ -361,10 +377,20 @@ function buildPiano(scene) {
     const pivot = new THREE.Object3D();
     pivot.position.set(keyX(p), black ? KEY_TOP_Y + 0.004 : KEY_TOP_Y - KEY_H / 2, -WHITE_L - 0.02);
     let geo;
-    if (black) { geo = new THREE.BoxGeometry(BLACK_W, KEY_H * 0.95, BLACK_L); }
-    else {
+    // 鍵の境目が見えるように: すき間を実物より少し広く (片側 1.1mm)、角に丸み (1.2mm) をつける
+    const KEY_GAP = 0.0011, BEV = 0.0012, BEV_T = 0.0012;
+    if (black) {
+      // 黒鍵: 上がわずかに細い台形の断面。角は丸い
+      const w = BLACK_W - 0.0006 - BEV * 2, hh = KEY_H * 0.95 - BEV * 2;
+      const sh = new THREE.Shape();
+      sh.moveTo(-w / 2, 0); sh.lineTo(w / 2, 0); sh.lineTo(w / 2 * 0.84, hh); sh.lineTo(-w / 2 * 0.84, hh); sh.lineTo(-w / 2, 0);
+      geo = new THREE.ExtrudeGeometry(sh, { depth: BLACK_L - BEV_T * 2, bevelEnabled: true, bevelThickness: BEV_T, bevelSize: BEV, bevelSegments: 3 });
+      geo.translate(0, BEV - KEY_H * 0.95 / 2, BEV_T);   // 高さの中心を 0 に、z を 0〜BLACK_L に
+      geo.rotateY(Math.PI);                              // 押し出し (+z) を奥 (-z) へ。断面は左右対称なので裏返っても同じ
+      geo.translate(0, 0, BLACK_L);                      // z: 0 (奥=支点側) 〜 BLACK_L (手前)
+    } else {
       // 白鍵は奥で黒鍵をよける L 字 / T 字。左右どちらに黒鍵があるかで奥の幅を削る
-      const gap = 0.0006, fullW = WHITE_W - gap * 2;
+      const gap = KEY_GAP + BEV, fullW = WHITE_W - gap * 2;
       const leftBlack = p > LOW && isBlack(p - 1), rightBlack = p < HIGH && isBlack(p + 1);
       const cutL = leftBlack ? (keyX(p - 1) + BLACK_W / 2 + gap) - (keyX(p) - WHITE_W / 2) : 0;
       const cutR = rightBlack ? (keyX(p) + WHITE_W / 2) - (keyX(p + 1) - BLACK_W / 2 - gap) : 0;
@@ -372,17 +398,25 @@ function buildPiano(scene) {
       const sh = new THREE.Shape();
       const x0 = -fullW / 2, x1 = fullW / 2;
       sh.moveTo(x0, 0); sh.lineTo(x1, 0); sh.lineTo(x1, frontLen); sh.lineTo(x1 - Math.max(0, cutR), frontLen); sh.lineTo(x1 - Math.max(0, cutR), frontLen + backLen); sh.lineTo(x0 + Math.max(0, cutL), frontLen + backLen); sh.lineTo(x0 + Math.max(0, cutL), frontLen); sh.lineTo(x0, frontLen); sh.lineTo(x0, 0);
-      geo = new THREE.ExtrudeGeometry(sh, { depth: KEY_H, bevelEnabled: true, bevelThickness: 0.0008, bevelSize: 0.0008, bevelSegments: 2 });
+      geo = new THREE.ExtrudeGeometry(sh, { depth: KEY_H - BEV_T * 2, bevelEnabled: true, bevelThickness: BEV_T, bevelSize: BEV, bevelSegments: 3 });
+      geo.translate(0, 0, BEV_T);                // 押し出しの範囲を 0〜KEY_H に
       geo.rotateX(-Math.PI / 2);                 // shape の y (奥行き) → -z、押し出し → +y。x はそのまま (左右を裏返さない)
       geo.translate(0, -KEY_H / 2, WHITE_L + 0.02); // 支点 (奥) から手前へ 0〜L
     }
-    const mesh = shadowed(new THREE.Mesh(geo, black ? P.ebony : P.ivory));
-    mesh.position.set(0, black ? KEY_H * 0.48 : 0, black ? BLACK_L / 2 + 0.02 : 0);
+    // 鍵ごとに材質を分ける (押した鍵だけ、金色にほんのり灯る)
+    const mat = (black ? P.ebony : P.ivory).clone(); mat.emissive = new THREE.Color(0xc9a656); mat.emissiveIntensity = 0;
+    const mesh = shadowed(new THREE.Mesh(geo, mat));
+    mesh.position.set(0, black ? KEY_H * 0.48 : 0, black ? 0.02 : 0);
     pivot.add(mesh); g.add(pivot);
-    keys[p] = { pivot, mesh, black, press: 0, target: 0, idx: p - LOW, hasDamper: p <= 89, dirty: true };
+    keys[p] = { pivot, mesh, mat, black, press: 0, target: 0, idx: p - LOW, hasDamper: p <= 89, dirty: true };
   }
   // ── 鍵盤まわり
   const keybed = shadowed(new THREE.Mesh(new THREE.BoxGeometry(HALF_W * 2, 0.07, 0.46), P.lacquer)); keybed.position.set(0, KEY_TOP_Y - KEY_H - 0.04, -0.08); g.add(keybed);
+  // 鍵と鍵のすき間の底に黒い細い板 (上から見たとき、境目が黒い線に見える)
+  const gapMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 1 });
+  const gapMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.0007, KEY_H * 0.8, WHITE_L + 0.02), gapMat, N_WHITE + 1);
+  for (let i = 0; i <= N_WHITE; i++) { tmp.position.set(KEYS_X0 + i * WHITE_W, KEY_TOP_Y - KEY_H / 2 - 0.0025, -(WHITE_L + 0.02) / 2); tmp.rotation.set(0, 0, 0); tmp.scale.set(1, 1, 1); tmp.updateMatrix(); gapMesh.setMatrixAt(i, tmp.matrix); }
+  g.add(gapMesh);
   [-1, 1].forEach((s) => { const cheek = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.115, 0.22, 0.46), P.lacquer)); cheek.position.set(s * (HALF_W - 0.0575), KEY_TOP_Y + 0.055, -0.08); g.add(cheek); });
   const keyslip = shadowed(new THREE.Mesh(new THREE.BoxGeometry(HALF_W * 2 - 0.23, 0.028, 0.02), P.lacquer)); keyslip.position.set(0, KEY_TOP_Y - 0.018, 0.10); g.add(keyslip);
   const nameboardFelt = new THREE.Mesh(new THREE.BoxGeometry(HALF_W * 2 - 0.23, 0.01, 0.012), P.feltRed); nameboardFelt.position.set(0, KEY_TOP_Y + 0.006, -WHITE_L - 0.03); g.add(nameboardFelt);
@@ -437,7 +471,9 @@ export class PianoStage {
     const rim = new THREE.SpotLight(0xbfd8ff, 35, 10, 0.7, 0.7, 1.4); rim.position.set(-2.4, 2.8, -2.0); this.scene.add(rim);
     const fill = new THREE.PointLight(0xffe6c4, 5, 5, 1.6); fill.position.set(0.6, 1.5, 1.6); this.scene.add(fill);
     const inside = new THREE.PointLight(0xffe9c8, 3.5, 2.6, 1.6); inside.position.set(0.1, 1.25, -0.9); this.scene.add(inside);
-    const handLamp = new THREE.PointLight(0xffffff, 4, 2.0, 1.8); handLamp.position.set(0, 1.35, 0.3); this.scene.add(handLamp);
+    const handLamp = new THREE.PointLight(0xffffff, 2.2, 2.0, 1.8); handLamp.position.set(0, 1.35, 0.3); this.scene.add(handLamp);
+    // 鍵盤を斜めから撫でる光 (影つき): 鍵の丸い角に光が乗り、すき間に影が落ちて境目が見える
+    const keyLamp = new THREE.SpotLight(0xfff6e8, 30, 4.5, 0.62, 0.5, 1.5); keyLamp.position.set(1.05, 1.55, 0.62); keyLamp.castShadow = true; keyLamp.shadow.mapSize.set(2048, 2048); keyLamp.shadow.bias = -0.00012; keyLamp.shadow.normalBias = 0.0008; keyLamp.shadow.camera.near = 0.3; keyLamp.shadow.camera.far = 4; this.scene.add(keyLamp); this.scene.add(keyLamp.target); keyLamp.target.position.set(-0.1, KEY_TOP_Y, -0.08);
     const pedalLamp = new THREE.PointLight(0xfff0d8, 2.2, 1.4, 1.6); pedalLamp.position.set(0.35, 0.45, 0.35); this.scene.add(pedalLamp); // ペダルと右足 (小窓用)
     const floor = shadowed(new THREE.Mesh(new THREE.CircleGeometry(7, 64), P.floor)); floor.rotation.x = -Math.PI / 2; this.scene.add(floor);
     this.piano = buildPiano(this.scene);
@@ -457,7 +493,7 @@ export class PianoStage {
     this.layout = "stack";       // stack (上下) | side (左右)
     this._bindOrbit();
     this.t = 0; this.energy = 0; this.pedalDown = false; this.pedalAmt = 0; this._lastPedalAmt = -1; this._damperInit = false;
-    this.handState = { L: { x: keyX(48), y: KEY_TOP_Y + 0.05, z: 0.115 }, R: { x: keyX(72), y: KEY_TOP_Y + 0.05, z: 0.115 } };
+    this.handState = { L: { x: keyX(48), y: KEY_TOP_Y + 0.044, z: 0.055 }, R: { x: keyX(72), y: KEY_TOP_Y + 0.044, z: 0.055 } };
     this.notesRef = []; this.pedalRef = [];
     this.headNod = 0;
     this._eyeLook = new THREE.Vector3(0, KEY_TOP_Y, -0.05);
@@ -546,7 +582,7 @@ export class PianoStage {
       const pq = new THREE.Quaternion(); parent.getWorldQuaternion(pq);
       const dirLocal = to.clone().sub(from).normalize().applyQuaternion(pq.clone().invert());
       const q = new THREE.Quaternion().setFromUnitVectors(restAxis, dirLocal);
-      bone.quaternion.slerp(q, Math.min(1, dt * 24));
+      bone.quaternion.copy(q);
       bone.updateMatrixWorld(true);
     };
     setBone(shoulder, S, E, new THREE.Vector3(sgn, 0, 0));
@@ -559,9 +595,102 @@ export class PianoStage {
     const zAxis = new THREE.Vector3().crossVectors(xAxis, yAxis);
     m.makeBasis(xAxis, yAxis, zAxis);
     const wq = new THREE.Quaternion().setFromRotationMatrix(m);
-    hand.quaternion.slerp(pq.clone().invert().multiply(wq), Math.min(1, dt * 20));
+    hand.quaternion.copy(pq.clone().invert().multiply(wq));
   }
 
+
+  /* ── 指先を鍵の上にぴったり置く (3 つの関節角を、実測のヤコビアンで 3 回だけニュートン法) ──
+     戻り値: 残ったずれ (world)。鍵の x 中心・鍵の上面 (沈み込み込み)・鍵の中の自然な z を狙う。 */
+  _placeFinger(hand, f, p, keyPress, hover) {
+    const black = isBlack(p);
+    const sgn = hand.sgn, root = f.root, joint = f.joint, tip = f.tip;
+    const T = this._tmpV ??= new THREE.Vector3();
+    const measure = () => { root.updateMatrixWorld(true); tip.getWorldPosition(T); return [T.x, T.y, T.z]; };
+    // 関節の動ける範囲: [横振り, 付け根の曲げ, 第 2 関節の曲げ]
+    const lo = [-1.1, sgn > 0 ? -1.35 : -0.4, sgn > 0 ? -1.8 : -0.05], hi = [1.1, sgn > 0 ? 0.4 : 1.35, sgn > 0 ? 0.05 : 1.8];
+    const get = () => [root.rotation.y, root.rotation.z, joint.rotation.z];
+    const set = (q) => { root.rotation.y = clamp(q[0], lo[0], hi[0]); root.rotation.z = clamp(q[1], lo[1], hi[1]); joint.rotation.z = clamp(q[2], lo[2], hi[2]); };
+    const restPose = get();   // 呼ばれた時点の「だいたいの形」
+    // 指先が乗ってよい z の範囲: 白鍵は手前の縁〜黒鍵の間の細い部分まで、黒鍵は黒鍵の上
+    const zLo = black ? -0.140 : -0.115, zHi = black ? -0.065 : -0.010;
+    const cur = measure();
+    const zT = clamp(cur[2], zLo, zHi);
+    const dip = keyPress * (KEY_DIP / (black ? BLACK_L : WHITE_L)) * (zT - KEY_PIVOT_Z);
+    const yT = (black ? BLACK_TOP_Y : KEY_TOP_Y) - dip + TIP_R + hover;
+    const target = [keyX(p), yT, zT];
+    const solveFrom = (q0) => {
+      set(q0); let base = measure(); let e = Math.hypot(target[0] - base[0], target[1] - base[1], target[2] - base[2]);
+      for (let it = 0; it < 6 && e >= 0.0004; it++) {
+        const q = get();
+        const err = [target[0] - base[0], target[1] - base[1], target[2] - base[2]];
+        const J = [];
+        for (let k = 0; k < 3; k++) {
+          // 限界に当たっている側には動かせないので、反対向きに少しずらして傾きを測る
+          const hk = q[k] + 0.015 > hi[k] ? -0.015 : 0.015;
+          const q2 = q.slice(); q2[k] += hk; set(q2); const m = measure();
+          J.push([(m[0] - base[0]) / hk, (m[1] - base[1]) / hk, (m[2] - base[2]) / hk]);
+        }
+        // 減衰最小二乗: dq = (JᵀJ + λI)⁻¹ Jᵀ err   (J の列 k = J[k])
+        const lam = 1e-4;
+        const A = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], g = [0, 0, 0];
+        for (let a = 0; a < 3; a++) { for (let b = 0; b < 3; b++) { let sum = 0; for (let r = 0; r < 3; r++) sum += J[a][r] * J[b][r]; A[a][b] = sum + (a === b ? lam : 0); } let gs = 0; for (let r = 0; r < 3; r++) gs += J[a][r] * err[r]; g[a] = gs; }
+        const dq = solve3(A, g);
+        if (!dq) { set(q); break; }
+        set([q[0] + clamp(dq[0], -0.6, 0.6), q[1] + clamp(dq[1], -0.6, 0.6), q[2] + clamp(dq[2], -0.6, 0.6)]);
+        base = measure(); e = Math.hypot(target[0] - base[0], target[1] - base[1], target[2] - base[2]);
+      }
+      return { q: get(), base, e };
+    };
+    // 前のフレームの答えから始め、それで届かなければ「だいたいの形」からやり直す
+    let best = null;
+    for (const q0 of f.exactPose ? [f.exactPose, restPose] : [restPose]) {
+      const r = solveFrom(q0);
+      if (!best || r.e < best.e) best = r;
+      if (best.e < 0.002) break;
+    }
+    set(best.q); root.updateMatrixWorld(true);
+    f.exactPose = best.q;
+    return new THREE.Vector3(target[0] - best.base[0], target[1] - best.base[1], target[2] - best.base[2]);
+  }
+
+  /* ── リハーサル: 描画せずに曲を頭から通し、音の始まりごとに「指先が鍵の上にあるか」を測る ──
+     戻り値 { notes, misses: [{i, p, h, f, s, dx, dy, dz}], maxDx, maxDy, maxDz } */
+  rehearse(notes, pedal, beatToSec, { fps = 60, endBeat = null } = {}) {
+    const saved = { notes: this.notesRef, pedal: this.pedalRef, hs: JSON.parse(JSON.stringify(this.handState)), t: this.t };
+    this.setSong(notes, pedal);
+    const sorted = this.notesRef;
+    const end = endBeat ?? (sorted.length ? Math.max(...sorted.map((n) => n.s + n.d)) : 0);
+    const endSec = beatToSec(end) + 0.5;
+    const secToBeat = (sec) => { let lo = 0, hi = end + 8; for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (beatToSec(mid) < sec) lo = mid; else hi = mid; } return (lo + hi) / 2; };
+    const dt = 1 / fps; const T = new THREE.Vector3();
+    const onset = sorted.map((n) => beatToSec(n.s));
+    const checks = [];   // {i, at} 音の始まりの次のフレームと、その 60ms 後
+    for (let i = 0; i < sorted.length; i++) { checks.push({ i, at: onset[i], stage: 0 }); checks.push({ i, at: onset[i] + 0.06, stage: 1 }); }
+    checks.sort((a, b) => a.at - b.at);
+    let ci = 0; const misses = []; let maxDx = 0, maxDy = 0, maxDz = 0, checked = 0;
+    for (let sec = 0; sec <= endSec; sec += dt) {
+      this.update(secToBeat(sec), beatToSec, dt, true);
+      while (ci < checks.length && checks[ci].at <= sec) {
+        const c = checks[ci++]; const n = sorted[c.i]; const p = n.p, black = isBlack(p);
+        const hand = this.hands[n.h === "L" ? "Left" : "Right"];
+        if (c.stage === 1 && n._released) continue;
+        const f = hand.fingers[n._f ?? clamp((n.f ?? 3) - 1, 0, 4)];
+        f.tip.getWorldPosition(T);
+        const k = this.piano.keys[p];
+        const dx = T.x - keyX(p);
+        const zLo = black ? -0.145 : -0.120, zHi = black ? -0.060 : -0.004;
+        const dz = T.z < zLo ? T.z - zLo : T.z > zHi ? T.z - zHi : 0;
+        const dip = (k ? k.press : 0) * (KEY_DIP / (black ? BLACK_L : WHITE_L)) * (clamp(T.z, zLo, zHi) - KEY_PIVOT_Z);
+        const dy = T.y - ((black ? BLACK_TOP_Y : KEY_TOP_Y) - dip + TIP_R);
+        const halfW = (black ? BLACK_W : WHITE_W) / 2 - 0.001;
+        checked++;
+        maxDx = Math.max(maxDx, Math.abs(dx)); maxDy = Math.max(maxDy, Math.abs(dy)); maxDz = Math.max(maxDz, Math.abs(dz));
+        if (Math.abs(dx) > halfW || Math.abs(dz) > 0 || Math.abs(dy) > 0.008) misses.push({ i: c.i, stage: c.stage, p, h: n.h, f: n.f, s: n.s, dx: +dx.toFixed(4), dy: +dy.toFixed(4), dz: +dz.toFixed(4) });
+      }
+    }
+    this.notesRef = saved.notes; this.pedalRef = saved.pedal; this.handState = saved.hs; this.t = saved.t;
+    return { notes: sorted.length, checked, misses, maxDx: +maxDx.toFixed(4), maxDy: +maxDy.toFixed(4), maxDz: +maxDz.toFixed(4) };
+  }
 
   _updateKeys(dt) {
     const pn = this.piano;
@@ -574,6 +703,7 @@ export class PianoStage {
       if (!moving && !k.dirty && !pedalChanged) continue;
       k.dirty = moving;
       k.pivot.rotation.x = Math.atan(KEY_DIP / (k.black ? BLACK_L : WHITE_L)) * k.press;
+      k.mat.emissiveIntensity = k.press * (k.black ? 1.1 : 0.55);   // 押した鍵は金色に灯る
       const swing = Math.min(1, k.press * 1.4);
       const lift = k.hasDamper ? Math.max(k.press, this.pedalAmt) * 0.012 : 0.02;
       this._placeMechanics(k, swing, lift);
@@ -597,14 +727,18 @@ export class PianoStage {
     const B = this.bones; const pn = this.piano;
     const nowSec = beatToSec(beat);
     const LOOK = 0.5;
-    const active = { L: [], R: [] }, upcoming = { L: [], R: [] };
+    const LEAD = 0.10;   // この秒数だけ先の音まで「もう指を鍵に乗せておく」
+    const active = { L: [], R: [] }, lead = { L: [], R: [] }, upcoming = { L: [], R: [] };
     let accent = 0;
     for (const n of this.notesRef) {
       const s = beatToSec(n.s), e = beatToSec(n.s + n.d);
       if (e < nowSec - 0.3) continue;
       if (s > nowSec + LOOK + 0.2) break;
       const h = n.h === "L" ? "L" : "R";
-      if (s <= nowSec && nowSec < Math.max(e, s + 0.09)) { active[h].push(n); if (nowSec - s < 0.06) accent = Math.max(accent, n.v / 127); }
+      const held = nowSec < Math.max(e, s + 0.09);
+      // 4ms 以内に始まる音は「もう鳴っている」扱い (フレームの境目で 1 フレーム遅れないように)
+      if (s <= nowSec + 0.004 && held) { active[h].push(n); lead[h].push(n); if (nowSec - s < 0.06) accent = Math.max(accent, n.v / 127); }
+      else if (s > nowSec && s <= nowSec + LEAD) { lead[h].push(n); upcoming[h].push(n); }
       else if (s > nowSec && s <= nowSec + LOOK) upcoming[h].push(n);
     }
     // ペダルと右足
@@ -637,33 +771,77 @@ export class PianoStage {
     this.robotParts.core.material.emissiveIntensity = 3 + Math.sin(this.t * 3) * 0.6 + this.energy * 2;
     this.robot.updateMatrixWorld(true);
 
+    // 鍵を沈める (音の始まりと同時)。指はこのあと、沈んだ鍵の上面に合わせて置く
+    for (const { k, n } of this._pendingKeys) k.target = 0.7 + 0.3 * (n.v / 127);
+    this._updateKeys(dt);
+
+    const FI = (n) => n._f ?? clamp((n.f ?? 3) - 1, 0, 4);
+
     // 手と指
+    // 手の位置は LEAD 秒先の音で決める (音が鳴る瞬間には指がもう鍵の上にあるように)。
     for (const h of ["L", "R"]) {
       const st = this.handState[h];
       const side = h === "L" ? "Left" : "Right";
       const hand = this.hands[side];
-      const list = active[h].length ? active[h] : upcoming[h];
-      let palmX = st.x, palmZ = 0.115;
+      // その手が「今」受け持つ音。新しく始まる音があるときは、遠くで押さえたままの古い音は手放したことにする
+      // (楽譜データでは伸ばしたままでも、実際の手は届かない。ペダルが音を保つ)
+      let list = lead[h].length ? lead[h] : upcoming[h];
+      if (lead[h].length) {
+        const fresh = lead[h].filter((n) => beatToSec(n.s) > nowSec - 0.12);
+        if (fresh.length && fresh.length < lead[h].length) {
+          const cx = fresh.reduce((a, n) => a + keyX(n.p), 0) / fresh.length;
+          list = lead[h].filter((n) => fresh.includes(n) || Math.abs(keyX(n.p) - cx) <= 0.12);
+        }
+      }
+      // 同じ手で同時に鳴る音に同じ指が付いていたり、指の順番が音の高さと逆だったら (データの指番号の間違い)、その瞬間だけ振り直す。
+      // 右手は低い音から 1→5、左手は高い音から 1→5 に、音の数に応じて広げて割り当てる。
+      {
+        for (const n of list) n._f = clamp((n.f ?? 3) - 1, 0, 4);
+        const used = new Map(); let bad = false;
+        for (const n of list) { const prev = used.get(n._f); if (prev && prev.p !== n.p) bad = true; used.set(n._f, n); }
+        if (!bad) { const srt = list.slice().sort((a, b) => a.p - b.p); for (let i = 1; i < srt.length; i++) { if (srt[i].p === srt[i - 1].p) continue; if (h === "R" ? srt[i]._f < srt[i - 1]._f : srt[i]._f > srt[i - 1]._f) bad = true; } }
+        if (bad) {
+          const uniq = [...new Map(list.map((n) => [n.p, n])).values()].sort((a, b) => (h === "R" ? a.p - b.p : b.p - a.p));
+          const k = Math.min(5, uniq.length);
+          const plan = { 1: [0], 2: [0, 4], 3: [0, 2, 4], 4: [0, 1, 3, 4], 5: [0, 1, 2, 3, 4] }[k];
+          uniq.forEach((n, i) => { const fi = plan[Math.min(i, k - 1)]; for (const m of list) if (m.p === n.p) m._f = fi; });
+        }
+      }
+      const inList = new Set(list);
+      for (const n of lead[h]) n._released = !inList.has(n);
+      let palmX = st.x, palmZ = 0.055;
       if (list.length) {
-        const offs = list.map((n) => keyX(n.p) - fingerOffsetX(h, clamp((n.f ?? 3) - 1, 0, 4)));
+        // x: 各指が受け持つ鍵の位置から、手の中心を逆算して平均
+        const offs = list.map((n) => keyX(n.p) - fingerOffsetX(h, FI(n)));
         palmX = offs.reduce((a, b) => a + b, 0) / offs.length;
-        const blackRatio = list.filter((n) => isBlack(n.p)).length / list.length;
-        palmZ = 0.115 - blackRatio * 0.04;
+        // z: 指ごとに届く長さが違う (親指は短い) ので、「鍵の上の狙い z + その指の届く長さ」の平均を手の z にする
+        let zsum = 0, wsum = 0;
+        for (const n of list) { const fi = FI(n); const w = FINGER_Z_WEIGHT[fi]; zsum += ((isBlack(n.p) ? -0.095 : -0.045) + FINGER_REACH_Z[fi]) * w; wsum += w; }
+        palmZ = zsum / wsum - 0.85 * ROBOT_SCALE;
       } else if (playing) palmX = lerp(st.x, h === "L" ? keyX(48) : keyX(72), 0.002);
-      st.x = lerp(st.x, palmX, Math.min(1, dt * (active[h].length ? 40 : 22)));
-      st.z = lerp(st.z, palmZ, Math.min(1, dt * 10));
-      const palmY = KEY_TOP_Y + 0.05;
+      st.x = lerp(st.x, palmX, Math.min(1, dt * (lead[h].length ? 55 : 22)));
+      if (Math.abs(st.x - palmX) < 0.0004) st.x = palmX;
+      st.z = lerp(st.z, palmZ, Math.min(1, dt * (lead[h].length ? 40 : 12)));
+      if (Math.abs(st.z - palmZ) < 0.0004) st.z = palmZ;
+      const palmY = KEY_TOP_Y + 0.044;
       st.y = palmY;
+      // 前のフレームの「手のずらし」を戻してから腕を解く
+      hand.bone.position.copy(hand.restPos);
       this._solveArm(side, new THREE.Vector3(st.x, st.y, st.z + 0.85 * ROBOT_SCALE), dt);
+      hand.bone.updateMatrixWorld(true);
       const pressing = new Map();
-      for (const n of active[h]) { const i = clamp((n.f ?? 3) - 1, 0, 4); pressing.set(i, n); }
+      for (const n of active[h]) if (inList.has(n)) pressing.set(FI(n), n);
+      const ready = new Map();
+      for (const n of lead[h]) { if (!inList.has(n)) continue; const i = FI(n); if (!pressing.has(i) && !ready.has(i)) ready.set(i, n); }
       const nextByF = new Map();
-      for (const n of upcoming[h]) { const i = clamp((n.f ?? 3) - 1, 0, 4); if (!nextByF.has(i)) nextByF.set(i, n); }
+      for (const n of upcoming[h]) { const i = FI(n); if (!nextByF.has(i)) nextByF.set(i, n); }
+      const exactList = [];
       hand.fingers.forEach((f, i) => {
-        const n = pressing.get(i) ?? nextByF.get(i);
-        const p = pressing.has(i) ? 1 : nextByF.has(i) ? 0.3 : 0;
-        f.press = lerp(f.press, p, Math.min(1, dt * (p === 1 ? 60 : 18)));
-        const keyTop = n && isBlack(n.p) ? KEY_TOP_Y + 0.012 : KEY_TOP_Y;
+        const n = pressing.get(i) ?? ready.get(i) ?? nextByF.get(i);
+        const p = pressing.has(i) ? 1 : ready.has(i) ? 0.4 : nextByF.has(i) ? 0.2 : 0;
+        f.press = lerp(f.press, p, Math.min(1, dt * (p === 1 ? 70 : 18)));
+        // まず「だいたいの形」(休んでいる指もこの形)
+        const keyTop = n && isBlack(n.p) ? BLACK_TOP_Y : KEY_TOP_Y;
         const restDrop = clamp((palmY - keyTop - 0.018) / f.lenM, 0, 0.95), pressDrop = clamp((palmY - keyTop + 0.006) / f.lenM, 0, 0.98);
         const ang = Math.asin(lerp(restDrop, pressDrop, f.press));
         f.root.rotation.z = hand.sgn * -(ang * 0.75);
@@ -671,22 +849,33 @@ export class PianoStage {
         let shift = 0;
         if (n) shift = keyX(n.p) - (st.x + fingerOffsetX(h, i));
         const target = clamp(shift / Math.max(0.03, f.lenM * 0.9), -0.8, 0.8);
-        f.spread = lerp(f.spread, target, Math.min(1, dt * 26));
+        f.spread = lerp(f.spread, target, Math.min(1, dt * 30));
         f.root.rotation.y = -Math.asin(f.spread);
+        // 鳴っている音・すぐ鳴る音の指は、指先を鍵の上にぴったり合わせる
+        if (n && (pressing.has(i) || ready.has(i))) exactList.push({ f, n, i, hover: pressing.has(i) ? 0 : 0.016 * (1 - Math.min(1, f.press / 0.4)) + 0.004 });
+        else f.exactPose = null;
       });
+      // 指先合わせ (2 回: 1 回目の残りを手全体のずらしで吸収してからもう 1 回)
+      for (let pass = 0; pass < 2; pass++) {
+        const resid = new THREE.Vector3(); let nres = 0;
+        for (const e of exactList) {
+          const k = pn.keys[e.n.p];
+          const err = this._placeFinger(hand, e.f, e.n.p, k ? k.press : 0, e.hover);
+          if (pressing.has(e.i)) { resid.add(err); nres++; }
+        }
+        if (pass === 0 && nres && resid.length() / nres > 0.0008) {
+          resid.divideScalar(nres);
+          // world のずれ → 手の骨の親 (前腕) のローカルへ
+          const pq = new THREE.Quaternion(); hand.bone.parent.getWorldQuaternion(pq);
+          const local = resid.clone().applyQuaternion(pq.invert()).divideScalar(ROBOT_SCALE);
+          const maxShift = 0.045 / ROBOT_SCALE;
+          if (local.length() > maxShift) local.setLength(maxShift);
+          hand.bone.position.copy(hand.restPos).add(local);
+          hand.bone.updateMatrixWorld(true);
+        } else break;
+      }
     }
 
-    // 鍵を沈める判定 (指先の world x が鍵から 1 鍵分以内、または音が始まって 80ms 過ぎた)
-    const tipPos = new THREE.Vector3();
-    for (const { k, n, h } of this._pendingKeys) {
-      const hand = this.hands[h === "L" ? "Left" : "Right"];
-      const f = hand.fingers[clamp((n.f ?? 3) - 1, 0, 4)];
-      f.tip.getWorldPosition(tipPos);
-      const near = Math.abs(tipPos.x - keyX(n.p)) < WHITE_W * 1.1;
-      const elapsed = nowSec - beatToSec(n.s);
-      if (near || elapsed > 0.08) k.target = 0.7 + 0.3 * (n.v / 127);
-    }
-    this._updateKeys(dt);
 
     // カメラ 1: VESPER の目線
     const eyePos = new THREE.Vector3(); this.robotParts.eye.getWorldPosition(eyePos);
@@ -702,7 +891,7 @@ export class PianoStage {
     this.camHands.lookAt(hx * 0.85, KEY_TOP_Y - 0.02, -0.07);
     // カメラ 3: 全体 (回せる)。auto のときはゆっくり回る
     const o = this.orbit;
-    if (o.auto) o.theta += dt * 0.04;
+    if (o.auto) { o.autoT = (o.autoT ?? 0) + dt; o.theta = 0.85 + 0.55 * Math.sin(o.autoT * 0.05); }   // 手前側だけをゆっくり行き来 (屋根の裏に回り込まない)
     this.camWide.position.set(o.target.x + o.radius * Math.sin(o.phi) * Math.sin(o.theta), o.target.y + o.radius * Math.cos(o.phi), o.target.z + o.radius * Math.sin(o.phi) * Math.cos(o.theta));
     this.camWide.lookAt(o.target);
   }

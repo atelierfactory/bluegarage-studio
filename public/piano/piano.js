@@ -6,8 +6,7 @@
 
 import {
   state, on, emit, selectedTrack, totalBars, pushUndo, undo, redo, loadLocal, saveLocal, resetSong, onSave,
-  makeTrack, uid, beatToSec, tempoAt, defaultSong,
-} from "../js/state.js";
+  makeTrack, uid, beatToSec, tempoAt, defaultSong, totalBeats } from "../js/state.js";
 import * as audio from "../js/audio.js";
 import { PianoRoll, THEME } from "../js/pianoroll.js";
 import { downloadMidi } from "../js/midi.js";
@@ -112,11 +111,13 @@ $("#btn-rew").addEventListener("click", () => audio.seek(0));
 $("#btn-loop").addEventListener("click", (e) => { state.loop = !state.loop; e.currentTarget.classList.toggle("active", state.loop); if (state.playing) { audio.stop(); audio.play(); } });
 $("#btn-met").addEventListener("click", () => { state.metronome = !state.metronome; $("#btn-met").classList.toggle("active", state.metronome); if (state.playing) { audio.stop(); audio.play(); } });
 on("transport", () => { btnPlay.textContent = state.playing ? "❚❚" : "▶"; btnPlay.classList.toggle("active", state.playing); if (!state.playing && jam) jamStop(); });
+function songEndBeat() { let end = totalBeats(); for (const tr of state.song.tracks) for (const n of tr.notes) end = Math.max(end, n.s + n.d); return end; }
 on("playhead", () => {
   const ts = state.song.timeSig; const bar = Math.floor(state.playheadBeat / ts) + 1; const beat = Math.floor(state.playheadBeat % ts) + 1;
   $("#pos-display").textContent = `${String(bar).padStart(3, "0")}.${beat}`;
-  const sec = beatToSec(state.playheadBeat);
-  $("#time-display").textContent = `${Math.floor(sec / 60)}:${(sec % 60).toFixed(1).padStart(4, "0")}`;
+  const sec = beatToSec(state.playheadBeat), total = beatToSec(songEndBeat());
+  const mmss = (x, frac) => `${Math.floor(x / 60)}:${frac ? (x % 60).toFixed(1).padStart(4, "0") : String(Math.floor(x % 60)).padStart(2, "0")}`;
+  $("#time-display").textContent = `${mmss(sec, true)} / ${mmss(total, false)}`;
   if (state.playing) proll.followPlayhead();
 });
 window.addEventListener("keydown", (e) => {
@@ -460,9 +461,12 @@ function jamStop() { if (!jam) return; clearInterval(jam.timer); jam = null; if 
 
 /* ─────────── お題バー ─────────── */
 const COMPOSE_MODEL = "claude-fable-5-1"; // 作曲は Fable 5.1 の超作り込み一本 (さとるん決定)
-let mode = "jam";
+let mode = "play";
 function applyMode() {
   document.querySelectorAll(".mtab").forEach((x) => x.classList.toggle("on", x.dataset.mode === mode));
+  const play = mode === "play";
+  $("#btn-songs").classList.toggle("hidden", !play); $("#play-hint").classList.toggle("hidden", !play);
+  $("#inp-theme").classList.toggle("hidden", play); $("#btn-go").classList.toggle("hidden", play);
   $("#btn-go").textContent = mode === "compose" ? "♪ 作曲する (数分)" : "▶ 即興を始める";
   $("#inp-theme").placeholder = mode === "compose" ? "お題 (例: 雨の日の午後、静かで少し切ない曲)" : "お題 (空でもすぐ始まります。例: ジャズバラード)";
 }

@@ -24,6 +24,9 @@ body.piano-app .tbtn.rec { color: #d0d0d0; }
 body.piano-app .tbtn.jam { font-family: var(--font-display); letter-spacing: 2px; font-size: 12px; width: 52px; }
 body.piano-app .lcd { color: #f2f2f2; text-shadow: none; background: #000; border: 1px solid #3a3a3a; }
 body.piano-app .lcd-dim { color: #8a8a8a; }
+body.piano-app .lcd-time { color: #f2f2f2; font-size: 14px; margin-left: 10px; letter-spacing: 1px; }
+#prompt-bar #play-hint { flex: 1; font-size: 12px; color: #8a8a8a; }
+#prompt-bar #btn-songs { height: 34px; padding: 0 18px; }
 body.piano-app .tfield { color: #8a8a8a; }
 body.piano-app .tfield input, body.piano-app .tfield select { background: #000; color: #f0f0f0; border-color: #3a3a3a; }
 body.piano-app .tfield input:focus, body.piano-app .tfield select:focus { border-color: #8c8c8c; }
