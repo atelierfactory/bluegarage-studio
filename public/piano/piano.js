@@ -66,7 +66,8 @@ function pianoTrack() {
 function setTitleUi() { $("#proll-title").textContent = state.song.title || "—"; $("#stage-title").textContent = state.song.title || ""; }
 
 /* ─────────── views ─────────── */
-const proll = new PianoRoll($("#proll"), { getSnap: () => parseFloat($("#inp-snap").value) || 0 });
+// できあがった曲 (同梱の名曲・作曲・即興・読み込んだ曲) に手で音を足したり動かしたりはしない: 見る・聴く・再生位置を選ぶだけ
+const proll = new PianoRoll($("#proll"), { getSnap: () => parseFloat($("#inp-snap").value) || 0, editable: false });
 on("notes", () => { const tr = selectedTrack(); if (!tr) return; let changed = false; for (const n of tr.notes) if (!n.h) { n.h = $("#inp-hand").value; n.f = n.f ?? 2; changed = true; } if (changed) proll.draw(); stage.setSong(tr.notes, state.song.pedal); });
 on("song", () => { syncTransportFields(); setTitleUi(); const tr = selectedTrack(); if (tr) stage.setSong(tr.notes, state.song.pedal); });
 
@@ -107,10 +108,10 @@ async function play(fromBeat = null) {
 async function togglePlay() { if (state.playing) audio.stop(); else await play(); }
 btnPlay.addEventListener("click", togglePlay);
 $("#btn-stop").addEventListener("click", () => audio.stop(true));
-$("#btn-rew").addEventListener("click", () => audio.seek(0));
+$("#btn-rew").addEventListener("click", () => { proll.resetFollow(); audio.seek(0); });
 $("#btn-loop").addEventListener("click", (e) => { state.loop = !state.loop; e.currentTarget.classList.toggle("active", state.loop); if (state.playing) { audio.stop(); audio.play(); } });
 $("#btn-met").addEventListener("click", () => { state.metronome = !state.metronome; $("#btn-met").classList.toggle("active", state.metronome); if (state.playing) { audio.stop(); audio.play(); } });
-on("transport", () => { btnPlay.textContent = state.playing ? "❚❚" : "▶"; btnPlay.classList.toggle("active", state.playing); if (!state.playing && jam) jamStop(); });
+on("transport", () => { if (state.playing) proll.resetFollow(); btnPlay.textContent = state.playing ? "❚❚" : "▶"; btnPlay.classList.toggle("active", state.playing); if (!state.playing && jam) jamStop(); });
 function songEndBeat() { let end = totalBeats(); for (const tr of state.song.tracks) for (const n of tr.notes) end = Math.max(end, n.s + n.d); return end; }
 function updateLcd() {
   const ts = state.song.timeSig; const bar = Math.floor(state.playheadBeat / ts) + 1; const beat = Math.floor(state.playheadBeat % ts) + 1;
@@ -125,7 +126,7 @@ on("song", updateLcd); on("notes", updateLcd);
 window.addEventListener("keydown", (e) => {
   if (e.target.matches("input, textarea, select")) return;
   if (e.code === "Space") { e.preventDefault(); togglePlay(); return; }
-  if (e.key === "Home") audio.seek(0);
+  if (e.key === "Home") { proll.resetFollow(); audio.seek(0); }
   if (e.key === "m" && !e.metaKey && !e.ctrlKey) $("#btn-met").click();
   if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
   if ((e.metaKey || e.ctrlKey) && (e.key === "Z" || (e.shiftKey && e.key === "z"))) { e.preventDefault(); redo(); }
@@ -263,7 +264,7 @@ function row(title, meta, btnLabel, onOpen, extra = []) {
 async function renderSongs() {
   const el = $("#lib-list"); el.innerHTML = "";
   const head = (txt) => { const h = document.createElement("div"); h.className = "lib-head"; h.textContent = txt; el.appendChild(h); };
-  head("同梱の名曲 (著作権切れ・Mutopia Project の Public Domain 版)");
+  head("同梱の曲 (著作権切れの名曲 = Mutopia Project の Public Domain 版、と このアプリで作ったオリジナル曲)");
   for (const it of await listRepertoire()) el.appendChild(row(it.title, `${it.composer} · ${it.year} · ${it.license}`, "弾く", async () => { try { status(await playRepertoire(it), "lit"); dlg.close(); play(0); } catch (err) { toast(err.message, true); } }));
   const all = await lib.listSongs();
   const groups = [["作った曲 (作曲したもの)", all.filter((m) => m.kind === "composed")], ["読み込んだ曲 (自分の MIDI / JSON)", all.filter((m) => m.kind === "imported")]];

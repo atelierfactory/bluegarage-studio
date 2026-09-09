@@ -664,8 +664,13 @@ export class PianoStage {
     const secToBeat = (sec) => { let lo = 0, hi = end + 8; for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (beatToSec(mid) < sec) lo = mid; else hi = mid; } return (lo + hi) / 2; };
     const dt = 1 / fps; const T = new THREE.Vector3();
     const onset = sorted.map((n) => beatToSec(n.s));
-    const checks = [];   // {i, at} 音の始まりの次のフレームと、その 60ms 後
-    for (let i = 0; i < sorted.length; i++) { checks.push({ i, at: onset[i], stage: 0 }); checks.push({ i, at: onset[i] + 0.06, stage: 1 }); }
+    // {i, at} 音の始まりの次のフレームと、その 60ms 後 (60ms より短い音は始まりだけ見る。32 分音符の駆け上がりでは 60ms 後には指が次の鍵へ移っていてよい)
+    const checks = [];
+    for (let i = 0; i < sorted.length; i++) {
+      const dur = beatToSec(sorted[i].s + sorted[i].d) - onset[i];
+      checks.push({ i, at: onset[i], stage: 0 });
+      if (dur >= 0.06) checks.push({ i, at: onset[i] + 0.06, stage: 1 });
+    }
     checks.sort((a, b) => a.at - b.at);
     let ci = 0; const misses = []; let maxDx = 0, maxDy = 0, maxDz = 0, checked = 0;
     for (let sec = 0; sec <= endSec; sec += dt) {
@@ -806,10 +811,26 @@ export class PianoStage {
       // 同じ手で同時に鳴る音に同じ指が付いていたり、指の順番が音の高さと逆だったら (データの指番号の間違い)、その瞬間だけ振り直す。
       // 右手は低い音から 1→5、左手は高い音から 1→5 に、音の数に応じて広げて割り当てる。
       {
-        for (const n of list) n._f = clamp((n.f ?? 3) - 1, 0, 4);
-        const used = new Map(); let bad = false;
-        for (const n of list) { const prev = used.get(n._f); if (prev && prev.p !== n.p) bad = true; used.set(n._f, n); }
-        if (!bad) { const srt = list.slice().sort((a, b) => a.p - b.p); for (let i = 1; i < srt.length; i++) { if (srt[i].p === srt[i - 1].p) continue; if (h === "R" ? srt[i]._f < srt[i - 1]._f : srt[i]._f > srt[i - 1]._f) bad = true; } }
+        const conflict = (arr) => {
+          for (const n of arr) n._f = clamp((n.f ?? 3) - 1, 0, 4);
+          const used = new Map();
+          for (const n of arr) { const prev = used.get(n._f); if (prev && prev.p !== n.p) return true; used.set(n._f, n); }
+          const srt = arr.slice().sort((a, b) => a.p - b.p);
+          for (let i = 1; i < srt.length; i++) { if (srt[i].p === srt[i - 1].p) continue; if (h === "R" ? srt[i]._f < srt[i - 1]._f : srt[i]._f > srt[i - 1]._f) return true; }
+          return false;
+        };
+        let bad = conflict(list);
+        // 取り合いの相手が「楽譜上はもう終わっている古い音 (短い音を 90ms 保つ名残)」と「これから始まる音」なら、古い音を手放す。
+        // (同じ和音を 16 分で連打しながら形を変える所で、振り直しで指が付け替わり、次のフレームでまた戻る「ちらつき」を防ぐ)
+        if (bad && list.some((n) => beatToSec(n.s) > nowSec)) {
+          const fresh = list.filter((n) => !(beatToSec(n.s) <= nowSec && beatToSec(n.s + n.d) <= nowSec + 0.004));
+          if (fresh.length < list.length && !conflict(fresh)) { list = fresh; bad = false; }
+        }
+        // それでも取り合うなら、相手は「今鳴っている音」と「これから始まる音 (先回り)」。先回りを後回しにして今の音の指を守る
+        if (bad && list.some((n) => beatToSec(n.s) > nowSec) && list.some((n) => beatToSec(n.s) <= nowSec)) {
+          const now = list.filter((n) => beatToSec(n.s) <= nowSec);
+          if (!conflict(now)) { list = now; bad = false; }
+        }
         if (bad) {
           const uniq = [...new Map(list.map((n) => [n.p, n])).values()].sort((a, b) => (h === "R" ? a.p - b.p : b.p - a.p));
           const k = Math.min(5, uniq.length);

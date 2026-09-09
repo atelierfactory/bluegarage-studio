@@ -31,6 +31,8 @@ export class PianoRoll {
     this.cv = canvas;
     this.ctx = canvas.getContext("2d");
     this.getSnap = opts.getSnap ?? (() => 0.25);
+    // 編集できるか (false のときは見る・聴く・再生位置を動かすだけ。ノートの追加・移動・削除はしない)
+    this.editable = opts.editable ?? true;
     this.keyW = 64;
     this.rulerH = 26;
     this.pxPerBeat = 42;
@@ -105,6 +107,7 @@ export class PianoRoll {
 
       // ルーラー: シーク
       if (y < this.rulerH && x > this.keyW) {
+        this.resetFollow();
         seek(Math.max(0, this.xToBeat(x)));
         return;
       }
@@ -116,6 +119,8 @@ export class PianoRoll {
       }
 
       const n = this.noteAt(x, y);
+      // 編集不可: ノートをクリックしたら試聴だけ
+      if (!this.canEdit()) { if (n && e.button !== 2) previewNote(t, n.p, n.v); return; }
       // 削除 (alt+クリック / 右クリック)
       if (n && (e.altKey || e.button === 2)) {
         t.notes = t.notes.filter((m) => m !== n);
@@ -170,7 +175,7 @@ export class PianoRoll {
       if (!this.drag) {
         const n = this.noteAt(x, y);
         const resizing = n && x > this.beatToX(n.s + n.d) - 6;
-        cv.style.cursor = y < this.rulerH ? "pointer" : n ? (resizing ? "ew-resize" : "grab") : x < this.keyW ? "pointer" : "cell";
+        cv.style.cursor = y < this.rulerH ? "pointer" : n ? (this.canEdit() ? (resizing ? "ew-resize" : "grab") : "pointer") : x < this.keyW ? "pointer" : this.canEdit() ? "cell" : "default";
         if (n !== this.hoverNote) { this.hoverNote = n; this.draw(); }
         return;
       }
@@ -230,7 +235,7 @@ export class PianoRoll {
         return;
       }
       const n = this.noteAt(x, y);
-      if (n && this.selection.has(n.id)) {
+      if (n && this.selection.has(n.id) && this.canEdit()) {
         const dv = e.deltaY < 0 ? 4 : -4;
         const t = selectedTrack();
         for (const id of this.selection) {
@@ -255,6 +260,7 @@ export class PianoRoll {
 
     window.addEventListener("keydown", (e) => {
       if (e.target.matches("input, textarea, select")) return;
+      if (!this.canEdit()) return;
       if (e.key === "Backspace" || e.key === "Delete") {
         const t = selectedTrack();
         if (!t || !this.selection.size) return;
@@ -489,7 +495,7 @@ export class PianoRoll {
     } else if (!t.notes.length) {
       ctx.fillStyle = THEME.hint2;
       ctx.font = "12px 'Zen Kaku Gothic New'";
-      ctx.fillText("クリックでノートを置くか、右のAIパネルから生成 →", this.beatToX(this.scrollX) + 30, this.rulerH + 40);
+      if (this.canEdit()) ctx.fillText("クリックでノートを置くか、右のAIパネルから生成 →", this.beatToX(this.scrollX) + 30, this.rulerH + 40);
     }
   }
 
@@ -505,14 +511,23 @@ export class PianoRoll {
     this.draw();
   }
 
-  // プレイヘッド追従 (ユーザーが動かした直後は追わない。しばらく触らなければまた追う)
+  canEdit() { return typeof this.editable === "function" ? !!this.editable() : !!this.editable; }
+
+  // プレイヘッド追従。手で動かした直後 (5 秒) は追わない。
+  // 手で動かして再生位置が画面の外に出ているあいだは、再生位置が画面に戻ってくるか、再生し直す・位置を選び直す (resetFollow) まで追わない
+  // (前に戻って見ているのに勝手に再生位置へ引き戻さない)
   followPlayhead() {
-    if (this.userScrollUntil && performance.now() < this.userScrollUntil) return;
     const px = this.beatToX(state.playheadBeat);
+    const visible = px >= this.keyW && px <= this.w;
+    if (this.userScrolled) {
+      if (!visible || performance.now() < this.userScrollUntil) return;
+      this.userScrolled = false;
+    }
     if (px > this.w - 60 || px < this.keyW) {
       this.scrollX = Math.max(0, state.playheadBeat - 2);
       this.draw();
     }
   }
-  markUserScroll(ms = 5000) { this.userScrollUntil = performance.now() + ms; }
+  markUserScroll(ms = 5000) { this.userScrolled = true; this.userScrollUntil = performance.now() + ms; }
+  resetFollow() { this.userScrolled = false; this.userScrollUntil = 0; }
 }

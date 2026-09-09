@@ -46,6 +46,21 @@
   "source": "https://www.mutopiaproject.org/ftp/ChopinFF/O10/op-10-12-wfi/",
   "typesetter": "Roland Goretzki",
   "license": "Public Domain (typeset placed in the public domain, Mutopia Project; Peters ed. Scholtz 1900)",
-  "note": "Allegro con fuoco. 左手の速い 16 分音符の連続と、右手のオクターブの和音"
+  "note": "Allegro con fuoco. 左手の速い 16 分音符の連続と、右手のオクターブの和音",
+  "perf": "revolutionary.vesper.json",
+  "perfBy": "Claude Fable 5.1",
+  "perfNote": "楽譜はそのまま、強弱・間・音の切り方・手と指・ペダルを Claude Fable 5.1 が演奏家として決めた版 (2026-09-09)"
+ },
+ {
+  "file": "matsuri-overdrive.vesper.json",
+  "title": "祭囃子オーバードライブ",
+  "composer": "Claude Fable 5.1",
+  "year": "2026",
+  "source": "VESPER PIANO の「作曲」で作ったオリジナル曲 (2026-09-09)",
+  "license": "オリジナル (Claude Fable 5.1 作曲。既存の曲の旋律は使っていない)",
+  "perf": "matsuri-overdrive.vesper.json",
+  "perfBy": "Claude Fable 5.1",
+  "perfNote": "作曲・強弱・間・手と指・ペダルまで Claude Fable 5.1 が決めた版 (2026-09-09)",
+  "note": "和風ロック。テンポ 154。右手のオクターブ連打と 16 分の駆け上がり、左手の 8 分オクターブ・ベース、間奏は琴のような分散和音"
  }
 ]
