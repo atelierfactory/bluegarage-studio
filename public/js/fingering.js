@@ -41,6 +41,28 @@ export function autoFinger(notes, { tracks = [] } = {}) {
       }
     }
   }
+  // 1b. 片手で同時に 15 半音 (10 度) を超えて広がる塊は、楽譜の段の都合なので、届く方の手に端の音を移す
+  {
+    const srt = out.slice().sort((a, b) => a.s - b.s || a.p - b.p);
+    let i = 0;
+    while (i < srt.length) {
+      let j = i; while (j < srt.length && srt[j].s - srt[i].s < 0.05) j++;
+      const g = srt.slice(i, j);
+      for (const h of ["L", "R"]) {
+        const other = h === "L" ? "R" : "L";
+        for (let guard = 0; guard < 6; guard++) {
+          const hs = g.filter((n) => n.h === h).sort((a, b) => a.p - b.p);
+          if (hs.length < 2 || hs[hs.length - 1].p - hs[0].p <= 15) break;
+          const os = g.filter((n) => n.h === other).map((n) => n.p);
+          const cand = h === "L" ? hs[hs.length - 1] : hs[0];   // 左手なら一番高い音、右手なら一番低い音
+          const fits = !os.length || (Math.max(...os, cand.p) - Math.min(...os, cand.p) <= 15);
+          if (!fits) break;
+          cand.h = other;
+        }
+      }
+      i = j;
+    }
+  }
   // 2. 指
   for (const h of ["L", "R"]) {
     const hs = out.filter((n) => n.h === h).sort((a, b) => a.s - b.s || a.p - b.p);

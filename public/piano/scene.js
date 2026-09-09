@@ -612,7 +612,7 @@ export class PianoStage {
     const set = (q) => { root.rotation.y = clamp(q[0], lo[0], hi[0]); root.rotation.z = clamp(q[1], lo[1], hi[1]); joint.rotation.z = clamp(q[2], lo[2], hi[2]); };
     const restPose = get();   // 呼ばれた時点の「だいたいの形」
     // 指先が乗ってよい z の範囲: 白鍵は手前の縁〜黒鍵の間の細い部分まで、黒鍵は黒鍵の上
-    const zLo = black ? -0.140 : -0.115, zHi = black ? -0.065 : -0.010;
+    const zLo = black ? -0.140 : -0.115, zHi = black ? -0.068 : -0.020;
     const cur = measure();
     const zT = clamp(cur[2], zLo, zHi);
     const dip = keyPress * (KEY_DIP / (black ? BLACK_L : WHITE_L)) * (zT - KEY_PIVOT_Z);
@@ -673,7 +673,7 @@ export class PianoStage {
       while (ci < checks.length && checks[ci].at <= sec) {
         const c = checks[ci++]; const n = sorted[c.i]; const p = n.p, black = isBlack(p);
         const hand = this.hands[n.h === "L" ? "Left" : "Right"];
-        if (c.stage === 1 && n._released) continue;
+        if (n._released) continue;
         const f = hand.fingers[n._f ?? clamp((n.f ?? 3) - 1, 0, 4)];
         f.tip.getWorldPosition(T);
         const k = this.piano.keys[p];
@@ -783,14 +783,24 @@ export class PianoStage {
       const st = this.handState[h];
       const side = h === "L" ? "Left" : "Right";
       const hand = this.hands[side];
-      // その手が「今」受け持つ音。新しく始まる音があるときは、遠くで押さえたままの古い音は手放したことにする
-      // (楽譜データでは伸ばしたままでも、実際の手は届かない。ペダルが音を保つ)
-      let list = lead[h].length ? lead[h] : upcoming[h];
-      if (lead[h].length) {
-        const fresh = lead[h].filter((n) => beatToSec(n.s) > nowSec - 0.12);
-        if (fresh.length && fresh.length < lead[h].length) {
-          const cx = fresh.reduce((a, n) => a + keyX(n.p), 0) / fresh.length;
-          list = lead[h].filter((n) => fresh.includes(n) || Math.abs(keyX(n.p) - cx) <= 0.12);
+      // その手が「今」受け持つ音を決める。
+      //  1. 60ms 以内に始まる音が遠く (12cm 超) にあれば、今鳴らしている音は手放す (実際の手は跳ぶ前に鍵を離す。音はペダルが保つ)
+      //  2. 残った音に、手の届く範囲 (12cm) で始まりかけの音を足す
+      //  3. 何も鳴らしていなければ、次に始まる音のかたまり (先頭から 30ms 以内) に手を先回りさせる
+      let list;
+      {
+        const mean = (arr) => arr.reduce((a, n) => a + keyX(n.p), 0) / arr.length;
+        const act = active[h];
+        const up = lead[h].filter((n) => !act.includes(n));
+        // 「始まったばかり (120ms 以内)」か「60ms 以内に始まる」音 = 手が今いるべき場所
+        const soon = lead[h].filter((n) => { const ds = beatToSec(n.s) - nowSec; return ds >= -0.12 && ds <= 0.06; });
+        let kept = act;
+        if (soon.length) { const cx = mean(soon); kept = act.filter((n) => Math.abs(keyX(n.p) - cx) <= 0.12); }
+        if (kept.length) { const cx = mean(kept); list = kept.concat(up.filter((n) => Math.abs(keyX(n.p) - cx) <= 0.12)); }
+        else {
+          const src = up.length ? up : upcoming[h];
+          if (src.length) { const s0 = Math.min(...src.map((n) => beatToSec(n.s))); list = src.filter((n) => beatToSec(n.s) - s0 <= 0.03); }
+          else list = [];
         }
       }
       // 同じ手で同時に鳴る音に同じ指が付いていたり、指の順番が音の高さと逆だったら (データの指番号の間違い)、その瞬間だけ振り直す。
@@ -809,6 +819,7 @@ export class PianoStage {
       }
       const inList = new Set(list);
       for (const n of lead[h]) n._released = !inList.has(n);
+      for (const n of active[h]) n._released = !inList.has(n);
       let palmX = st.x, palmZ = 0.055;
       if (list.length) {
         // x: 各指が受け持つ鍵の位置から、手の中心を逆算して平均
@@ -855,22 +866,23 @@ export class PianoStage {
         if (n && (pressing.has(i) || ready.has(i))) exactList.push({ f, n, i, hover: pressing.has(i) ? 0 : 0.016 * (1 - Math.min(1, f.press / 0.4)) + 0.004 });
         else f.exactPose = null;
       });
-      // 指先合わせ (2 回: 1 回目の残りを手全体のずらしで吸収してからもう 1 回)
-      for (let pass = 0; pass < 2; pass++) {
+      // 指先合わせ (最大 3 回: 届かなかった指の残りを手全体のずらしで吸収してからもう 1 回。届いた指は曲げ直せるので残りには数えない)
+      let shiftAcc = new THREE.Vector3();
+      for (let pass = 0; pass < 3; pass++) {
         const resid = new THREE.Vector3(); let nres = 0;
         for (const e of exactList) {
           const k = pn.keys[e.n.p];
           const err = this._placeFinger(hand, e.f, e.n.p, k ? k.press : 0, e.hover);
-          if (pressing.has(e.i)) { resid.add(err); nres++; }
+          if (pressing.has(e.i) && err.length() > 0.0003) { resid.add(err); nres++; }
         }
-        if (pass === 0 && nres && resid.length() / nres > 0.0008) {
+        if (pass < 2 && nres) {
           resid.divideScalar(nres);
           // world のずれ → 手の骨の親 (前腕) のローカルへ
           const pq = new THREE.Quaternion(); hand.bone.parent.getWorldQuaternion(pq);
-          const local = resid.clone().applyQuaternion(pq.invert()).divideScalar(ROBOT_SCALE);
+          shiftAcc.add(resid.clone().applyQuaternion(pq.invert()).divideScalar(ROBOT_SCALE));
           const maxShift = 0.045 / ROBOT_SCALE;
-          if (local.length() > maxShift) local.setLength(maxShift);
-          hand.bone.position.copy(hand.restPos).add(local);
+          if (shiftAcc.length() > maxShift) shiftAcc.setLength(maxShift);
+          hand.bone.position.copy(hand.restPos).add(shiftAcc);
           hand.bone.updateMatrixWorld(true);
         } else break;
       }

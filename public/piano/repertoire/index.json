@@ -37,5 +37,15 @@
   "source": "https://www.mutopiaproject.org/ftp/ChopinFF/B130/TroisNouvellesEtudes_Chopin_n1/",
   "typesetter": "Romain Behar",
   "license": "Public Domain (typeset placed in the public domain, Mutopia Project)"
+ },
+ {
+  "file": "op-10-12-wfi.mid",
+  "title": "Étude Op. 10 No. 12 「革命」(C minor)",
+  "composer": "Frédéric Chopin",
+  "year": "1831",
+  "source": "https://www.mutopiaproject.org/ftp/ChopinFF/O10/op-10-12-wfi/",
+  "typesetter": "Roland Goretzki",
+  "license": "Public Domain (typeset placed in the public domain, Mutopia Project; Peters ed. Scholtz 1900)",
+  "note": "Allegro con fuoco. 左手の速い 16 分音符の連続と、右手のオクターブの和音"
  }
 ]
