@@ -182,7 +182,7 @@ function loadMidiIntoSong(buffer, title, meta = {}) {
   const a = checkNow();
   return `「${title}」(${notes.length}音、${bars}小節、${song.tempo} BPM、ペダル ${song.pedal.length} 区間) 手と指は自動。検査: ${describeAnalysis(a)}`;
 }
-$("#inp-import-midi").addEventListener("change", async (e) => { const f = e.target.files[0]; if (!f) return; try { status(loadMidiIntoSong(await f.arrayBuffer(), f.name.replace(/\.midi?$/i, "")), "lit"); play(0); } catch (err) { toast(err.message, true); } $("#dlg-songs").close(); e.target.value = ""; });
+$("#inp-import-midi").addEventListener("change", async (e) => { const f = e.target.files[0]; if (!f) return; try { status(loadMidiIntoSong(await f.arrayBuffer(), f.name.replace(/\.midi?$/i, "")), "lit"); audio.seek(0); } catch (err) { toast(err.message, true); } $("#dlg-songs").close(); e.target.value = ""; });
 let repertoireCache = null;
 async function listRepertoire() { if (repertoireCache) return repertoireCache; try { const r = await fetch("repertoire/index.json", { cache: "no-cache" }); repertoireCache = r.ok ? await r.json() : []; } catch { repertoireCache = []; } return repertoireCache; }
 async function playRepertoire(item) {
@@ -265,15 +265,15 @@ async function renderSongs() {
   const el = $("#lib-list"); el.innerHTML = "";
   const head = (txt) => { const h = document.createElement("div"); h.className = "lib-head"; h.textContent = txt; el.appendChild(h); };
   head("同梱の曲 (著作権切れの名曲 = Mutopia Project の Public Domain 版、と このアプリで作ったオリジナル曲)");
-  for (const it of await listRepertoire()) el.appendChild(row(it.title, `${it.composer} · ${it.year} · ${it.license}`, "弾く", async () => { try { status(await playRepertoire(it), "lit"); dlg.close(); play(0); } catch (err) { toast(err.message, true); } }));
+  for (const it of await listRepertoire()) el.appendChild(row(it.title, `${it.composer} · ${it.year} · ${it.license}`, "選択", async () => { try { status(await playRepertoire(it) + "。▶ で再生", "lit"); dlg.close(); audio.seek(0); } catch (err) { toast(err.message, true); } }));
   const all = await lib.listSongs();
   const groups = [["作った曲 (作曲したもの)", all.filter((m) => m.kind === "composed")], ["読み込んだ曲 (自分の MIDI / JSON)", all.filter((m) => m.kind === "imported")]];
   for (const [title, list] of groups) {
   head(title);
   if (!list.length) { const p = document.createElement("p"); p.className = "dim"; p.textContent = title.startsWith("作った") ? "まだありません。「作曲」で作った曲がここに残ります。" : "まだありません。上の「MIDI 読み込み」で読めます。"; el.appendChild(p); }
   for (const m of list) {
-    el.appendChild(row(`${m.title}${m.id === state.songId ? " (開いている曲)" : ""}`, `${m.tempo ?? "-"} BPM · ${m.key ?? ""} · ${m.bars} 小節 · ${m.notes} 音 · ${new Date(m.updatedAt ?? 0).toLocaleString()}`, "弾く",
-      async () => { await openFromLibrary(m.id); dlg.close(); play(0); },
+    el.appendChild(row(`${m.title}${m.id === state.songId ? " (開いている曲)" : ""}`, `${m.tempo ?? "-"} BPM · ${m.key ?? ""} · ${m.bars} 小節 · ${m.notes} 音 · ${new Date(m.updatedAt ?? 0).toLocaleString()}`, "選択",
+      async () => { await openFromLibrary(m.id); dlg.close(); audio.seek(0); status(`「${state.song.title}」を選びました。▶ で再生`, "lit"); },
       [["名前", async () => { const name = prompt("曲の名前", m.title); if (!name) return; const song = await lib.loadSong(m.id); if (!song) return; song.title = name; await lib.saveSong(m.id, song); if (m.id === state.songId) { state.song.title = name; setTitleUi(); saveLocal(); } renderSongs(); }],
        ["削除", async () => { if (!confirm(`「${m.title}」を消しますか?`)) return; await lib.deleteSong(m.id); if (m.id === state.songId) state.songId = null; renderSongs(); }, "danger"]]));
   }
