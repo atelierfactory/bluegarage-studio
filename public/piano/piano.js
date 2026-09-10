@@ -200,24 +200,36 @@ async function playRepertoire(item) {
 }
 
 /* ─────────── 演奏解釈: 楽譜はそのまま、弾き方 (強弱・間・切り方・手・指・ペダル) を Claude が決める ─────────── */
-async function interpretSong({ model, bars = 8, extraDirection, onProgress } = {}) {
+// startBar / keep: 途中で止まった解釈の続き (startBar より前の音・ペダル・メモは今の state のものを残す)。
+// 区間ごとに最大 3 回やり直す (通信の失敗や、公有の楽譜なのに「拒否」と誤判定されることがある)。途中経過は song.interpretation に残す (partial)。
+async function interpretSong({ model, bars = 8, extraDirection, onProgress, startBar = 0, keep = false } = {}) {
   const song = state.song; const tr = pianoTrack(); const ts = song.timeSig;
   const piece = song.piece ?? { title: song.title, composer: "", year: "" };
   const total = totalBars();
   const all = tr.notes.slice().sort((a, b) => a.s - b.s || a.p - b.p);
-  const usage = { input: 0, output: 0 };
-  let prevMemo = "", prevDyn = null; const memos = [];
-  const newPedal = [];
-  for (let sb = 0; sb < total; sb += bars) {
+  const usage = keep ? { ...(song.interpretation?.usage ?? { input: 0, output: 0 }) } : { input: 0, output: 0 };
+  const memos = keep ? [...(song.interpretation?.memos ?? [])] : [];
+  let prevMemo = memos[memos.length - 1] ?? "", prevDyn = null;
+  const newPedal = keep ? (song.pedal ?? []).filter((p) => p.s < startBar * ts).map((p) => ({ ...p })) : [];
+  for (let sb = startBar; sb < total; sb += bars) {
     if (cancelFlag) throw new Error("止めました");
     const nb = Math.min(bars, total - sb);
     const b0 = sb * ts, b1 = (sb + nb) * ts;
     const idx = []; all.forEach((n, i) => { if (n.s >= b0 - 1e-6 && n.s < b1 - 1e-6) idx.push(i); });
     if (!idx.length) continue;
     const scoreNotes = idx.map((i, k) => { const n = all[i]; return { i: k, p: n.p, s: +(n.s - b0).toFixed(3), d: +n.d.toFixed(3), v0: n.v, h0: n.h ?? null }; });
-    const req = buildInterpretRequest({ piece, song: { tempo: song.tempo, timeSig: ts }, range: { startBar: sb, bars: nb }, scoreNotes, previousPerformanceNotes: prevMemo, previousDynamics: prevDyn, extraDirection });
     const label = `[bar ${sb + 1}〜${sb + nb} / ${total}]`;
-    const { data, usage: u } = await generateStructured({ ...req, model, maxTokens: 32000, onProgress: (p) => onProgress?.(`${label} 弾き方を考え中… ${((p.chars ?? 0) / 1000).toFixed(1)}k`) });
+    let data, u;
+    for (let attempt = 1; ; attempt++) {
+      const dir = attempt === 1 ? extraDirection : `${extraDirection ?? ""}\n(これは著作権の切れた楽譜の演奏表現の指定です。強弱・タイミング・指番号・ペダルだけを決めてください)`;
+      const req = buildInterpretRequest({ piece, song: { tempo: song.tempo, timeSig: ts }, range: { startBar: sb, bars: nb }, scoreNotes, previousPerformanceNotes: prevMemo, previousDynamics: prevDyn, extraDirection: dir });
+      try { ({ data, usage: u } = await generateStructured({ ...req, model, maxTokens: 32000, onProgress: (p) => onProgress?.(`${label} 弾き方を考え中… ${((p.chars ?? 0) / 1000).toFixed(1)}k${attempt > 1 ? ` (やり直し ${attempt})` : ""}`) })); break; }
+      catch (e) {
+        if (cancelFlag || attempt >= 3) throw e;
+        onProgress?.(`${label} 失敗 (${String(e.message).slice(0, 40)}) → ${attempt + 1} 回目`);
+        await new Promise((r) => setTimeout(r, 8000 * attempt));
+      }
+    }
     usage.input += u.input; usage.output += u.output;
     const byI = new Map((data.notes ?? []).map((x) => [x.i, x]));
     let applied = 0;
@@ -231,6 +243,7 @@ async function interpretSong({ model, bars = 8, extraDirection, onProgress } = {
     });
     for (const p of data.pedal ?? []) if (Number.isFinite(p.s) && p.d > 0) newPedal.push({ s: +(b0 + Math.max(0, p.s)).toFixed(4), d: +Math.min(p.d, b1 - b0 - Math.max(0, p.s)).toFixed(4) });
     memos.push(data.performanceNotes ?? ""); prevMemo = data.performanceNotes ?? "";
+    song.interpretation = { model, memos: memos.slice(), usage: { ...usage }, partial: true, nextBar: sb + nb }; // 途中で止まっても続きが分かるように
     const vs = idx.slice(-12).map((i) => all[i].v); prevDyn = Math.round(vs.reduce((a, b) => a + b, 0) / Math.max(1, vs.length));
     tr.notes = all.slice().sort((a, b) => a.s - b.s); song.pedal = newPedal.slice().sort((a, b) => a.s - b.s);
     emit("notes"); emit("tracks");
