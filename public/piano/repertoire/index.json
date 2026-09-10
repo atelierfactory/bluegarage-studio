@@ -62,5 +62,70 @@
   "perfBy": "Claude Fable 5.1",
   "perfNote": "作曲・強弱・間・手と指・ペダルまで Claude Fable 5.1 が決めた版 (2026-09-09)",
   "note": "和風ロック。テンポ 154。右手のオクターブ連打と 16 分の駆け上がり、左手の 8 分オクターブ・ベース、間奏は琴のような分散和音"
+ },
+ {
+  "file": "KV331_3_RondoAllaTurca.mid",
+  "title": "トルコ行進曲 (ピアノソナタ第 11 番 K.331 第 3 楽章)",
+  "composer": "Wolfgang Amadeus Mozart",
+  "year": "1783",
+  "source": "https://www.mutopiaproject.org/ftp/MozartWA/KV331/KV331_3_RondoAllaTurca/",
+  "typesetter": "Rune Zedeler and Chris Sawer",
+  "license": "Public Domain (typeset placed in the public domain, Mutopia Project; Mutopia-2015/08/13-108)",
+  "note": "Rondo alla turca。日本で一番よく知られたモーツァルトのピアノ曲",
+  "perf": "turkish-march.vesper.json",
+  "perfBy": "Claude Fable 5.1",
+  "perfNote": "楽譜はそのまま、強弱・間・音の切り方・手と指・ペダルを Claude Fable 5.1 が演奏家として決めた版 (2026-09-10)"
+ },
+ {
+  "file": "chopin_fantaisie-impromptu.mid",
+  "title": "幻想即興曲 (Op.66)",
+  "composer": "Frédéric Chopin",
+  "year": "1834",
+  "source": "https://www.mutopiaproject.org/ftp/ChopinFF/O66/chopin_fantaisie-impromptu/",
+  "typesetter": "Guy D. Lederfein",
+  "license": "Public Domain (typeset placed in the public domain, Mutopia Project; Scholtz ed.; Mutopia-2009/09/05-1693)",
+  "note": "Allegro agitato。右手 16 分と左手 3 連の掛け合い、中間部は歌うように",
+  "perf": "fantaisie-impromptu.vesper.json",
+  "perfBy": "Claude Fable 5.1",
+  "perfNote": "楽譜はそのまま、強弱・間・音の切り方・手と指・ペダルを Claude Fable 5.1 が演奏家として決めた版 (2026-09-10)"
+ },
+ {
+  "file": "chopin_valse_op64_no1.mid",
+  "title": "子犬のワルツ (Op.64-1)",
+  "composer": "Frédéric Chopin",
+  "year": "1847",
+  "source": "https://www.mutopiaproject.org/ftp/ChopinFF/O64/chopin_valse_op64_no1/",
+  "typesetter": "Magnus Lewis-Smith",
+  "license": "Public Domain (typeset placed in the public domain, Mutopia Project; Peters ed.; Mutopia-2015/01/17-483)",
+  "note": "Molto vivace。くるくる回る子犬",
+  "perf": "minute-waltz.vesper.json",
+  "perfBy": "Claude Fable 5.1",
+  "perfNote": "楽譜はそのまま、強弱・間・音の切り方・手と指・ペダルを Claude Fable 5.1 が演奏家として決めた版 (2026-09-10)"
+ },
+ {
+  "file": "gymnopedie_1.mid",
+  "title": "ジムノペディ 第 1 番",
+  "composer": "Erik Satie",
+  "year": "1888",
+  "source": "https://www.mutopiaproject.org/ftp/SatieE/gymnopedie_1/",
+  "typesetter": "Evin Robertson",
+  "license": "Public Domain (typeset placed in the public domain, Mutopia Project; Mutopia-2014/12/14-37)",
+  "note": "Lent et douloureux。静かに、ゆっくり",
+  "perf": "gymnopedie-1.vesper.json",
+  "perfBy": "Claude Fable 5.1",
+  "perfNote": "楽譜はそのまま、強弱・間・音の切り方・手と指・ペダルを Claude Fable 5.1 が演奏家として決めた版 (2026-09-10)"
+ },
+ {
+  "file": "pathetique-2.mid",
+  "title": "悲愴ソナタ 第 2 楽章 (Op.13)",
+  "composer": "Ludwig van Beethoven",
+  "year": "1798",
+  "source": "https://www.mutopiaproject.org/ftp/BeethovenLv/O13/pathetique-2/",
+  "typesetter": "Chris Sawer",
+  "license": "Public Domain (typeset placed in the public domain, Mutopia Project; Mutopia-2011/10/25-295)",
+  "note": "Adagio cantabile。歌うように",
+  "perf": "pathetique-2.vesper.json",
+  "perfBy": "Claude Fable 5.1",
+  "perfNote": "楽譜はそのまま、強弱・間・音の切り方・手と指・ペダルを Claude Fable 5.1 が演奏家として決めた版 (2026-09-10)"
  }
 ]

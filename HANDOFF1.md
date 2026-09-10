@@ -186,3 +186,14 @@ window.vesperInterpret({ model: 'claude-fable-5-1', bars: 8, extraDirection: '�
 - 注意: VESPER PIANO の画面には ⚙（合言葉欄）が無いので、合言葉は使わない（Origin と回数で守る）。作曲は Fable 5.1 固定なので 1 曲 2〜5 ドル級 → 1 日 20 曲。料金の栓は service の Environment で `FORCE_MODEL` / `EFFORT` / `MAX_TOKENS_CAP` を足せば効く。
 - 2026-09-10 追記（さとるん要望「誰かが作曲中なら他の人は作曲できないように」・鍵は 1 本を使い回す。上限は鍵の提供元が付けている）: 中継に「作曲の席は 1 つ」を入れた。作曲系の呼び出し（blueprint / piano / polish / revise / track / interpret）は、ブラウザごとの番号 `x-bluegarage-session`（claude.js の sessionId、sessionStorage の乱数）で席を取る。通信中か最後の通信から 3 分以内は席が埋まったまま（`VESPER_BUSY_IDLE_SEC`）、念のため 90 分で必ず空く（`VESPER_BUSY_MAX_MIN`）。埋まっていれば 409 `busy_error`（数に入れない）。`/health` の `seat` に {busy, minutes}。ブラウザ側は「作曲」を押した瞬間に `relaySeat()` で席を見て、埋まっていれば曲を作り始めずに知らせる（piano.js）。即興の手札作り（jam）と小さな呼び出しは席に関係なく通る。手元の煙テスト済み（A が作曲中 → B は 409、A の続きは通る、空いてから B が取れると今度は A が 409）。
 - 2026-09-10 公開版の作曲が動くようになった（確認済み）: さとるんが `relay/deploy.sh`・`gh variable set PROXY_URL`・Pages 再実行を実行。公開ページ (atelierfactory.jp/device/jukebox/piano/) から transport "remote" で中継を通り Claude が返事（OK）。席が埋まっている間に「作曲」を押すと曲を作り始めずに「今、別の人が作曲中です」と出る。事故 2 つ: (1) piano/ からは `config.json` を `../config.json`（claude.js の場所基準）で探す必要があった、(2) 中継の CORS `Access-Control-Allow-Headers` に `x-bluegarage-session` を書き忘れ → "Failed to fetch"。新しい見出しを足したら必ず一覧にも足す。今日の曲数カウントは確認のため 3 消費。
+
+## 14. 日本で有名なクラシック 5 曲を Fable の演奏解釈つきで追加（2026-09-10・さとるん要望）
+- 選び方: 日本で有名 + Mutopia に「Public Domain」と明記された打ち込みがある曲。ノクターン Op.9-2 と月光ソナタは Mutopia に CC 版しか無く見送り。
+- 追加: トルコ行進曲 (Mozart K.331 III, Mutopia id 108, 128 小節 2/4→4/4 換算 64)、幻想即興曲 (Chopin Op.66, id 1693, 138 小節)、子犬のワルツ (Chopin Op.64-1, id 483, 140 小節 3/4)、ジムノペディ第 1 番 (Satie, id 37, 47 小節)、悲愴ソナタ第 2 楽章 (Beethoven Op.13, id 295, 73 小節 2/4→37)。.mid と .ly（KV331 と Op.64-1 は複数ファイルなので -lys.zip）を `public/piano/repertoire/` に置き、index.json に出典・打ち込み者・ライセンスを記録。
+- トルコ行進曲の .ly には速さの指定が無く MIDI が 60 になっていたので、解釈前に `state.song.tempo = 126` にした（perf に保存済み）。
+- 解釈: 3 タブ同時 (`window.vesperInterpret` → `/api/save-preset` → `tools/adopt-perf.mjs`)。所要: トルコ 18 分 / ジムノペディ 5 分 / 幻想即興曲 36 分 / 子犬 約 40 分 / 悲愴 約 50 分。
+- **事故と対処**: Fable が公有の楽譜の演奏指示を「拒否」する誤判定が、子犬のワルツと悲愴で区間ごとに何度も起きた（stop_reason refusal）。指示文を素っ気なくすると通ることが多い。通らない区間は Opus 5 で補った（子犬 1 区間、悲愴 2 区間。メモの先頭にモデル名）。**Opus 5 / Sonnet 5 は 32k の出力枠を「考える分」で使い切って max_tokens で落ちる** → Opus は maxTokens 64000 で通った。Sonnet は使わない方がよい。
+- piano.js `interpretSong` に、区間ごと最大 3 回のやり直し（指示文に「公有の楽譜の演奏表現の指定」の一文を足す）、`startBar` / `keep` での途中再開、`song.interpretation.partial` の途中経過を入れた（コミット e0f0378）。今回の再開はタブ内の JS で同じ手順を組んで走らせた（ページを読み直すと途中結果が消えるため）。
+- 6 曲すべて（新 5 曲 + 既存）リハーサル ずれ 0: トルコ 2992 / 幻想 5996 / 子犬 2727 / ジムノペディ 564 / 悲愴 3247 判定。
+- 音量: ジムノペディは v25〜56、悲愴は v24〜90 と静かな解釈（指示どおり）。他の曲より小さく聞こえる。気になれば VOL で。
+- 今の「曲を選ぶ」: 11 曲（The Entertainer / Für Elise / Clair de Lune / 新練習曲 1 / 革命 / 祭囃子 / トルコ / 幻想即興曲 / 子犬 / ジムノペディ / 悲愴）。Für Elise・Clair de Lune・新練習曲は解釈なし（MIDI + 自動運指）のまま。
