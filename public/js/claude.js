@@ -40,7 +40,8 @@ export async function probeServer() {
   } catch {}
   if (!info.hasKey) {
     try {
-      const r = await fetch("config.json", { cache: "no-cache" }); // 相対パス (サブディレクトリ配信でも動く)
+      // config.json はアプリの根 (public/) にある。ページが piano/ のような下の階層でも見つかるよう、この js ファイルの場所から辿る
+      const r = await fetch(new URL("../config.json", import.meta.url), { cache: "no-cache" });
       if (r.ok) {
         const c = await r.json();
         if (c?.proxyUrl) {
