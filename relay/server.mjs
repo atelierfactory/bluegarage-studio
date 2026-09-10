@@ -91,8 +91,9 @@ function cors(req, res) {
   const origin = req.headers.origin ?? "";
   if (ORIGINS.includes(origin)) { res.setHeader("Access-Control-Allow-Origin", origin); res.setHeader("Vary", "Origin"); }
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "content-type, anthropic-version, x-bluegarage-kind, x-bluegarage-pass");
-  res.setHeader("Access-Control-Max-Age", "86400");
+  // ブラウザが「この見出しを送ってよいか」と聞いてくる (preflight)。使う見出しは全部ここに書く (書き忘れると "Failed to fetch" で止まる)
+  res.setHeader("Access-Control-Allow-Headers", "content-type, anthropic-version, x-bluegarage-kind, x-bluegarage-pass, x-bluegarage-session");
+  res.setHeader("Access-Control-Max-Age", "3600");
 }
 const json = (res, status, obj) => { res.writeHead(status, { "content-type": "application/json", "cache-control": "no-store" }); res.end(JSON.stringify(obj)); };
 const err = (res, status, type, message) => json(res, status, { error: { type, message } });
