@@ -184,11 +184,12 @@ function loadMidiIntoSong(buffer, title, meta = {}) {
 }
 $("#inp-import-midi").addEventListener("change", async (e) => { const f = e.target.files[0]; if (!f) return; try { status(loadMidiIntoSong(await f.arrayBuffer(), f.name.replace(/\.midi?$/i, "")), "lit"); audio.seek(0); } catch (err) { toast(err.message, true); } $("#dlg-songs").close(); e.target.value = ""; });
 let repertoireCache = null;
-async function listRepertoire() { if (repertoireCache) return repertoireCache; try { const r = await fetch("repertoire/index.json", { cache: "no-cache" }); repertoireCache = r.ok ? await r.json() : []; } catch { repertoireCache = []; } return repertoireCache; }
+// 公開サイトは途中に CDN (CloudFront) が挟まり、古い一覧を最大 10 分返す。毎回違う番号を付けて必ず新しい物を取る (小さいファイルなので毎回でよい)
+async function listRepertoire() { if (repertoireCache) return repertoireCache; try { const r = await fetch(`repertoire/index.json?v=${Date.now()}`, { cache: "no-cache" }); repertoireCache = r.ok ? await r.json() : []; } catch { repertoireCache = []; } return repertoireCache; }
 async function playRepertoire(item) {
   if (item.perf) {
     // Fable / Opus が演奏解釈済み (強弱・間・指・ペダル入り) の完成データ
-    const r = await fetch(`repertoire/${item.perf}`, { cache: "no-cache" }); if (!r.ok) throw new Error("演奏データが読めません");
+    const r = await fetch(`repertoire/${item.perf}?v=${Date.now()}`, { cache: "no-cache" }); if (!r.ok) throw new Error("演奏データが読めません");
     const data = await r.json();
     if (state.playing) audio.stop();
     data.song.kind = "repertoire";

@@ -8,11 +8,11 @@
 
 import * as THREE from "three";
 
-const V = (x, y, z) => new THREE.Vector3(x, y, z);
-const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
-const lerp = (a, b, t) => a + (b - a) * t;
+export const V = (x, y, z) => new THREE.Vector3(x, y, z);
+export const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+export const lerp = (a, b, t) => a + (b - a) * t;
 // 3x3 の連立方程式 A x = b (クラメルの公式)。解けなければ null
-function solve3(A, b) {
+export function solve3(A, b) {
   const det = (m) => m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
   const D = det(A); if (Math.abs(D) < 1e-12) return null;
   const col = (k) => A.map((row, r) => row.map((v, c) => (c === k ? b[r] : v)));
@@ -22,7 +22,7 @@ function solve3(A, b) {
 /* ─────────── 鍵盤の寸法 (m) ─────────── */
 const WHITE_W = 0.0235, WHITE_L = 0.150, BLACK_W = 0.0135, BLACK_L = 0.095, KEY_H = 0.013;
 const LOW = 21, HIGH = 108;
-const isBlack = (p) => [1, 3, 6, 8, 10].includes(p % 12);
+export const isBlack = (p) => [1, 3, 6, 8, 10].includes(p % 12);
 const whiteIndex = (p) => { let k = 0; for (let q = LOW; q < p; q++) if (!isBlack(q)) k++; return k; };
 const N_WHITE = whiteIndex(HIGH) + 1;                 // 52
 const KEYS_X0 = -(N_WHITE * WHITE_W) / 2;             // -0.611
@@ -36,7 +36,7 @@ const KEY_TOP_Y = 0.735;   // 白鍵の上面
 const KEY_DIP = 0.010;     // 鍵の沈み (手前で約 1cm)
 
 /* ─────────── 材質 ─────────── */
-const M = {
+export const M = {
   shell: new THREE.MeshPhysicalMaterial({ color: 0xdfe4ec, roughness: 0.28, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0.1 }),
   carbon: new THREE.MeshPhysicalMaterial({ color: 0x111318, roughness: 0.45, metalness: 0.65 }),
   chrome: new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.07, metalness: 1.0 }),
@@ -45,7 +45,7 @@ const M = {
   glowO: new THREE.MeshStandardMaterial({ color: 0x221006, emissive: 0xff7a1a, emissiveIntensity: 3.0, roughness: 0.4 }),
   visor: new THREE.MeshPhysicalMaterial({ color: 0x030507, roughness: 0.05, metalness: 0.2, clearcoat: 1, emissive: 0x1de0ff, emissiveIntensity: 2.0 }),
 };
-const P = {
+export const P = {
   lacquer: new THREE.MeshPhysicalMaterial({ color: 0x08080a, roughness: 0.10, metalness: 0.08, clearcoat: 1, clearcoatRoughness: 0.04, reflectivity: 0.9 }),
   lacquerMatte: new THREE.MeshPhysicalMaterial({ color: 0x101012, roughness: 0.35, metalness: 0.05, clearcoat: 0.5 }),
   ivory: new THREE.MeshPhysicalMaterial({ color: 0xece6d8, roughness: 0.24, metalness: 0, clearcoat: 0.6, clearcoatRoughness: 0.18 }),
@@ -66,8 +66,8 @@ const P = {
   cushion: new THREE.MeshStandardMaterial({ color: 0x1c1c1e, roughness: 0.9 }),
 };
 
-function shadowed(m) { m.castShadow = true; m.receiveShadow = true; return m; }
-function limb(parent, a, b, rTop, rBot, mat, seg = 20, capsule = false) {
+export function shadowed(m) { m.castShadow = true; m.receiveShadow = true; return m; }
+export function limb(parent, a, b, rTop, rBot, mat, seg = 20, capsule = false) {
   const dir = b.clone().sub(a); const len = dir.length();
   const g = capsule ? new THREE.CapsuleGeometry(rTop, Math.max(0.01, len - rTop * 2), 6, seg) : new THREE.CylinderGeometry(rTop, rBot, len, seg, 1);
   const mesh = shadowed(new THREE.Mesh(g, mat));
@@ -76,16 +76,16 @@ function limb(parent, a, b, rTop, rBot, mat, seg = 20, capsule = false) {
   holder.quaternion.setFromUnitVectors(V(0, 1, 0), dir.clone().normalize());
   holder.add(mesh); parent.add(holder); return holder;
 }
-function sphere(parent, p, r, mat, seg = 24) { const m = shadowed(new THREE.Mesh(new THREE.SphereGeometry(r, seg, seg), mat)); m.position.copy(p); parent.add(m); return m; }
-function box(parent, p, s, mat, rot) { const m = shadowed(new THREE.Mesh(new THREE.BoxGeometry(s.x, s.y, s.z), mat)); m.position.copy(p); if (rot) m.rotation.set(rot.x, rot.y, rot.z); parent.add(m); return m; }
+export function sphere(parent, p, r, mat, seg = 24) { const m = shadowed(new THREE.Mesh(new THREE.SphereGeometry(r, seg, seg), mat)); m.position.copy(p); parent.add(m); return m; }
+export function box(parent, p, s, mat, rot) { const m = shadowed(new THREE.Mesh(new THREE.BoxGeometry(s.x, s.y, s.z), mat)); m.position.copy(p); if (rot) m.rotation.set(rot.x, rot.y, rot.z); parent.add(m); return m; }
 function strip(holder, len, r, mat, angle = 0, w = 0.16, thick = 0.05) {
   const g = new THREE.BoxGeometry(w, len * 0.62, thick); const m = new THREE.Mesh(g, mat);
   m.position.set(Math.sin(angle) * r, 0, Math.cos(angle) * r); m.rotation.y = angle; holder.add(m); return m;
 }
 
 /* ─────────── 骨組み (BVH と同じ名前・ロボット単位。全体を ROBOT_SCALE で m に) ─────────── */
-const ROBOT_SCALE = 0.061;
-const SKELETON = {
+export const ROBOT_SCALE = 0.061;
+export const SKELETON = {
   Hips: [0, 0, 0],
   LowerBack: [0, 0.4, 0], Spine: [0, 2.0, 0], Spine1: [0, 2.3, 0], Neck1: [0, 1.85, 0], Head: [0, 1.15, 0], HeadEnd: [0, 2.4, 0],
   LeftShoulder: [1.0, 2.2, 0], LeftArm: [2.2, 0, 0], LeftForeArm: [5.4, 0, 0], LeftHand: [4.9, 0, 0], LeftHandEnd: [1.4, 0, 0],
@@ -100,7 +100,7 @@ const PARENT = {
   LeftUpLeg: "Hips", LeftLeg: "LeftUpLeg", LeftFoot: "LeftLeg", LeftToeBase: "LeftFoot", LeftToeEnd: "LeftToeBase",
   RightUpLeg: "Hips", RightLeg: "RightUpLeg", RightFoot: "RightLeg", RightToeBase: "RightFoot", RightToeEnd: "RightToeBase",
 };
-function buildSkeleton() {
+export function buildSkeleton() {
   const bones = {};
   for (const [name, pos] of Object.entries(SKELETON)) { const b = new THREE.Bone(); b.name = name; b.position.set(...pos); b.isBone = true; bones[name] = b; }
   for (const [name, parent] of Object.entries(PARENT)) bones[parent].add(bones[name]);
@@ -108,7 +108,7 @@ function buildSkeleton() {
 }
 
 // 3D_model/balance_mimic_v1.html の buildRobot と同じ部品 (手はピアノ用に指付き、首は胴とつながるように調整)
-function buildRobot(B, hands) {
+export function buildRobot(B, hands) {
   const child = (b) => b.children.find((c) => c.isBone);
   const off = (name) => child(B[name]) ? child(B[name]).position.clone() : V(0, 0, 0);
   const L = (name) => off(name).length();
@@ -197,20 +197,20 @@ function buildRobot(B, hands) {
 
 // 手: 手のひら + 5 本の指 (2 関節)。指は手の骨の +x*sgn 方向、手のひらの幅は骨の z 軸。
 // 指の並び (world x): 右手は親指が一番左、左手は親指が一番右。
-const FINGER_LEN = [1.65, 2.0, 2.2, 2.0, 1.75];     // 親指→小指 (ロボット単位)。親指と小指は鍵に届くよう少し長め
+export const FINGER_LEN = [1.65, 2.0, 2.2, 2.0, 1.75];     // 親指→小指 (ロボット単位)。親指と小指は鍵に届くよう少し長め
 // 手の骨のローカル z は、左手では world +x、右手では world -x を向く (どちらも「体の内側」= 親指側)。
 // なので親指の z を + にすれば、右手は親指が左、左手は親指が右になる (実際の手と同じ)。
-const FINGER_Z = [0.9, 0.45, 0, -0.45, -0.9];
-const FINGER_OFFSET_M = [-0.9, -0.45, 0, 0.45, 0.9].map((z) => z * ROBOT_SCALE);   // 右手の world x のずれ (親指→小指)
+export const FINGER_Z = [0.9, 0.45, 0, -0.45, -0.9];
+export const FINGER_OFFSET_M = [-0.9, -0.45, 0, 0.45, 0.9].map((z) => z * ROBOT_SCALE);   // 右手の world x のずれ (親指→小指)
 export function fingerOffsetX(hand, fingerIdx) { return FINGER_OFFSET_M[fingerIdx] * (hand === "R" ? 1 : -1); }
 // 指先が手の骨から前 (-z) にどれだけ届くか (m)。親指→小指。手の位置 z を決めるのに使う
-const FINGER_REACH_Z = [0.176, 0.210, 0.222, 0.210, 0.195];
+export const FINGER_REACH_Z = [0.176, 0.210, 0.222, 0.210, 0.195];
 // 手の z を決めるときの重み: 親指は伸ばせないので優先、長い指は曲げて合わせられる
-const FINGER_Z_WEIGHT = [3, 1, 1, 1, 1.5];
+export const FINGER_Z_WEIGHT = [3, 1, 1, 1, 1.5];
 const BLACK_TOP_Y = 0.7514;   // 黒鍵の上面 (KEY_TOP_Y + 0.004 + 0.48*KEY_H + 0.475*KEY_H)
-const TIP_R = 0.0055;         // 指先の丸みの半径 (m)
+export const TIP_R = 0.0055;         // 指先の丸みの半径 (m)
 const KEY_PIVOT_Z = -0.170;   // 鍵の支点 (奥)
-function buildHand(H, sgn) {
+export function buildHand(H, sgn) {
   const palm = box(H, V(sgn * 0.85, 0, 0), V(1.5, 0.34, 2.0), M.carbon);
   box(H, V(sgn * 0.85, 0.2, 0), V(1.25, 0.14, 1.8), M.shell);
   const fingers = [];
@@ -248,7 +248,7 @@ function extrudeOutline(shape, depth, mat, holeShape = null) {
   g.rotateX(-Math.PI / 2);   // (x, y, +z) → (x, +z→+y, y→-z)
   return shadowed(new THREE.Mesh(g, mat));
 }
-function textPlate(text, w, h, opts = {}) {
+export function textPlate(text, w, h, opts = {}) {
   const cv = document.createElement("canvas"); cv.width = 1024; cv.height = Math.round(1024 * h / w);
   const c = cv.getContext("2d");
   c.fillStyle = opts.bg ?? "#c9a656"; c.fillRect(0, 0, cv.width, cv.height);
@@ -264,7 +264,7 @@ function textPlate(text, w, h, opts = {}) {
 }
 
 // 木目 (計算で描く) — 響板のスプルースとピン板のメープル
-function woodTexture({ base = "#d9b57a", grain = "#b98f55", lines = 160, w = 1024, h = 1024, noise = 0.08 } = {}) {
+export function woodTexture({ base = "#d9b57a", grain = "#b98f55", lines = 160, w = 1024, h = 1024, noise = 0.08 } = {}) {
   const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
   const c = cv.getContext("2d");
   c.fillStyle = base; c.fillRect(0, 0, w, h);
@@ -282,7 +282,7 @@ function woodTexture({ base = "#d9b57a", grain = "#b98f55", lines = 160, w = 102
   return tex;
 }
 // 映り込み用の環境 (暗いホール: 天井の照明と壁の淡い光)
-function makeEnvironment(renderer) {
+export function makeEnvironment(renderer) {
   const pm = new THREE.PMREMGenerator(renderer);
   const env = new THREE.Scene();
   env.add(new THREE.Mesh(new THREE.SphereGeometry(20, 32, 16), new THREE.MeshBasicMaterial({ color: 0x141414, side: THREE.BackSide })));
