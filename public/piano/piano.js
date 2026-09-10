@@ -10,7 +10,7 @@ import {
 import * as audio from "../js/audio.js";
 import { PianoRoll, THEME } from "../js/pianoroll.js";
 import { downloadMidi } from "../js/midi.js";
-import { generateStructured, settings, resolveTransport, MODELS } from "../js/claude.js";
+import { generateStructured, settings, resolveTransport, relaySeat, MODELS } from "../js/claude.js";
 import { buildBlueprintRequest, buildPianoRequest, buildInterpretRequest } from "../js/prompts.js";
 import { analyzePiano, describeAnalysis } from "../js/critic.js";
 import { t, setLang, detectLang, applyDom } from "../js/i18n.js";
@@ -487,7 +487,13 @@ $("#btn-go").addEventListener("click", async () => {
   cancelFlag = false;
   try {
     if (mode === "jam") { setGoUi(true); await jamStart(theme, { model }); }
-    else { if (!theme) { toast("お題を入れてください", true); return; } setGoUi(true); await compose(theme, { model: COMPOSE_MODEL, deep: true }); setGoUi(false); }
+    else {
+      if (!theme) { toast("お題を入れてください", true); return; }
+      // 作曲は一度に 1 人 (公開版の中継)。席が埋まっていたら、曲を作り始めずに知らせる
+      const seat = await relaySeat();
+      if (seat?.busy) { status(`今、別の人が作曲中です (始めてから約 ${seat.minutes} 分)。終わって少したつと作れます。少し待ってからもう一度どうぞ`); return; }
+      setGoUi(true); await compose(theme, { model: COMPOSE_MODEL, deep: true }); setGoUi(false);
+    }
   } catch (e) { status(`失敗: ${e.message}`); setGoUi(false); }
 });
 $("#btn-cancel").addEventListener("click", () => { cancelFlag = true; if (jam) jamStop(); else status("止めています…"); });

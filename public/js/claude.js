@@ -61,6 +61,22 @@ export async function probeServer() {
 }
 export function resetServerProbe() { serverInfo = null; }
 
+// 中継サーバーの「作曲の席」が今埋まっているか (中継を使っていない時は null)。{busy, minutes}
+export async function relaySeat() {
+  const info = await probeServer();
+  if (!info.proxyUrl) return null;
+  try { const h = await fetch(`${info.proxyUrl}/health`, { cache: "no-cache" }); const hj = h.ok ? await h.json() : {}; return hj.seat ?? null; } catch { return null; }
+}
+
+// このタブの番号 (中継サーバーが「作曲は一度に 1 人」を守るために使う。個人情報ではない乱数)
+let _sid = "";
+function sessionId() {
+  if (_sid) return _sid;
+  try { _sid = sessionStorage.getItem("bg:session") || ""; } catch {}
+  if (!_sid) { _sid = (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`); try { sessionStorage.setItem("bg:session", _sid); } catch {} }
+  return _sid;
+}
+
 // 実際に使う経路: "direct" (自分のキー) / "proxy" (ローカルサーバーのキー) / "remote" (中継サーバー)
 export async function resolveTransport() {
   const s = settings.get();
@@ -81,6 +97,7 @@ function friendlyError(status, body) {
   const msg = body?.error?.message ?? "";
   if (type === "access_code_error") return new ClaudeError("アクセスコードが違います。⚙ 設定で「アクセスコード」を確認してください。", { status, type });
   if (type === "daily_limit_error") return new ClaudeError(msg || "今日の利用上限に達しました。", { status, type });
+  if (type === "busy_error" || status === 409) return new ClaudeError(msg || "今、別の人が作曲中です。少し待ってからもう一度どうぞ。", { status, type: "busy_error" });
   if (status === 401 || type === "authentication_error") return new ClaudeError("APIキーが無効です。⚙ 設定でキーを確認してください。", { status, type });
   if (status === 403 || type === "permission_error") return new ClaudeError(`このキーでは使えません: ${msg}`, { status, type });
   if (status === 429 || type === "rate_limit_error") return new ClaudeError("レート制限に達しました。少し待って再試行してください。", { status, type, retryable: true });
@@ -140,6 +157,7 @@ async function attemptOnce(body, transport, apiKey, o, attempt) {
   if (transport === "remote") {
     headers["anthropic-version"] = "2023-06-01";
     headers["x-bluegarage-kind"] = o.kind ?? "chat"; // 中継サーバーが 1 日の曲数を数えるための種類
+    headers["x-bluegarage-session"] = sessionId(); // 「作曲は一度に 1 人」の席の番号 (このタブごと)
     const pass = settings.get().passcode ?? "";
     if (pass) headers["x-bluegarage-pass"] = pass;
   }

@@ -22,6 +22,35 @@ const LIM = {
 // Origin ヘッダは curl などでは偽れるので、それだけに頼らない: 使えるモデルを絞り、出力の長さに上限を付け、1 日の回数 (全体・IP ごと) で金額を抑える
 const MODELS = String(env.VESPER_MODELS ?? "claude-fable-5-1,claude-sonnet-5,claude-opus-5").split(",").map((s) => s.trim()).filter(Boolean);
 const MAX_TOKENS_CAP = Math.max(1000, Number(env.MAX_TOKENS_CAP ?? 110000));
+
+/* ── 作曲は一度に 1 人 (さとるん要望 2026-09-10) ──
+   作曲 = 設計図 (blueprint) → 8 小節ごとの生成 (piano/polish/revise) が 10 回ほど続く。
+   最初の作曲の依頼で「席」を取り、同じ人 (ブラウザごとの番号 x-bluegarage-session、無ければ IP) が続けて使う。
+   通信の途中か、最後の通信から BUSY_IDLE 秒以内なら席は埋まったまま。念のため BUSY_MAX 分で必ず空ける。 */
+const COMPOSE_KINDS = new Set(["blueprint", "piano", "polish", "revise", "track", "interpret"]);
+const BUSY_IDLE = Math.max(10, Number(env.VESPER_BUSY_IDLE_SEC ?? 180)) * 1000;
+const BUSY_MAX = Math.max(1, Number(env.VESPER_BUSY_MAX_MIN ?? 90)) * 60 * 1000;
+let seat = null;   // { id, since, lastSeen, inflight }
+function seatTaken(now = Date.now()) {
+  if (!seat) return false;
+  if (now - seat.since > BUSY_MAX) { seat = null; return false; }
+  if (seat.inflight > 0) return true;
+  if (now - seat.lastSeen < BUSY_IDLE) return true;
+  seat = null; return false;
+}
+function seatInfo(now = Date.now()) {
+  if (!seatTaken(now)) return { busy: false };
+  return { busy: true, minutes: Math.round((now - seat.since) / 60000), idleLeftSec: seat.inflight > 0 ? null : Math.max(0, Math.round((BUSY_IDLE - (now - seat.lastSeen)) / 1000)) };
+}
+// 席を取る (自分の席ならそのまま)。取れなければ false
+function takeSeat(id) {
+  const now = Date.now();
+  if (seatTaken(now) && seat.id !== id) return false;
+  if (!seat || seat.id !== id) seat = { id, since: now, lastSeen: now, inflight: 0 };
+  seat.lastSeen = now; seat.inflight++;
+  return true;
+}
+function leaveCall(id) { if (seat && seat.id === id) { seat.inflight = Math.max(0, seat.inflight - 1); seat.lastSeen = Date.now(); } }
 const STATE = env.VESPER_STATE ?? "/var/lib/vesper/counters.json";
 const PASSCODE = env.VESPER_PASSCODE ?? "";
 const TZ_OFF = Number(env.VESPER_TZ_OFFSET ?? 9);
@@ -84,7 +113,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "OPTIONS") { res.writeHead(204); return res.end(); }
   if (req.method === "GET" && url.pathname === "/health") {
     rollDay();
-    return json(res, 200, { ok: true, hasKey: !!env.ANTHROPIC_API_KEY, passcode: !!PASSCODE, counter: true, day: state.day,
+    return json(res, 200, { ok: true, hasKey: !!env.ANTHROPIC_API_KEY, passcode: !!PASSCODE, counter: true, day: state.day, seat: seatInfo(),
       songs: { used: state.buckets.blueprint, limit: LIM.blueprint, left: Math.max(0, LIM.blueprint - state.buckets.blueprint) },
       tracks: { used: state.buckets.track, limit: LIM.track } });
   }
@@ -99,25 +128,35 @@ const server = http.createServer(async (req, res) => {
   const checked = checkBody(body);
   if (checked.error) return err(res, 400, "invalid_request_error", checked.error);
   body = checked.body;
-  if (!bumpIp(clientIp(req))) return err(res, 429, "rate_limit_error", "リクエストが多すぎます。少し待ってください");
   const kind = String(req.headers["x-bluegarage-kind"] ?? "chat").toLowerCase();
   const bucket = bucketOf(kind);
-  if (!bumpBucket(bucket)) {
-    const msg = bucket === "blueprint" ? `今日の曲数の上限 (${LIM.blueprint}曲/日) に達しました。日付が変わると (日本時間 0 時) また作れます`
-      : bucket === "track" ? `今日の生成回数の上限 (${LIM.track}回/日) に達しました。日付が変わるとまた作れます`
-      : "今日の利用上限に達しました。日付が変わるとまた使えます";
-    return err(res, 429, "daily_limit_error", msg);
+  // 作曲の席 (一度に 1 人)。席が埋まっていたら数に入れずに断る
+  const seatId = String(req.headers["x-bluegarage-session"] ?? "") || `ip:${clientIp(req)}`;
+  const isCompose = COMPOSE_KINDS.has(kind);
+  if (isCompose && !takeSeat(seatId)) {
+    const info = seatInfo();
+    const idle = BUSY_IDLE >= 60000 ? `${Math.round(BUSY_IDLE / 60000)} 分` : `${Math.round(BUSY_IDLE / 1000)} 秒`;
+    return err(res, 409, "busy_error", `今、別の人が作曲中です (始めてから約 ${info.minutes} 分)。その人の作曲が終わって ${idle} たつと作れます。少し待ってからもう一度どうぞ`);
   }
-  const ac = new AbortController();
-  res.on("close", () => { if (!res.writableFinished) ac.abort(); });
-  let up;
   try {
-    up = await fetch(ANTHROPIC, { method: "POST", headers: { "content-type": "application/json", "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" }, body, signal: ac.signal });
-  } catch (e) { if (ac.signal.aborted) return; console.error("[relay] connect:", e?.message); return err(res, 502, "api_error", `接続できません: ${e?.message}`); }
-  const ct = up.headers.get("content-type") ?? "application/json";
-  res.writeHead(up.status, { "content-type": ct, "cache-control": "no-cache", ...(ct.includes("event-stream") ? { "x-accel-buffering": "no" } : {}) });
-  try { for await (const chunk of up.body) { if (ac.signal.aborted) break; res.write(chunk); } } catch (e) { if (!ac.signal.aborted) console.error("[relay] stream:", e?.message); }
-  res.end();
-  console.log(`[relay] ${state.day} ${bucket} ${kind} ${up.status} ${clientIp(req)} songs=${state.buckets.blueprint}/${LIM.blueprint}`);
+    if (!bumpIp(clientIp(req))) return err(res, 429, "rate_limit_error", "リクエストが多すぎます。少し待ってください");
+    if (!bumpBucket(bucket)) {
+      const msg = bucket === "blueprint" ? `今日の曲数の上限 (${LIM.blueprint}曲/日) に達しました。日付が変わると (日本時間 0 時) また作れます`
+        : bucket === "track" ? `今日の生成回数の上限 (${LIM.track}回/日) に達しました。日付が変わるとまた作れます`
+        : "今日の利用上限に達しました。日付が変わるとまた使えます";
+      return err(res, 429, "daily_limit_error", msg);
+    }
+    const ac = new AbortController();
+    res.on("close", () => { if (!res.writableFinished) ac.abort(); });
+    let up;
+    try {
+      up = await fetch(ANTHROPIC, { method: "POST", headers: { "content-type": "application/json", "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" }, body, signal: ac.signal });
+    } catch (e) { if (ac.signal.aborted) return; console.error("[relay] connect:", e?.message); return err(res, 502, "api_error", `接続できません: ${e?.message}`); }
+    const ct = up.headers.get("content-type") ?? "application/json";
+    res.writeHead(up.status, { "content-type": ct, "cache-control": "no-cache", ...(ct.includes("event-stream") ? { "x-accel-buffering": "no" } : {}) });
+    try { for await (const chunk of up.body) { if (ac.signal.aborted) break; res.write(chunk); } } catch (e) { if (!ac.signal.aborted) console.error("[relay] stream:", e?.message); }
+    res.end();
+    console.log(`[relay] ${state.day} ${bucket} ${kind} ${up.status} ${clientIp(req)} songs=${state.buckets.blueprint}/${LIM.blueprint}${isCompose ? " seat=" + seatId.slice(0, 8) : ""}`);
+  } finally { if (isCompose) leaveCall(seatId); }
 });
 server.listen(PORT, "127.0.0.1", () => console.log(`[relay] http://127.0.0.1:${PORT}  origins=${ORIGINS.join(",")}  limits=${JSON.stringify(LIM)}  key=${env.ANTHROPIC_API_KEY ? "あり" : "なし"}  passcode=${PASSCODE ? "あり" : "なし"}`));
