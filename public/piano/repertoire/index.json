@@ -21,7 +21,9 @@
   "license": "Public Domain (typeset placed in the public domain, Mutopia Project)",
   "perf": "fur-elise.vesper.json",
   "perfBy": "Claude Fable 5.1",
-  "perfNote": "楽譜はそのまま、強弱・間・音の切り方・手と指・ペダルを Claude Fable 5.1 が演奏家として決めた版 (2026-09-11)"
+  "perfNote": "楽譜はそのまま、強弱・間・音の切り方・手と指・ペダルを Claude Fable 5.1 が演奏家として決めた版 (2026-09-11)",
+  "hidden": true,
+  "hiddenReason": "さとるんの判断で一覧から外した (2026-09-12)。曲データは残してある"
  },
  {
   "file": "debussy_Ste_Bergamesq_Clair.mid",
@@ -148,6 +150,8 @@
   "perf": "fifth-opus.vesper.json",
   "perfBy": "Claude Opus 5",
   "perfNote": "楽譜はそのまま、強弱・間・音の切り方・手と指・ペダル・テンポの揺れを Claude Opus 5 が演奏家として決めた版 (2026-09-12)。曲全体を一度に設計している",
-  "note": "Allegro con brio。3 つの短い音と 1 つの長い音の動機が、全曲を組み立てる"
+  "note": "Allegro con brio。3 つの短い音と 1 つの長い音の動機が、全曲を組み立てる",
+  "hidden": true,
+  "hiddenReason": "さとるんの判断で一覧から外した (2026-09-12)。曲データは残してある"
  }
 ]

@@ -492,3 +492,9 @@ window.bandShotStatus; // state === 'ready'
 ### 次にやるなら
 - Opus の解釈を他の曲にも作って Fable 版と聴き比べる（`PLANS` に足すだけ）。さとるんの耳で選ぶ。
 - 未公開（push していない）。
+
+### 17.1 さとるんの取捨選択（2026-09-12）
+- **ピアノから外した曲**（`index.json` の `hidden: true`。ファイルは残してある）: 交響曲第 5 番「運命」第 1 楽章（Opus 5 版）、Für Elise（Fable 版）。さとるんの判断「微妙」。一覧は 10 曲。
+- **バンドから外した曲**: GPT-6 Astra 作の 3 曲（硝子の環流・銅の蝶番・白磁の螺旋）。`public/band/repertoire/_hidden/index-removed.json` に元の記録を保存し、`.band.json` 本体も残してある。一覧は Fable 5.1 作の 3 曲（疾風・電脳桜 / Neon Circuit / 3+3+2 オーバードライブ）。
+- そのとき直した物: バンドの `index.json` の残り 3 曲に `shots`（撮影の拍）が無く `band-page-check` が落ちた → cutoff のつまみ操作の真ん中を `knob`/`ar`、その次の操作の直後を `full`/`crash`/`synth` にして埋めた。`band-page-check` が読む曲も glass-current → hayate-cyber-sakura に変えた。
+- `piano-motion-check` は新しい曲に前回の記録が無いと落ちるので、無い場合は今の値を使うように直した。
