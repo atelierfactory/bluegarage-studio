@@ -1,0 +1,47 @@
+(node:37020) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+--import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("./tools/band-node-loader.mjs", pathToFileURL("./"));'
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "cases": 272,
+  "checks": 4960,
+  "maximumSurfaceGapMm": 1.986839853116656,
+  "maximumContactErrorMm": 4.544801369147513,
+  "failures": 5,
+  "examples": [
+    {
+      "param": "cutoff",
+      "beat": 4,
+      "gap": -0.0001759433107533081,
+      "y": 0.006230592280262237,
+      "error": 0.0027591713382565724
+    },
+    {
+      "param": "cutoff",
+      "beat": 4,
+      "gap": -0.00010065322298037638,
+      "y": 0.0021888035402575223,
+      "error": 0.002684931268690377
+    },
+    {
+      "param": "cutoff",
+      "beat": 5.9998000000000005,
+      "gap": 0.001986839853116656,
+      "y": 0.005268313074408004,
+      "error": 0.002333990088467733
+    },
+    {
+      "param": "cutoff",
+      "beat": 5.9998000000000005,
+      "gap": 0.00007035806475990357,
+      "y": 0.007765596375160166,
+      "error": 0.004360605619294928
+    },
+    {
+      "param": "cutoff",
+      "beat": 5.9998000000000005,
+      "gap": 0.00023702975929414637,
+      "y": 0.0009084837662086676,
+      "error": 0.004544801369147513
+    }
+  ]
+}

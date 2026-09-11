@@ -1,0 +1,32 @@
+{
+  "syntaxFiles": 18,
+  "unchangedRepertoireFiles": 19,
+  "motionSourceHashesMatch": true,
+  "motionPassed": 10,
+  "motionFailed": [
+    {
+      "file": "matsuri-overdrive.vesper.json",
+      "issues": [
+        {
+          "kind": "speed",
+          "h": "R",
+          "beat": 144,
+          "fromBeat": 143.9333,
+          "required": 9.164291815668156,
+          "available": 0.02194753246753578,
+          "metres": 0.18504290479304134,
+          "missingMs": 45.09699825458065
+        }
+      ]
+    }
+  ],
+  "bandScoresWithoutErrors": 6,
+  "bandRegression": "PASS: 46 regression assertions (mock audio clock; actual audio.js and processor bundle)",
+  "bandPage": "PASS: 45 page assertions (actual band.js / THREE geometry; DOM, audio and AI mocked)",
+  "pianoPage": "PASS: 37 piano page assertions (mock DOM/audio; real controller and THREE pose)",
+  "pianoCamera": "PASS: camera projections and manual override (geometry only; no browser occlusion check)",
+  "browserChecked": false,
+  "audioListened": false,
+  "wavRenderedInBrowser": false,
+  "deployed": false
+}

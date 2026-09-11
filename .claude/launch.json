@@ -14,6 +14,18 @@
       "port": 5180
     },
     {
+      "name": "csp-test",
+      "runtimeExecutable": "/Users/satorun/.local/node/bin/node",
+      "runtimeArgs": ["astra/csp-proxy.mjs", "5190"],
+      "port": 5190
+    },
+    {
+      "name": "csp-test-blob",
+      "runtimeExecutable": "/Users/satorun/.local/node/bin/node",
+      "runtimeArgs": ["astra/csp-proxy.mjs", "5191", "blob"],
+      "port": 5191
+    },
+    {
       "name": "proxy-dev",
       "runtimeExecutable": "zsh",
       "runtimeArgs": ["/Users/satorun/Documents/agent/product/toys/music_app/tools/proxy-dev.sh"],

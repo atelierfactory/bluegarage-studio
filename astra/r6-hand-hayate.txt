@@ -1,0 +1,31 @@
+(node:37962) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+--import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("./tools/band-node-loader.mjs", pathToFileURL("./"));'
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "checks": 166050,
+  "frames": 615,
+  "meanAnimationMs": 16.187161720325207,
+  "minimumFingerClearanceMm": -1.1431565833576809,
+  "maximumContactErrorMm": 0.6306194700886648,
+  "failures": 2,
+  "examples": [
+    {
+      "file": "hayate-cyber-sakura.band.json",
+      "beat": 98,
+      "pair": [
+        1,
+        2
+      ],
+      "gap": -0.00011473958108380866
+    },
+    {
+      "file": "hayate-cyber-sakura.band.json",
+      "beat": 109.15,
+      "pair": [
+        1,
+        2
+      ],
+      "gap": -0.001143156583357681
+    }
+  ]
+}

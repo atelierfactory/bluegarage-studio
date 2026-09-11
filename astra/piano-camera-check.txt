@@ -1,0 +1,12 @@
+┌─────────┬──────────────────────────────────────┬───────┬───────┐
+│ (index) │ file                                 │ beat  │ views │
+├─────────┼──────────────────────────────────────┼───────┼───────┤
+│ 0       │ 'entertainer.mid'                    │ 32    │ 6     │
+│ 1       │ 'fur_Elise_WoO59.mid'                │ 46.75 │ 6     │
+│ 2       │ 'debussy_Ste_Bergamesq_Clair.mid'    │ 100   │ 6     │
+│ 3       │ 'TroisNouvellesEtudes_Chopin_n1.mid' │ 32    │ 6     │
+│ 4       │ 'op-10-12-wfi.mid'                   │ 32    │ 6     │
+│ 5       │ 'gymnopedie_1.mid'                   │ 13.01 │ 6     │
+│ 6       │ 'pathetique-2.mid'                   │ 32    │ 6     │
+└─────────┴──────────────────────────────────────┴───────┴───────┘
+PASS: camera projections and manual override (geometry only; no browser occlusion check)

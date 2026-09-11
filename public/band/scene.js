@@ -5,6 +5,9 @@
 // 座標: ロボットはイス (z=0.64) に座って -z を向く。右 = +x。長さは m。
 
 import * as THREE from "three";
+import {addKeyIndicator, updateKeyIndicator} from "../js/key-visual.js";
+import {refinePianoArms as refineArms} from "../js/robot-hardware.js";
+import {STICK_AXIS, STICK_GRIP, drumGripFrame} from "./drum-grip.js";
 import {
   V, clamp, lerp, solve3, M, P, shadowed, limb, sphere, box, ROBOT_SCALE, SKELETON, buildSkeleton, buildRobot,
   FINGER_OFFSET_M, FINGER_REACH_Z, FINGER_Z_WEIGHT, TIP_R, textPlate, makeEnvironment, isBlack,
@@ -99,22 +102,22 @@ function buildSynth(scene) {
       geo = new THREE.ExtrudeGeometry(sh, { depth: KEY_H, bevelEnabled: true, bevelThickness: 0.0008, bevelSize: 0.0008, bevelSegments: 2 });
       geo.rotateX(-Math.PI / 2); geo.translate(0, -KEY_H / 2, WHITE_L + 0.01);
     }
-    const mat = (black ? P.ebony : P.ivory).clone(); if(black){mat.color.setHex(0x050607);mat.metalness=0;mat.roughness=.30;} mat.emissive = new THREE.Color(0xc9a656); mat.emissiveIntensity = 0;
+    const mat = (black ? P.ebony : P.ivory).clone(); if(black){mat.color.setHex(0x050607);mat.metalness=0;mat.roughness=.30;} mat.emissive.setHex(0); mat.emissiveIntensity = 0;
     const mesh = shadowed(new THREE.Mesh(geo, mat)); pivot.add(mesh); g.add(pivot);
-    keys[p] = { pivot, mesh, mat, black, press: 0, target: 0 };
+    keys[p] = { pivot, mesh, mat, indicator: addKeyIndicator(mesh), black, press: 0, target: 0 };
   }
   buildSynthCase(g, KB_W, PANEL_Z, PANEL_Y, PANEL_TILT, textPlate);
   const display = buildDisplay(g);
   const knobs = [];
   KNOBS.forEach((k, i) => {
     const holder = new THREE.Object3D(); holder.position.set(knobXL(i), KNOB_Y, KNOB_Z); holder.rotation.x = PANEL_TILT; g.add(holder);
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.015, 0.006, 64), HARDWARE.black); base.position.y = -0.008; holder.add(base);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.015, 0.006, 20), HARDWARE.black); base.position.y = -0.008; holder.add(base);
     const rot = new THREE.Object3D(); holder.add(rot);
-    const cap = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.0125, 0.017, 64), HARDWARE.silver)); cap.position.y = 0.002; rot.add(cap);
+    const cap = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.0125, 0.017, 20), HARDWARE.silver)); cap.position.y = 0.002; rot.add(cap);
     const grooves = new THREE.InstancedMesh(new THREE.CylinderGeometry(.0004,.0005,.012,8), HARDWARE.black, 40);
     const groovePose = new THREE.Object3D();
     for(let j=0;j<40;j++){const a=j*Math.PI/20;groovePose.position.set(Math.sin(a)*.0119,.002,Math.cos(a)*.0119);groovePose.updateMatrix();grooves.setMatrixAt(j,groovePose.matrix);} rot.add(grooves);
-    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.0095, 0.0095, 0.002, 64), HARDWARE.black); top.position.y = 0.0115; rot.add(top);
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.0095, 0.0095, 0.002, 20), HARDWARE.black); top.position.y = 0.0115; rot.add(top);
     const ptr = new THREE.Mesh(new THREE.BoxGeometry(0.002, 0.004, 0.011), HARDWARE.gold); ptr.position.set(0, 0.012, -0.0055); rot.add(ptr);
     const label = textPlate(k.label, 0.05, 0.011, { bg: "#0d0e11", fg: "#d8d8d8", line: "#0d0e11", size: 125, weight: "400" }); label.position.set(0, -0.006, 0.030); label.rotation.x = -Math.PI / 2; holder.add(label);
     const ring = new THREE.Mesh(valueArc(.0175,.0015), HARDWARE.unlit); ring.position.y=-.007;holder.add(ring);
@@ -134,11 +137,11 @@ function buildPedalboard(scene) {
     const black = isBlack(p);
     const pivot = new THREE.Object3D(); pivot.position.set(pedalX(p), black ? PB_SHARP_TOP - 0.02 : PB_TOP - 0.012, PB_Z_HEEL - (black ? PB_LONG : PB_LONG) - 0.01);
     const len = black ? PB_SHORT : PB_LONG; const w = black ? 0.024 : PB_WHITE_W;
-    const mat = (black ? P.ebony : P.ivory).clone(); if(black){mat.color.setHex(0x050607);mat.metalness=0;mat.roughness=.30;} mat.emissive = new THREE.Color(0xc9a656); mat.emissiveIntensity = 0;
+    const mat = (black ? P.ebony : P.ivory).clone(); if(black){mat.color.setHex(0x050607);mat.metalness=0;mat.roughness=.30;} mat.emissive.setHex(0); mat.emissiveIntensity = 0;
     const mesh = shadowed(new THREE.Mesh(new THREE.BoxGeometry(w, 0.024, len), mat)); mesh.position.set(0, 0, len / 2); pivot.add(mesh);
     if (black) { const post = new THREE.Mesh(new THREE.BoxGeometry(0.02, PB_SHARP_TOP - 0.02, 0.02), D.rubber); post.position.set(0, -(PB_SHARP_TOP - 0.02) / 2, 0.04); pivot.add(post); }
     g.add(pivot);
-    pedals[p] = { pivot, mat, black, press: 0, target: 0 };
+    pedals[p] = { pivot, mesh, mat, indicator: addKeyIndicator(mesh), black, press: 0, target: 0 };
   }
   scene.add(g);
   return { group: g, pedals };
@@ -236,10 +239,9 @@ function roundedPlate(width, length, depth, radius) {
   geo.translate(0,0,-depth/2); geo.rotateX(-Math.PI/2); return geo;
 }
 
-const STICK_AXIS = V(0.42, 0.12, 0.90).normalize();
 function buildStick(handBone) {
   // A fixed diagonal through the palm: the fingers wrap around this axis.
-  const pivot = new THREE.Object3D(); pivot.position.set(2.0, -0.66, 0.30); handBone.add(pivot);
+  const pivot = new THREE.Object3D(); pivot.position.copy(STICK_GRIP); handBone.add(pivot);
   pivot.quaternion.setFromUnitVectors(V(0,1,0), STICK_AXIS);
   const profile = [[0,-1.1],[.108,-1.1],[.12,-1.03],[.12,0],[.115,STICK_LEN_R-1.2],[.07,STICK_LEN_R-.35],[.10,STICK_LEN_R-.18],[.07,STICK_LEN_R-.03],[0,STICK_LEN_R]];
   const mesh = shadowed(new THREE.Mesh(new THREE.LatheGeometry(profile.map(([r,y])=>new THREE.Vector2(r,y)),48),D.stick)); pivot.add(mesh);
@@ -287,7 +289,7 @@ export class BandStage {
     this.scene = new THREE.Scene();
     if (!headless) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
-    this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    this.renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1)); // 軽さ優先 (Retina でも 1.5 まで)
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.0;
     this.scene = new THREE.Scene();
@@ -312,6 +314,9 @@ export class BandStage {
     this.robot = new THREE.Group(); this.robot.scale.setScalar(ROBOT_SCALE); this.robot.add(this.bones.Hips); this.scene.add(this.robot);
     this.stick = buildStick(this.bones.LeftHand);
     refineHands(this.hands, ROBOT_SCALE, TIP_R);
+    // 軽さ優先 (2026-09-11): 手の小さな部品は影を落とさない (手首の甲だけ影あり)
+    for (const hand of Object.values(this.hands)) hand.bone.traverse((o) => { if (o.isMesh && o !== hand.palm) { o.castShadow = false; o.receiveShadow = false; } });
+    refineArms(this.bones, this.hands);
     // Band-only detail: smooth finger shells and flush toe soles; piano is untouched.
     for (const hand of Object.values(this.hands)) for (const f of hand.fingers) f.root.traverse((o) => {
       if (o.geometry?.type === "CapsuleGeometry") { const old=o.geometry,p=old.parameters; o.geometry=new THREE.CapsuleGeometry(p.radius,p.length,10,28); old.dispose(); }
@@ -428,8 +433,8 @@ export class BandStage {
   _initPose() {
     this.t=0; this.energy=0; this.headNod=0; this._yaw=0; this._look=0; this.footL.press=0; this.footR.press=0;
     this._cp=null; this._cl=null; this._closeSwitchT=0;
-    for (const k of Object.values(this.synth.keys)) { k.press=0; k.pivot.rotation.x=0; k.mat.emissiveIntensity=0; }
-    for (const p of Object.values(this.pb.pedals)) { p.press=0; p.pivot.rotation.x=0; p.mat.emissiveIntensity=0; }
+    for (const k of Object.values(this.synth.keys)) { k.press=0; k.pivot.rotation.x=0; updateKeyIndicator(k); }
+    for (const p of Object.values(this.pb.pedals)) { p.press=0; p.pivot.rotation.x=0; updateKeyIndicator(p); }
     for (const p of Object.values(this.drums.pads)) p.hit=0;
     for (const k of this.synth.knobs) k.lit=0;
     for (const h of Object.values(this.hands)) for(const f of h.fingers) {f.exactPose=null;f.contactPose=null;f.press=0;f.spread=0;f.root.rotation.set(0,0,0);f.joint.rotation.set(0,0,0);}
@@ -445,12 +450,12 @@ export class BandStage {
   }
 
   /* ── 2 本骨 IK (腕)。yaw: 手の向き (鍵盤の回転に合わせる)。pitch: 手首を下に向ける (つまみ用) ── */
-  _solveArm(side, target, { yaw = 0, pitch = 0, roll = 0, pole = null, quaternion = null } = {}) {
+  _solveArm(side, target, { yaw = 0, pitch = 0, roll = 0, pole = null, quaternion = null, extension = .985 } = {}) {
     const B = this.bones; const sgn = side === "Left" ? 1 : -1;
     const shoulder = B[side + "Arm"], elbow = B[side + "ForeArm"], hand = B[side + "Hand"];
     const S = new THREE.Vector3(); shoulder.getWorldPosition(S);
     const a = this.armLen.upper, b = this.armLen.fore;
-    const Dv = target.clone().sub(S); let d = Dv.length(); const maxD = (a + b) * 0.985; if (d > maxD) { Dv.multiplyScalar(maxD / d); d = maxD; }
+    const Dv = target.clone().sub(S); let d = Dv.length(); const maxD = (a + b) * extension; if (d > maxD) { Dv.multiplyScalar(maxD / d); d = maxD; }
     d = Math.max(d, Math.abs(a - b) + 0.01);
     const angE = Math.acos(clamp((a * a + d * d - b * b) / (2 * a * d), -1, 1));
     const dirN = Dv.clone().normalize();
@@ -584,7 +589,7 @@ export class BandStage {
     // ── 鍵 (シンセ)
     for (const k of Object.values(this.synth.keys)) k.target = 0;
     for (const n of active) { const k = this.synth.keys[n.p]; if (k) k.target = 0.7 + 0.3 * (n.v / 127); }
-    for (const k of Object.values(this.synth.keys)) { const prev = k.press; k.press = lerp(k.press, k.target, Math.min(1, dt * (k.target ? 60 : 16))); if (Math.abs(k.press - prev) > 1e-4 || k.press > 1e-3) { k.pivot.rotation.x = Math.atan(KEY_DIP / (k.black ? BLACK_L : WHITE_L)) * k.press; k.mat.emissiveIntensity = k.press * (k.black ? 1.1 : 0.55); } }
+    for (const k of Object.values(this.synth.keys)) { const prev = k.press; k.press = lerp(k.press, k.target, Math.min(1, dt * (k.target ? 60 : 16))); if (Math.abs(k.press - prev) > 1e-4 || k.press > 1e-3) { k.pivot.rotation.x = Math.atan(KEY_DIP / (k.black ? BLACK_L : WHITE_L)) * k.press; } updateKeyIndicator(k); }
     // ── つまみの回転と点灯
     for (const kn of this.synth.knobs) {
       const v = playing || S.knobs.length ? this.knobValues[kn.id] : (this.knobDefaults[kn.id] ?? 0.5);
@@ -729,16 +734,16 @@ export class BandStage {
       }
 
       const Sh = B.LeftArm.getWorldPosition(new THREE.Vector3());
-      const dir = ss.tip.clone().sub(Sh.clone().add(V(-.06,-.10,-.18))).normalize();
-      const localUp=V(0,1,0).addScaledVector(STICK_AXIS,-STICK_AXIS.y).normalize();
-      const worldUp=V(0,1,0).addScaledVector(dir,-dir.y).normalize();
-      const localBasis=new THREE.Matrix4().makeBasis(STICK_AXIS,localUp,new THREE.Vector3().crossVectors(STICK_AXIS,localUp));
-      const worldBasis=new THREE.Matrix4().makeBasis(dir,worldUp,new THREE.Vector3().crossVectors(dir,worldUp));
-      const q=new THREE.Quaternion().setFromRotationMatrix(worldBasis.multiply(localBasis.invert()));
-      const wrist=ss.tip.clone().addScaledVector(dir,-STICK_LEN).sub(this.stick.pivot.position.clone().applyQuaternion(q).multiplyScalar(ROBOT_SCALE));
-      this._solveArm("Left",wrist,{pole:V(-.7,-.6,.5)});
-      const hand=this.hands.Left, pq=hand.bone.parent.getWorldQuaternion(new THREE.Quaternion());
-      hand.bone.quaternion.copy(pq.invert().multiply(q)); hand.bone.updateMatrixWorld(true);
+      // Anticipatory extension, then a small flexion/rebound around each hit.
+      // The tip remains the animation's exact contact target throughout.
+      const before = hitNext ? hitNext._sec - now : Infinity;
+      const after = hitPrev ? now - hitPrev._sec : Infinity;
+      const snap = after < .16 ? -.07 * Math.exp(-after * 20) + .08 * Math.sin(Math.PI * after / .16)
+        : before < .16 ? .10 * Math.sin(Math.PI * before / .16) : 0;
+      const grip = drumGripFrame(Sh, ss.tip, this.armLen.upper, this.armLen.fore, ROBOT_SCALE, STICK_LEN, snap);
+      this._solveArm("Left", grip.wrist, {pole: grip.pole, quaternion: grip.quaternion, extension: .998});
+      this.drumGrip = {snap, reachError: grip.reachError};
+      const hand = this.hands.Left;
       hand.fingers.forEach((f,i)=>{
         const z=f.root.position.z, u=(z-this.stick.pivot.position.z)/STICK_AXIS.z;
         const target=this.stick.pivot.position.clone().addScaledVector(STICK_AXIS,u);
@@ -786,7 +791,7 @@ export class BandStage {
       const moveSpeed = nextSoon ? 32 : 10;
       fr.x = lerp(fr.x, tx, Math.min(1, dt * moveSpeed)); fr.z = lerp(fr.z, tz, Math.min(1, dt * moveSpeed));
       fr.press = lerp(fr.press, pressT, Math.min(1, dt * 35));
-      for (const p of Object.values(pedals)) { const prev = p.press; p.press = lerp(p.press, p.target, Math.min(1, dt * (p.target ? 50 : 14))); if (Math.abs(p.press - prev) > 1e-4 || p.press > 1e-3) { p.pivot.rotation.x = 0.05 * p.press; p.mat.emissiveIntensity = p.press * 0.7; } }
+      for (const p of Object.values(pedals)) { const prev = p.press; p.press = lerp(p.press, p.target, Math.min(1, dt * (p.target ? 50 : 14))); if (Math.abs(p.press - prev) > 1e-4 || p.press > 1e-3) { p.pivot.rotation.x = 0.05 * p.press; } updateKeyIndicator(p); }
       const pedal=tgt?pedals[tgt.p]:null;
       let contact=V(fr.x,PB_TOP,fr.z);
       if(pedal) { pedal.pivot.updateMatrixWorld(true); contact=pedal.pivot.localToWorld(V(0,.012,fr.z-pedal.pivot.position.z)); contact.x=fr.x; }

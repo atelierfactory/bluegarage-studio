@@ -1,0 +1,16 @@
+{
+  "public/band/prompts.js": "9689830486da691a660c383ab51d70e41879e73cfc00796b605143f53daa4139",
+  "public/js/claude.js": "b282193675d018baf155fba0a6f5b2be338275529a6d4a9317c64ec209af2861",
+  "public/js/api-schema.js": "5b8c4638779c91bf359a0da61887ee7c3665144eedfc872cfc26ac28e5ff4881",
+  "public/piano/scene.js": "e77147fd853ff4c2fac3eec91aafef54a4a9130a8e3525463f2d9f782a3d88c0",
+  "public/band/repertoire/copper-hinge.band.json": "8fea87a4155e89eb08fe2e37942d055caad0f6fe112b60b8c577c22581a2c8a8",
+  "public/band/repertoire/glass-current.band.json": "3d4dd4dc4ada1ca21d15644e3a6b1f8b14aef512680cae7fd1d7343f3289ca12",
+  "public/band/repertoire/index.json": "d9ae23b7f0c4cb4534590e745c59bb8850d89df89347a9713e3c3acb6507f5b7",
+  "public/band/repertoire/porcelain-tide.band.json": "8232551bba500c41fdc417d1e69fd3b4e824328c26a4e1a722841afd0b48e91f",
+  "compose": "fab45ec7415a8420cab60d6bac8ec8741ec6143269f7d177efc6f7f54d8d6982",
+  "handoffPrefix": "dd12f4e3ac0fd57a524cd335f6e2deeb7d26b33447646737d60c836ca988595c",
+  "tools/scores/copper-hinge.mjs": "9c3b1b805bbc6a1e8ac7b4c7abb291853353ff90dea6fbb072fc5c0515e1dae0",
+  "tools/scores/glass-current.mjs": "5e693c87dc1ed7976e780fc07af2950042e74e2ea4bde3cebf12156f2f2b3b08",
+  "tools/scores/porcelain-tide.mjs": "f8fd9a7dd01651db9f13c4b230ecb904a20788afa8d85c618e565bce28f61bbc",
+  "tools/scores/score.mjs": "6ed158426c336506138483ee617e7bc9630e90a969916f56390c8bce265053c1"
+}

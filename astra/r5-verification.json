@@ -1,0 +1,18 @@
+{
+  "syntaxChecks": 10,
+  "syntaxFailures": 0,
+  "protectedChecks": 14,
+  "protectedChanges": 0,
+  "files": [
+    "public/band/ar.js",
+    "public/band/scene.js",
+    "public/band/hardware.js",
+    "public/band/signal.js",
+    "public/band/band.js",
+    "tools/band-visual-check.mjs",
+    "tools/band-hand-check.mjs",
+    "tools/band-page-check.mjs",
+    "tools/band-signal-check.mjs",
+    "tools/band-offline-fixture.mjs"
+  ]
+}

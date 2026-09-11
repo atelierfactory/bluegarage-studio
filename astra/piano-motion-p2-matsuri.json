@@ -1,0 +1,134 @@
+{
+  "sourceHashes": {
+    "public/piano/scene.js": "847b05b90dba5fc3a0c04c7b806e814d47d40dab0cd33c4819c58c2c4b3b52fe",
+    "public/piano/motion.js": "234e499eabcdd106df81faf5dcefe529172780636b62d442a65058282be8c146",
+    "public/js/fingering.js": "fbfdbfb496ac3708c8609d254018b07fd87854310b01a435fc4ccf886eb62e8a",
+    "public/js/state.js": "57461c5ba5b4fa6677121e8907ef8fa48481e8a6b01b39cea96e51f601017d2e",
+    "tools/piano-motion-check.mjs": "241bec68d5a66153090c021040783330218ae606a836440d2a812931b9a2c56a"
+  },
+  "limits": {
+    "speed": 3,
+    "minContact": 0.012,
+    "settle": 0.006,
+    "minTravel": 0.065,
+    "maxLead": 0.48
+  },
+  "reports": [
+    {
+      "file": "matsuri-overdrive.vesper.json",
+      "title": "祭囃子オーバードライブ",
+      "notes": 1513,
+      "before": 423,
+      "after": 423,
+      "displayChanges": 421,
+      "preparation": {
+        "checked": 1512,
+        "misses": 0,
+        "examples": []
+      },
+      "onsets": {
+        "checked": 2670,
+        "misses": 0,
+        "maxDx": 0.0006288161206464693,
+        "maxDy": 0.0010712362462806935,
+        "maxDz": 0,
+        "examples": []
+      },
+      "fps": [
+        {
+          "fps": 60,
+          "checked": 12824,
+          "misses": 0,
+          "maxSpeed": 2.999999999999837,
+          "positionDrift": 1.9234613901630837e-14,
+          "assignmentChanges": 0,
+          "releasedChecks": 2,
+          "betweenFrames": 13,
+          "examples": []
+        },
+        {
+          "fps": 30,
+          "checked": 6424,
+          "misses": 0,
+          "maxSpeed": 2.999999999999832,
+          "positionDrift": 1.8207657603852567e-14,
+          "assignmentChanges": 0,
+          "releasedChecks": 1,
+          "betweenFrames": 40,
+          "examples": []
+        },
+        {
+          "fps": 20,
+          "checked": 4267,
+          "misses": 0,
+          "maxSpeed": 2.999999999999827,
+          "positionDrift": 1.8318679906315083e-14,
+          "assignmentChanges": 0,
+          "releasedChecks": 0,
+          "betweenFrames": 95,
+          "examples": []
+        },
+        {
+          "fps": 12,
+          "checked": 2561,
+          "misses": 0,
+          "maxSpeed": 2.829859193067131,
+          "positionDrift": 7.549516567451064e-15,
+          "assignmentChanges": 0,
+          "releasedChecks": 0,
+          "betweenFrames": 217,
+          "examples": []
+        }
+      ],
+      "pathMaxSpeed": 3.0000000000024007,
+      "issues": [],
+      "releases": [
+        {
+          "kind": "speed",
+          "h": "R",
+          "beat": 144,
+          "fromBeat": 143.9333,
+          "required": 9.164291815668156,
+          "available": 0.02194753246753578,
+          "metres": 0.18504290479304134,
+          "missingMs": 45.09699825458065,
+          "i": 1473,
+          "p": 59,
+          "f": 1,
+          "reason": "unreachable isolated attack; release and travel to the following note"
+        }
+      ],
+      "releaseChecks": [
+        {
+          "i": 1473,
+          "p": 59,
+          "beat": 144,
+          "keyPress": 0,
+          "nearestTip": 0.13371038962403692,
+          "clear": true,
+          "offset": 0
+        },
+        {
+          "i": 1473,
+          "p": 59,
+          "beat": 144,
+          "keyPress": 0,
+          "nearestTip": 0.13371038962403703,
+          "clear": true,
+          "offset": 0.012
+        },
+        {
+          "i": 1473,
+          "p": 59,
+          "beat": 144,
+          "keyPress": 0,
+          "nearestTip": 0.13360470388899504,
+          "clear": true,
+          "offset": 0.035
+        }
+      ],
+      "failed": false,
+      "ms": 2657
+    }
+  ]
+}

@@ -1,0 +1,657 @@
+{
+  "poses": 144,
+  "closeViews": 72,
+  "movingFrames": 37,
+  "rays": 1280,
+  "rows": [
+    {
+      "file": "entertainer.mid",
+      "beat": 32,
+      "view": "left",
+      "width": 1600,
+      "keys": 2,
+      "minVisible": 5,
+      "tipsVisible": true
+    },
+    {
+      "file": "entertainer.mid",
+      "beat": 32,
+      "view": "right",
+      "width": 1600,
+      "keys": 2,
+      "minVisible": 5,
+      "tipsVisible": true
+    },
+    {
+      "file": "entertainer.mid",
+      "beat": 32,
+      "view": "both",
+      "width": 1600,
+      "keys": 4,
+      "minVisible": 4,
+      "tipsVisible": true
+    },
+    {
+      "file": "entertainer.mid",
+      "beat": 32,
+      "view": "left",
+      "width": 390,
+      "keys": 2,
+      "minVisible": 4,
+      "tipsVisible": true
+    },
+    {
+      "file": "entertainer.mid",
+      "beat": 32,
+      "view": "right",
+      "width": 390,
+      "keys": 2,
+      "minVisible": 3,
+      "tipsVisible": true
+    },
+    {
+      "file": "entertainer.mid",
+      "beat": 32,
+      "view": "both",
+      "width": 390,
+      "keys": 4,
+      "minVisible": 4,
+      "tipsVisible": true
+    },
+    {
+      "file": "fur_Elise_WoO59.mid",
+      "beat": 46.75,
+      "view": "left",
+      "width": 1600,
+      "keys": 2,
+      "minVisible": 6,
+      "tipsVisible": true
+    },
+    {
+      "file": "fur_Elise_WoO59.mid",
+      "beat": 46.75,
+      "view": "right",
+      "width": 1600,
+      "keys": 1,
+      "minVisible": 3,
+      "tipsVisible": true
+    },
+    {
+      "file": "fur_Elise_WoO59.mid",
+      "beat": 46.75,
+      "view": "both",
+      "width": 1600,
+      "keys": 3,
+      "minVisible": 4,
+      "tipsVisible": true
+    },
+    {
+      "file": "fur_Elise_WoO59.mid",
+      "beat": 46.75,
+      "view": "left",
+      "width": 390,
+      "keys": 2,
+      "minVisible": 6,
+      "tipsVisible": true
+    },
+    {
+      "file": "fur_Elise_WoO59.mid",
+      "beat": 46.75,
+      "view": "right",
+      "width": 390,
+      "keys": 1,
+      "minVisible": 3,
+      "tipsVisible": true
+    },
+    {
+      "file": "fur_Elise_WoO59.mid",
+      "beat": 46.75,
+      "view": "both",
+      "width": 390,
+      "keys": 3,
+      "minVisible": 4,
+      "tipsVisible": true
+    },
+    {
+      "file": "debussy_Ste_Bergamesq_Clair.mid",
+      "beat": 100,
+      "view": "left",
+      "width": 1600,
+      "keys": 3,
+      "minVisible": 6,
+      "tipsVisible": true
+    },
+    {
+      "file": "debussy_Ste_Bergamesq_Clair.mid",
+      "beat": 100,
+      "view": "right",
+      "width": 1600,
+      "keys": 4,
+      "minVisible": 5,
+      "tipsVisible": true
+    },
+    {
+      "file": "debussy_Ste_Bergamesq_Clair.mid",
+      "beat": 100,
+      "view": "both",
+      "width": 1600,
+      "keys": 7,
+      "minVisible": 4,
+      "tipsVisible": true
+    },
+    {
+      "file": "debussy_Ste_Bergamesq_Clair.mid",
+      "beat": 100,
+      "view": "left",
+      "width": 390,
+      "keys": 3,
+      "minVisible": 7,
+      "tipsVisible": true
+    },
+    {
+      "file": "debussy_Ste_Bergamesq_Clair.mid",
+      "beat": 100,
+      "view": "right",
+      "width": 390,
+      "keys": 4,
+      "minVisible": 5,
+      "tipsVisible": true
+    },
+    {
+      "file": "debussy_Ste_Bergamesq_Clair.mid",
+      "beat": 100,
+      "view": "both",
+      "width": 390,
+      "keys": 7,
+      "minVisible": 5,
+      "tipsVisible": true
+    },
+    {
+      "file": "debussy_Ste_Bergamesq_Clair.mid",
+      "beat": 319,
+      "view": "left",
+      "width": 1600,
+      "keys": 1,
+      "minVisible": 6,
+      "tipsVisible": true
+    },
+    {
+      "file": "debussy_Ste_Bergamesq_Clair.mid",
+      "beat": 319,
+      "view": "right",
+      "width": 1600,
+      "keys": 2,
+      "minVisible": 6,
+      "tipsVisible": true
+    },
+    {
+      "file": "debussy_Ste_Bergamesq_Clair.mid",
+      "beat": 319,
+      "view": "both",
+      "width": 1600,
+      "keys": 3,
+      "minVisible": 3,
+      "tipsVisible": true
+    },
+    {
+      "file": "debussy_Ste_Bergamesq_Clair.mid",
+      "beat": 319,
+      "view": "left",
+      "width": 390,
+      "keys": 1,
+      "minVisible": 6,
+      "tipsVisible": true
+    },
+    {
+      "file": "debussy_Ste_Bergamesq_Clair.mid",
+      "beat": 319,
+      "view": "right",
+      "width": 390,
+      "keys": 2,
+      "minVisible": 6,
+      "tipsVisible": true
+    },
+    {
+      "file": "debussy_Ste_Bergamesq_Clair.mid",
+      "beat": 319,
+      "view": "both",
+      "width": 390,
+      "keys": 3,
+      "minVisible": 5,
+      "tipsVisible": true
+    },
+    {
+      "file": "TroisNouvellesEtudes_Chopin_n1.mid",
+      "beat": 28,
+      "view": "left",
+      "width": 1600,
+      "keys": 1,
+      "minVisible": 5,
+      "tipsVisible": true
+    },
+    {
+      "file": "TroisNouvellesEtudes_Chopin_n1.mid",
+      "beat": 28,
+      "view": "right",
+      "width": 1600,
+      "keys": 0,
+      "minVisible": 9,
+      "tipsVisible": true
+    },
+    {
+      "file": "TroisNouvellesEtudes_Chopin_n1.mid",
+      "beat": 28,
+      "view": "both",
+      "width": 1600,
+      "keys": 1,
+      "minVisible": 5,
+      "tipsVisible": true
+    },
+    {
+      "file": "TroisNouvellesEtudes_Chopin_n1.mid",
+      "beat": 28,
+      "view": "left",
+      "width": 390,
+      "keys": 1,
+      "minVisible": 5,
+      "tipsVisible": true
+    },
+    {
+      "file": "TroisNouvellesEtudes_Chopin_n1.mid",
+      "beat": 28,
+      "view": "right",
+      "width": 390,
+      "keys": 0,
+      "minVisible": 9,
+      "tipsVisible": true
+    },
+    {
+      "file": "TroisNouvellesEtudes_Chopin_n1.mid",
+      "beat": 28,
+      "view": "both",
+      "width": 390,
+      "keys": 1,
+      "minVisible": 5,
+      "tipsVisible": true
+    },
+    {
+      "file": "op-10-12-wfi.mid",
+      "beat": 16.5,
+      "view": "left",
+      "width": 1600,
+      "keys": 1,
+      "minVisible": 9,
+      "tipsVisible": true
+    },
+    {
+      "file": "op-10-12-wfi.mid",
+      "beat": 16.5,
+      "view": "right",
+      "width": 1600,
+      "keys": 2,
+      "minVisible": 6,
+      "tipsVisible": true
+    },
+    {
+      "file": "op-10-12-wfi.mid",
+      "beat": 16.5,
+      "view": "both",
+      "width": 1600,
+      "keys": 3,
+      "minVisible": 6,
+      "tipsVisible": true
+    },
+    {
+      "file": "op-10-12-wfi.mid",
+      "beat": 16.5,
+      "view": "left",
+      "width": 390,
+      "keys": 1,
+      "minVisible": 9,
+      "tipsVisible": true
+    },
+    {
+      "file": "op-10-12-wfi.mid",
+      "beat": 16.5,
+      "view": "right",
+      "width": 390,
+      "keys": 2,
+      "minVisible": 6,
+      "tipsVisible": true
+    },
+    {
+      "file": "op-10-12-wfi.mid",
+      "beat": 16.5,
+      "view": "both",
+      "width": 390,
+      "keys": 3,
+      "minVisible": 6,
+      "tipsVisible": true
+    },
+    {
+      "file": "matsuri-overdrive.vesper.json",
+      "beat": 144,
+      "view": "left",
+      "width": 1600,
+      "keys": 1,
+      "minVisible": 7,
+      "tipsVisible": true
+    },
+    {
+      "file": "matsuri-overdrive.vesper.json",
+      "beat": 144,
+      "view": "right",
+      "width": 1600,
+      "keys": 0,
+      "minVisible": 9,
+      "tipsVisible": true
+    },
+    {
+      "file": "matsuri-overdrive.vesper.json",
+      "beat": 144,
+      "view": "both",
+      "width": 1600,
+      "keys": 1,
+      "minVisible": 7,
+      "tipsVisible": true
+    },
+    {
+      "file": "matsuri-overdrive.vesper.json",
+      "beat": 144,
+      "view": "left",
+      "width": 390,
+      "keys": 1,
+      "minVisible": 7,
+      "tipsVisible": true
+    },
+    {
+      "file": "matsuri-overdrive.vesper.json",
+      "beat": 144,
+      "view": "right",
+      "width": 390,
+      "keys": 0,
+      "minVisible": 9,
+      "tipsVisible": true
+    },
+    {
+      "file": "matsuri-overdrive.vesper.json",
+      "beat": 144,
+      "view": "both",
+      "width": 390,
+      "keys": 1,
+      "minVisible": 7,
+      "tipsVisible": true
+    },
+    {
+      "file": "KV331_3_RondoAllaTurca.mid",
+      "beat": 32,
+      "view": "left",
+      "width": 1600,
+      "keys": 0,
+      "minVisible": 9,
+      "tipsVisible": true
+    },
+    {
+      "file": "KV331_3_RondoAllaTurca.mid",
+      "beat": 32,
+      "view": "right",
+      "width": 1600,
+      "keys": 1,
+      "minVisible": 4,
+      "tipsVisible": true
+    },
+    {
+      "file": "KV331_3_RondoAllaTurca.mid",
+      "beat": 32,
+      "view": "both",
+      "width": 1600,
+      "keys": 1,
+      "minVisible": 4,
+      "tipsVisible": true
+    },
+    {
+      "file": "KV331_3_RondoAllaTurca.mid",
+      "beat": 32,
+      "view": "left",
+      "width": 390,
+      "keys": 0,
+      "minVisible": 9,
+      "tipsVisible": true
+    },
+    {
+      "file": "KV331_3_RondoAllaTurca.mid",
+      "beat": 32,
+      "view": "right",
+      "width": 390,
+      "keys": 1,
+      "minVisible": 5,
+      "tipsVisible": true
+    },
+    {
+      "file": "KV331_3_RondoAllaTurca.mid",
+      "beat": 32,
+      "view": "both",
+      "width": 390,
+      "keys": 1,
+      "minVisible": 4,
+      "tipsVisible": true
+    },
+    {
+      "file": "chopin_fantaisie-impromptu.mid",
+      "beat": 32,
+      "view": "left",
+      "width": 1600,
+      "keys": 1,
+      "minVisible": 6,
+      "tipsVisible": true
+    },
+    {
+      "file": "chopin_fantaisie-impromptu.mid",
+      "beat": 32,
+      "view": "right",
+      "width": 1600,
+      "keys": 1,
+      "minVisible": 5,
+      "tipsVisible": true
+    },
+    {
+      "file": "chopin_fantaisie-impromptu.mid",
+      "beat": 32,
+      "view": "both",
+      "width": 1600,
+      "keys": 2,
+      "minVisible": 5,
+      "tipsVisible": true
+    },
+    {
+      "file": "chopin_fantaisie-impromptu.mid",
+      "beat": 32,
+      "view": "left",
+      "width": 390,
+      "keys": 1,
+      "minVisible": 6,
+      "tipsVisible": true
+    },
+    {
+      "file": "chopin_fantaisie-impromptu.mid",
+      "beat": 32,
+      "view": "right",
+      "width": 390,
+      "keys": 1,
+      "minVisible": 4,
+      "tipsVisible": true
+    },
+    {
+      "file": "chopin_fantaisie-impromptu.mid",
+      "beat": 32,
+      "view": "both",
+      "width": 390,
+      "keys": 2,
+      "minVisible": 5,
+      "tipsVisible": true
+    },
+    {
+      "file": "chopin_valse_op64_no1.mid",
+      "beat": 32,
+      "view": "left",
+      "width": 1600,
+      "keys": 2,
+      "minVisible": 4,
+      "tipsVisible": true
+    },
+    {
+      "file": "chopin_valse_op64_no1.mid",
+      "beat": 32,
+      "view": "right",
+      "width": 1600,
+      "keys": 1,
+      "minVisible": 6,
+      "tipsVisible": true
+    },
+    {
+      "file": "chopin_valse_op64_no1.mid",
+      "beat": 32,
+      "view": "both",
+      "width": 1600,
+      "keys": 3,
+      "minVisible": 4,
+      "tipsVisible": true
+    },
+    {
+      "file": "chopin_valse_op64_no1.mid",
+      "beat": 32,
+      "view": "left",
+      "width": 390,
+      "keys": 2,
+      "minVisible": 3,
+      "tipsVisible": true
+    },
+    {
+      "file": "chopin_valse_op64_no1.mid",
+      "beat": 32,
+      "view": "right",
+      "width": 390,
+      "keys": 1,
+      "minVisible": 6,
+      "tipsVisible": true
+    },
+    {
+      "file": "chopin_valse_op64_no1.mid",
+      "beat": 32,
+      "view": "both",
+      "width": 390,
+      "keys": 3,
+      "minVisible": 4,
+      "tipsVisible": true
+    },
+    {
+      "file": "gymnopedie_1.mid",
+      "beat": 13.01,
+      "view": "left",
+      "width": 1600,
+      "keys": 2,
+      "minVisible": 5,
+      "tipsVisible": true
+    },
+    {
+      "file": "gymnopedie_1.mid",
+      "beat": 13.01,
+      "view": "right",
+      "width": 1600,
+      "keys": 1,
+      "minVisible": 9,
+      "tipsVisible": true
+    },
+    {
+      "file": "gymnopedie_1.mid",
+      "beat": 13.01,
+      "view": "both",
+      "width": 1600,
+      "keys": 3,
+      "minVisible": 5,
+      "tipsVisible": true
+    },
+    {
+      "file": "gymnopedie_1.mid",
+      "beat": 13.01,
+      "view": "left",
+      "width": 390,
+      "keys": 2,
+      "minVisible": 5,
+      "tipsVisible": true
+    },
+    {
+      "file": "gymnopedie_1.mid",
+      "beat": 13.01,
+      "view": "right",
+      "width": 390,
+      "keys": 1,
+      "minVisible": 9,
+      "tipsVisible": true
+    },
+    {
+      "file": "gymnopedie_1.mid",
+      "beat": 13.01,
+      "view": "both",
+      "width": 390,
+      "keys": 3,
+      "minVisible": 5,
+      "tipsVisible": true
+    },
+    {
+      "file": "pathetique-2.mid",
+      "beat": 32,
+      "view": "left",
+      "width": 1600,
+      "keys": 0,
+      "minVisible": 9,
+      "tipsVisible": true
+    },
+    {
+      "file": "pathetique-2.mid",
+      "beat": 32,
+      "view": "right",
+      "width": 1600,
+      "keys": 1,
+      "minVisible": 4,
+      "tipsVisible": true
+    },
+    {
+      "file": "pathetique-2.mid",
+      "beat": 32,
+      "view": "both",
+      "width": 1600,
+      "keys": 1,
+      "minVisible": 4,
+      "tipsVisible": true
+    },
+    {
+      "file": "pathetique-2.mid",
+      "beat": 32,
+      "view": "left",
+      "width": 390,
+      "keys": 0,
+      "minVisible": 9,
+      "tipsVisible": true
+    },
+    {
+      "file": "pathetique-2.mid",
+      "beat": 32,
+      "view": "right",
+      "width": 390,
+      "keys": 1,
+      "minVisible": 4,
+      "tipsVisible": true
+    },
+    {
+      "file": "pathetique-2.mid",
+      "beat": 32,
+      "view": "both",
+      "width": 390,
+      "keys": 1,
+      "minVisible": 4,
+      "tipsVisible": true
+    }
+  ],
+  "failures": []
+}

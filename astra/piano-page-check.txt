@@ -1,0 +1,1 @@
+PASS: 37 piano page assertions (mock DOM/audio; real controller and THREE pose)

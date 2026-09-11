@@ -1,0 +1,85 @@
+{
+  "sourceHashes": {
+    "public/piano/scene.js": "def7483947e0bc36464a8a93d711e7c122cbe8054dba117e25c688bcfb765072",
+    "public/piano/motion.js": "640b76a78b8f99a1d80e6a38a5cab0ab1f602f0405eac7813c6d0d85bfa9e420",
+    "public/js/fingering.js": "fbfdbfb496ac3708c8609d254018b07fd87854310b01a435fc4ccf886eb62e8a",
+    "public/js/state.js": "57461c5ba5b4fa6677121e8907ef8fa48481e8a6b01b39cea96e51f601017d2e",
+    "tools/piano-motion-check.mjs": "24c43e6bc687c31efaf8a69bed108050df6aebf0b3320e60deddf32f06263139"
+  },
+  "limits": {
+    "speed": 3,
+    "minContact": 0.012,
+    "settle": 0.006,
+    "minTravel": 0.065,
+    "maxLead": 0.48
+  },
+  "reports": [
+    {
+      "file": "pathetique-2.mid",
+      "title": "悲愴ソナタ 第 2 楽章 (Op.13)",
+      "notes": 1629,
+      "before": 361,
+      "after": 361,
+      "displayChanges": 361,
+      "preparation": {
+        "checked": 1629,
+        "misses": 0,
+        "examples": []
+      },
+      "onsets": {
+        "checked": 3255,
+        "misses": 0,
+        "maxDx": 3.4416913763379853e-15,
+        "maxDy": 1.2212453270876722e-14,
+        "maxDz": 0,
+        "examples": []
+      },
+      "fps": [
+        {
+          "fps": 60,
+          "checked": 43099,
+          "misses": 0,
+          "maxSpeed": 2.6020142026868194,
+          "positionDrift": 5.750955267558311e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 30,
+          "checked": 21674,
+          "misses": 0,
+          "maxSpeed": 2.5827374680132418,
+          "positionDrift": 5.437317263101704e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 20,
+          "checked": 14360,
+          "misses": 0,
+          "maxSpeed": 2.519696153726985,
+          "positionDrift": 5.750955267558311e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 1,
+          "examples": []
+        },
+        {
+          "fps": 12,
+          "checked": 8803,
+          "misses": 0,
+          "maxSpeed": 1.4981234297561965,
+          "positionDrift": 1.1726730697603216e-15,
+          "assignmentChanges": 0,
+          "betweenFrames": 1,
+          "examples": []
+        }
+      ],
+      "pathMaxSpeed": 2.6197762448586976,
+      "issues": [],
+      "failed": false,
+      "ms": 4226
+    }
+  ]
+}

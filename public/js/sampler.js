@@ -127,10 +127,10 @@ export class SfzInstrument {
     await Promise.all(rs.filter((r) => r.s >= 0).map((r) => loadBuffer(decodeCtx, this.sampleUrl(r)).catch(() => null)));
   }
 
-  createOutput(ctx) { const g = ctx.createGain(); g.gain.value = 1; return g; }
+  createOutput(ctx, { velocityTracking = null } = {}) { const g = ctx.createGain(); g.gain.value = 1; g.vesperVelocityTracking = velocityTracking; return g; }
 
   /* ── ゲイン計算 ── */
-  velGain(r, vel) {
+  velGain(r, vel, velocityTracking = null) {
     const v = vel / 127;
     let curveVal;
     if (r.vc && r.vc.length) {
@@ -139,7 +139,8 @@ export class SfzInstrument {
       const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
       curveVal = x1 === x0 ? y1 : y0 + ((vel - x0) * (y1 - y0)) / (x1 - x0);
     } else curveVal = v * v;
-    let g = 1 - r.vt + r.vt * curveVal;
+    const vt = velocityTracking == null ? r.vt : Math.max(0, Math.min(1, velocityTracking));
+    let g = 1 - vt + vt * curveVal;
     if (r.xf) {
       const { inLo, inHi, outLo, outHi } = r.xf;
       if (inHi > inLo) g *= Math.min(1, Math.max(0, (vel - inLo) / (inHi - inLo)));
@@ -169,7 +170,7 @@ export class SfzInstrument {
     if (r.choke) { if (r.grp) this.choke(r.grp, time); return null; }
     if (!buf) return null;
     touch(this.sampleUrl(r));
-    let g = r.g * this.velGain(r, vel);
+    let g = r.g * this.velGain(r, vel, out.vesperVelocityTracking);
     if (releaseTrigger && r.rt) g *= Math.pow(10, (-r.rt * heldSec) / 20);
     if (g < 1e-4) return null;
 

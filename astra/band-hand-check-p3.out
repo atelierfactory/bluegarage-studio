@@ -1,0 +1,9 @@
+{
+  "checks": 1040580,
+  "frames": 3854,
+  "meanAnimationMs": 0.3187170259470677,
+  "minimumFingerClearanceMm": 1.6512350596410326,
+  "maximumContactErrorMm": 0.3428040797066874,
+  "failures": 0,
+  "examples": []
+}

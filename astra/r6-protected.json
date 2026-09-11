@@ -1,0 +1,16 @@
+{
+  "public/band/prompts.js": "9689830486da691a660c383ab51d70e41879e73cfc00796b605143f53daa4139",
+  "public/band/critic.js": "4cfbad62cbf85036d0af1af9d6c722001d188d5735aabec7c166fe6a852e47c5",
+  "public/js/claude.js": "b282193675d018baf155fba0a6f5b2be338275529a6d4a9317c64ec209af2861",
+  "public/js/api-schema.js": "5b8c4638779c91bf359a0da61887ee7c3665144eedfc872cfc26ac28e5ff4881",
+  "public/piano/scene.js": "e77147fd853ff4c2fac3eec91aafef54a4a9130a8e3525463f2d9f782a3d88c0",
+  "public/band/repertoire/copper-hinge.band.json": "8fea87a4155e89eb08fe2e37942d055caad0f6fe112b60b8c577c22581a2c8a8",
+  "public/band/repertoire/glass-current.band.json": "3d4dd4dc4ada1ca21d15644e3a6b1f8b14aef512680cae7fd1d7343f3289ca12",
+  "public/band/repertoire/hayate-cyber-sakura.band.json": "433c2385ffaee9308b8b06449abec4901bb025aa3870c00184d6cd69151391e8",
+  "public/band/repertoire/index.json": "7072d626ce8cdf463c4b7ca3b5d2ec844ff05be5e0243ea015f73b95fa955185",
+  "public/band/repertoire/neon-circuit.band.json": "8c651babfa5959d5f09947ad9c236370068dbd48444c825f96331f02234b3fbf",
+  "public/band/repertoire/overdrive-332.band.json": "4ba242921ebe78f6de58fd82b0cec600b3da91c0a8b5010edafc4c84211f658c",
+  "public/band/repertoire/porcelain-tide.band.json": "8232551bba500c41fdc417d1e69fd3b4e824328c26a4e1a722841afd0b48e91f",
+  "compose": "d80915d38dd1098d1b033bb854ff1260fcea7682570725b08e1a34482efca332",
+  "handoffPrefix": "dd12f4e3ac0fd57a524cd335f6e2deeb7d26b33447646737d60c836ca988595c"
+}

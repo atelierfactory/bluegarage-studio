@@ -1,0 +1,8 @@
+{
+  "cases": 272,
+  "checks": 4960,
+  "maximumSurfaceGapMm": 1.7291717180318456,
+  "maximumContactErrorMm": 1.95454655510154,
+  "failures": 0,
+  "examples": []
+}

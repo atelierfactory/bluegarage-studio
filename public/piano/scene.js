@@ -7,6 +7,9 @@
 // 特定メーカーの意匠を写さない一般的なコンサートグランドとして、弦の一本一本まで組み立てる。
 
 import * as THREE from "three";
+import {addKeyIndicator, updateKeyIndicator} from "../js/key-visual.js";
+import { buildMotion, motionAt, MOTION_LIMITS } from "./motion.js";
+import { refineHands, refinePianoArms, batchHardware } from "../js/robot-hardware.js";
 
 export const V = (x, y, z) => new THREE.Vector3(x, y, z);
 export const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
@@ -403,12 +406,12 @@ function buildPiano(scene) {
       geo.rotateX(-Math.PI / 2);                 // shape の y (奥行き) → -z、押し出し → +y。x はそのまま (左右を裏返さない)
       geo.translate(0, -KEY_H / 2, WHITE_L + 0.02); // 支点 (奥) から手前へ 0〜L
     }
-    // 鍵ごとに材質を分ける (押した鍵だけ、金色にほんのり灯る)
-    const mat = (black ? P.ebony : P.ivory).clone(); mat.emissive = new THREE.Color(0xc9a656); mat.emissiveIntensity = 0;
+    // 鍵の上面は元の色を保ち、小口だけに押した印を出す
+    const mat = (black ? P.ebony : P.ivory).clone(); mat.emissive.setHex(0); mat.emissiveIntensity = 0;
     const mesh = shadowed(new THREE.Mesh(geo, mat));
     mesh.position.set(0, black ? KEY_H * 0.48 : 0, black ? 0.02 : 0);
     pivot.add(mesh); g.add(pivot);
-    keys[p] = { pivot, mesh, mat, black, press: 0, target: 0, idx: p - LOW, hasDamper: p <= 89, dirty: true };
+    keys[p] = { pivot, mesh, mat, indicator: addKeyIndicator(mesh), black, press: 0, target: 0, idx: p - LOW, hasDamper: p <= 89, dirty: true };
   }
   // ── 鍵盤まわり
   const keybed = shadowed(new THREE.Mesh(new THREE.BoxGeometry(HALF_W * 2, 0.07, 0.46), P.lacquer)); keybed.position.set(0, KEY_TOP_Y - KEY_H - 0.04, -0.08); g.add(keybed);
@@ -455,17 +458,19 @@ function buildPiano(scene) {
 
 /* ─────────── 舞台 ─────────── */
 export class PianoStage {
-  constructor(canvas) {
-    this.canvas = canvas;
+  constructor(canvas, { headless = false } = {}) {
+    this.canvas = canvas; this.headless = headless;
+    if (!headless) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
-    this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    this.renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1)); // 軽さ優先 (Retina でも 1.5 まで)
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.0;
+    }
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x050505);
     this.scene.fog = new THREE.Fog(0x050505, 7, 16);
     this.scene.add(new THREE.HemisphereLight(0x9a9a9a, 0x0a0a0a, 0.5));
-    this.scene.environment = makeEnvironment(this.renderer); // 漆・金属の映り込み
+    if (!headless) this.scene.environment = makeEnvironment(this.renderer); // 漆・金属の映り込み
     this.scene.environmentIntensity = 0.55;
     const key = new THREE.SpotLight(0xfff1dc, 110, 12, 0.55, 0.55, 1.4); key.position.set(1.6, 3.8, 1.6); key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -0.0003; this.scene.add(key); this.scene.add(key.target); key.target.position.set(0, 0.8, -0.3);
     const rim = new THREE.SpotLight(0xbfd8ff, 35, 10, 0.7, 0.7, 1.4); rim.position.set(-2.4, 2.8, -2.0); this.scene.add(rim);
@@ -480,6 +485,11 @@ export class PianoStage {
     this.bones = buildSkeleton();
     this.hands = {};
     this.robotParts = buildRobot(this.bones, this.hands);
+    refineHands(this.hands,ROBOT_SCALE,TIP_R,{knuckleArch:false});
+    refinePianoArms(this.bones,this.hands);
+    // 軽さ優先 (2026-09-11): 手の小さな部品は影を落とさない (手首の甲・前腕の外装だけ影あり)
+    for (const hand of Object.values(this.hands)) hand.bone.traverse((o) => { if (o.isMesh && o !== hand.palm) { o.castShadow = false; o.receiveShadow = false; } });
+    for(const side of ["Left","Right"])batchHardware(this.bones[side+"ForeArm"]);
     this.robot = new THREE.Group(); this.robot.scale.setScalar(ROBOT_SCALE);
     this.robot.add(this.bones.Hips);
     this.scene.add(this.robot);
@@ -488,25 +498,28 @@ export class PianoStage {
     this.camHands = new THREE.PerspectiveCamera(32, 1, 0.02, 10);
     this.camWide = new THREE.PerspectiveCamera(40, 1, 0.05, 40);
     // 全体カメラ: 目標点のまわりを回す (ドラッグ = 回転、ホイール = 寄り引き)
-    this.orbit = { target: new THREE.Vector3(0.1, 0.95, -0.3), theta: 0.75, phi: 1.15, radius: 3.0, auto: true };
+    this.orbit = { target: new THREE.Vector3(0, 0.85, 0.12), theta: 0.68, phi: 1.25, radius: 2.5, auto: true };
     this.view = "wide";          // 上 (または左) の画面: wide | eye | side | top
+    this.closeMode = "auto"; this.closeTarget = "both"; this._closeDwell = 1;
+    this._closePos = V(0,1.12,.30); this._closeLook = V(0,KEY_TOP_Y,-.07);
+    this.camDetail = new THREE.PerspectiveCamera(38,1,.02,30);
     this.layout = "stack";       // stack (上下) | side (左右)
-    this._bindOrbit();
+    if (!headless) this._bindOrbit();
     this.t = 0; this.energy = 0; this.pedalDown = false; this.pedalAmt = 0; this._lastPedalAmt = -1; this._damperInit = false;
     this.handState = { L: { x: keyX(48), y: KEY_TOP_Y + 0.044, z: 0.055 }, R: { x: keyX(72), y: KEY_TOP_Y + 0.044, z: 0.055 } };
     this.notesRef = []; this.pedalRef = [];
     this.headNod = 0;
     this._eyeLook = new THREE.Vector3(0, KEY_TOP_Y, -0.05);
     this._resize();
-    new ResizeObserver(() => this._resize()).observe(canvas.parentElement);
+    if (!headless) new ResizeObserver(() => this._resize()).observe(canvas.parentElement);
   }
 
   _resize() {
-    const r = this.canvas.parentElement.getBoundingClientRect();
+    const r = this.headless ? (this.headlessViewport??{width:1000,height:800}) : this.canvas.parentElement.getBoundingClientRect();
     const w = Math.max(64, Math.floor(r.width)), h = Math.max(64, Math.floor(r.height));
-    this.renderer.setSize(w, h, false);
-    this.w = w; this.h = h;
-    if (this.layout === "side") {
+    this.renderer?.setSize(w, h, false);
+    this.w = w; this.h = h; this.needsRender = true;
+    if (this.layout === "side" && w >= 700) {
       this.split = Math.round(w * 0.6);
       this.rects = { main: [0, 0, this.split, h], hands: [this.split, 0, w - this.split, h] };
     } else {
@@ -515,26 +528,43 @@ export class PianoStage {
     }
     for (const c of [this.camEye, this.camWide]) { c.aspect = this.rects.main[2] / this.rects.main[3]; c.updateProjectionMatrix(); }
     this.camHands.aspect = this.rects.hands[2] / this.rects.hands[3]; this.camHands.updateProjectionMatrix();
+    if(this.shotCamera){this.shotCamera.aspect=w/h;this.shotCamera.updateProjectionMatrix();}
   }
   setLayout(layout) { this.layout = layout; this._resize(); }
   setView(view) {
     this.view = view;
     const o = this.orbit; o.auto = false;
-    if (view === "wide") { o.theta = 0.75; o.phi = 1.15; o.radius = 3.0; o.auto = true; }
+    if (view === "wide") { o.theta = 0.68; o.phi = 1.25; o.radius = 2.5; o.auto = true; }
     if (view === "side") { o.theta = Math.PI / 2 + 0.05; o.phi = 1.35; o.radius = 2.6; }
     if (view === "top") { o.theta = 0.2; o.phi = 0.35; o.radius = 2.8; }
     if (view === "front") { o.theta = Math.PI + 0.35; o.phi = 1.25; o.radius = 3.2; }
   }
+  setClose(mode) {
+    if(!["auto","left","right","both"].includes(mode))throw new Error("Unknown close camera");
+    this.closeMode=mode;this._closePending=null;this._closeDwell=1;
+  }
   _bindOrbit() {
-    const cv = this.canvas; const o = this.orbit;
-    let drag = null;
-    const inMain = (x, y) => { const [rx, ry, rw, rh] = this.rects.main; const gy = this.h - y; return x >= rx && x <= rx + rw && gy >= ry && gy <= ry + rh; };
-    cv.addEventListener("pointerdown", (e) => { const r = cv.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top; if (!inMain(x, y) || this.view === "eye") return; drag = { x: e.clientX, y: e.clientY, theta: o.theta, phi: o.phi }; cv.setPointerCapture(e.pointerId); o.auto = false; });
-    cv.addEventListener("pointermove", (e) => { if (!drag) return; o.theta = drag.theta - (e.clientX - drag.x) * 0.006; o.phi = clamp(drag.phi - (e.clientY - drag.y) * 0.005, 0.25, 1.5); });
-    const up = (e) => { if (!drag) return; drag = null; try { cv.releasePointerCapture(e.pointerId); } catch {} };
-    cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
-    cv.addEventListener("wheel", (e) => { const r = cv.getBoundingClientRect(); if (!inMain(e.clientX - r.left, e.clientY - r.top)) return; e.preventDefault(); o.radius = clamp(o.radius * (e.deltaY > 0 ? 1.08 : 0.92), 0.9, 7); o.auto = false; }, { passive: false });
-    cv.addEventListener("dblclick", () => { if (this.view !== "eye") this.setView("wide"); });
+    const cv=this.canvas,o=this.orbit;let drag=null;
+    const inMain=e=>{const r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=this.h-e.clientY+r.top;const [rx,ry,rw,rh]=this.rects.main;return x>=rx&&x<=rx+rw&&y>=ry&&y<=ry+rh;};
+    cv.addEventListener("pointerdown",e=>{
+      const main=inMain(e);if(main&&this.view==="eye")return;
+      drag={main,x:e.clientX,y:e.clientY,theta:o.theta,phi:o.phi,pos:this._closePos.clone(),look:this._closeLook.clone()};
+      cv.setPointerCapture(e.pointerId);
+      if(main)o.auto=false;else this.closeMode="manual";
+    });
+    cv.addEventListener("pointermove",e=>{
+      if(!drag)return;
+      if(drag.main){o.theta=drag.theta-(e.clientX-drag.x)*.006;o.phi=clamp(drag.phi-(e.clientY-drag.y)*.005,.25,1.5);}
+      else {const dx=-(e.clientX-drag.x)*.001,dy=(e.clientY-drag.y)*.001;this._closePos.copy(drag.pos).add(V(dx,dy,0));this._closeLook.copy(drag.look).add(V(dx,0,0));}
+    });
+    const up=e=>{if(!drag)return;drag=null;try{cv.releasePointerCapture(e.pointerId);}catch{}};
+    cv.addEventListener("pointerup",up);cv.addEventListener("pointercancel",up);
+    cv.addEventListener("wheel",e=>{
+      e.preventDefault();
+      if(inMain(e)){o.radius=clamp(o.radius*(e.deltaY>0?1.08:.92),.9,7);o.auto=false;}
+      else {this.closeMode="manual";this._closePos.sub(this._closeLook).multiplyScalar(e.deltaY>0?1.08:.92).add(this._closeLook);}
+    },{passive:false});
+    cv.addEventListener("dblclick",e=>{if(inMain(e))this.setView("wide");else this.setClose("auto");});
   }
 
   poseSeated() {
@@ -555,8 +585,55 @@ export class PianoStage {
   }
 
   setSong(notes, pedal) {
-    this.notesRef = notes.slice().sort((a, b) => a.s - b.s);
+    this.notesRef = notes.map(n => ({...n})).sort((a, b) => a.s - b.s);
+    this.motion = null; this._motionTempo = null;
+    this._cameraAngle=null;this._visibilityAt=-Infinity;
     this.pedalRef = pedal ?? [];
+  }
+
+  _palmFor(h, list) {
+    let x=0,z=0,weight=0;
+    for(const n of list) {
+      x+=keyX(n.p)-fingerOffsetX(h,n._f);
+      const w=FINGER_Z_WEIGHT[n._f];
+      z+=((isBlack(n.p)?-.095:-.045)+FINGER_REACH_Z[n._f])*w;weight+=w;
+    }
+    return {x:x/list.length,y:KEY_TOP_Y+.044,z:z/weight-.85*ROBOT_SCALE};
+  }
+
+  _fitPalm(h,g) {
+    const hand=this.hands[h==="L"?"Left":"Right"],side=h==="L"?"Left":"Right";
+    const palm=g.palm;
+    hand.bone.position.copy(hand.restPos);
+    for(let pass=0;pass<6;pass++) {
+      this._solveArm(side,V(palm.x,palm.y,palm.z+.85*ROBOT_SCALE),0);
+      const residual=V(0,0,0);let count=0;
+      for(const n of g.contacts) {
+        const f=hand.fingers[n._f];
+        f.exactPose=null;f.root.rotation.set(0,0,-hand.sgn*.25);f.joint.rotation.z=-hand.sgn*.2;
+        const error=this._placeFinger(hand,f,n.p,.7+.3*n.v/127,0);
+        if(error.length()>.0007){residual.add(error);count++;}
+      }
+      if(!count)break;
+      residual.divideScalar(count);if(residual.length()>.03)residual.setLength(.03);
+      palm.x+=residual.x;palm.y+=residual.y;palm.z+=residual.z;
+    }
+    this._solveArm(side,V(palm.x,palm.y,palm.z+.85*ROBOT_SCALE),0);
+    let error=0;g.fingerPoses={};
+    for(const n of g.contacts){const f=hand.fingers[n._f];const r=this._placeFinger(hand,f,n.p,.7+.3*n.v/127,0);error=Math.max(error,r.length());g.fingerPoses[n._f]=f.exactPose.slice();}
+    return error;
+  }
+
+  _canHold(h,n,palm) {
+    const side=h==="L"?"Left":"Right",hand=this.hands[side];
+    hand.bone.position.copy(hand.restPos);
+    this._solveArm(side,V(palm.x,palm.y,palm.z+.85*ROBOT_SCALE),0);
+    return this._placeFinger(hand,hand.fingers[n._f],n.p,.7+.3*n.v/127,0).length()<.0015;
+  }
+
+  setFrameRate(fps=0) {
+    if(!Number.isFinite(fps)||fps<0)throw new Error("fps must be zero (native) or positive");
+    this.frameRate=fps;return fps;
   }
 
   /* ── 2 本骨 IK。肘は「外・下・体側 (手前)」へ ── */
@@ -599,102 +676,85 @@ export class PianoStage {
   }
 
 
-  /* ── 指先を鍵の上にぴったり置く (3 つの関節角を、実測のヤコビアンで 3 回だけニュートン法) ──
-     戻り値: 残ったずれ (world)。鍵の x 中心・鍵の上面 (沈み込み込み)・鍵の中の自然な z を狙う。 */
-  _placeFinger(hand, f, p, keyPress, hover) {
-    const black = isBlack(p);
-    const sgn = hand.sgn, root = f.root, joint = f.joint, tip = f.tip;
-    const T = this._tmpV ??= new THREE.Vector3();
-    const measure = () => { root.updateMatrixWorld(true); tip.getWorldPosition(T); return [T.x, T.y, T.z]; };
-    // 関節の動ける範囲: [横振り, 付け根の曲げ, 第 2 関節の曲げ]
-    const lo = [-1.1, sgn > 0 ? -1.35 : -0.4, sgn > 0 ? -1.8 : -0.05], hi = [1.1, sgn > 0 ? 0.4 : 1.35, sgn > 0 ? 0.05 : 1.8];
-    const get = () => [root.rotation.y, root.rotation.z, joint.rotation.z];
-    const set = (q) => { root.rotation.y = clamp(q[0], lo[0], hi[0]); root.rotation.z = clamp(q[1], lo[1], hi[1]); joint.rotation.z = clamp(q[2], lo[2], hi[2]); };
-    const restPose = get();   // 呼ばれた時点の「だいたいの形」
-    // 指先が乗ってよい z の範囲: 白鍵は手前の縁〜黒鍵の間の細い部分まで、黒鍵は黒鍵の上
-    const zLo = black ? -0.140 : -0.115, zHi = black ? -0.068 : -0.020;
-    const cur = measure();
-    const zT = clamp(cur[2], zLo, zHi);
-    const dip = keyPress * (KEY_DIP / (black ? BLACK_L : WHITE_L)) * (zT - KEY_PIVOT_Z);
-    const yT = (black ? BLACK_TOP_Y : KEY_TOP_Y) - dip + TIP_R + hover;
-    const target = [keyX(p), yT, zT];
-    const solveFrom = (q0) => {
-      set(q0); let base = measure(); let e = Math.hypot(target[0] - base[0], target[1] - base[1], target[2] - base[2]);
-      for (let it = 0; it < 6 && e >= 0.0004; it++) {
-        const q = get();
-        const err = [target[0] - base[0], target[1] - base[1], target[2] - base[2]];
-        const J = [];
-        for (let k = 0; k < 3; k++) {
-          // 限界に当たっている側には動かせないので、反対向きに少しずらして傾きを測る
-          const hk = q[k] + 0.015 > hi[k] ? -0.015 : 0.015;
-          const q2 = q.slice(); q2[k] += hk; set(q2); const m = measure();
-          J.push([(m[0] - base[0]) / hk, (m[1] - base[1]) / hk, (m[2] - base[2]) / hk]);
-        }
-        // 減衰最小二乗: dq = (JᵀJ + λI)⁻¹ Jᵀ err   (J の列 k = J[k])
-        const lam = 1e-4;
-        const A = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], g = [0, 0, 0];
-        for (let a = 0; a < 3; a++) { for (let b = 0; b < 3; b++) { let sum = 0; for (let r = 0; r < 3; r++) sum += J[a][r] * J[b][r]; A[a][b] = sum + (a === b ? lam : 0); } let gs = 0; for (let r = 0; r < 3; r++) gs += J[a][r] * err[r]; g[a] = gs; }
-        const dq = solve3(A, g);
-        if (!dq) { set(q); break; }
-        set([q[0] + clamp(dq[0], -0.6, 0.6), q[1] + clamp(dq[1], -0.6, 0.6), q[2] + clamp(dq[2], -0.6, 0.6)]);
-        base = measure(); e = Math.hypot(target[0] - base[0], target[1] - base[1], target[2] - base[2]);
-      }
-      return { q: get(), base, e };
-    };
-    // 前のフレームの答えから始め、それで届かなければ「だいたいの形」からやり直す
-    let best = null;
-    for (const q0 of f.exactPose ? [f.exactPose, restPose] : [restPose]) {
-      const r = solveFrom(q0);
-      if (!best || r.e < best.e) best = r;
-      if (best.e < 0.002) break;
+  // Analytic two-link finger IK, including the pad's 0.1-unit offset.
+  // Solve the actual bones; no proxy contact points or fingertip translation.
+  _placeFinger(hand,f,p,keyPress,hover) {
+    const black=isBlack(p),sgn=hand.sgn,lo=black?-.140:-.115,hi=black?-.068:-.020;
+    const natural=black?-.095:-.045,A=f.len*.55,B=Math.hypot(f.len*.45,.1),pad=Math.atan2(-.1,f.len*.45);
+    hand.bone.updateWorldMatrix(true,false);
+    const inverse=hand.bone.matrixWorld.clone().invert();
+    const targets=[natural,...Array.from({length:13},(_,i)=>lo+(hi-lo)*i/12)];
+    let best=null;
+    for(const z of targets) {
+      const dip=keyPress*(KEY_DIP/(black?BLACK_L:WHITE_L))*(z-KEY_PIVOT_Z);
+      const target=V(keyX(p),(black?BLACK_TOP_Y:KEY_TOP_Y)-dip+TIP_R+hover,z);
+      const q=target.clone().applyMatrix4(inverse).sub(f.root.position);
+      const yaw=clamp(Math.atan2(-sgn*q.z,sgn*q.x),-1.1,1.1);
+      const x=Math.hypot(q.x,q.z),y=q.y,d2=x*x+y*y;
+      const gamma=-Math.acos(clamp((d2-A*A-B*B)/(2*A*B),-1,1));
+      const bend=clamp(gamma-pad,-1.8,.05);
+      const root=clamp(Math.atan2(y,x)-Math.atan2(B*Math.sin(gamma),A+B*Math.cos(gamma)),-1.35,.4);
+      f.root.rotation.set(0,yaw,sgn*root);f.joint.rotation.z=sgn*bend;f.root.updateMatrixWorld(true);
+      const actual=V(0,0,0);f.tip.getWorldPosition(actual);
+      const residual=target.clone().sub(actual),error=residual.length();
+      const cost=error*1000+Math.abs(z-natural)*.4;
+      if(!best||cost<best.cost)best={cost,error,residual,pose:[yaw,sgn*root,sgn*bend]};
+      if(error<.0001&&z===natural)break;
     }
-    set(best.q); root.updateMatrixWorld(true);
-    f.exactPose = best.q;
-    return new THREE.Vector3(target[0] - best.base[0], target[1] - best.base[1], target[2] - best.base[2]);
+    f.root.rotation.set(0,best.pose[0],best.pose[1]);f.joint.rotation.z=best.pose[2];f.root.updateMatrixWorld(true);
+    f.exactPose=best.pose;return best.residual;
   }
 
-  /* ── リハーサル: 描画せずに曲を頭から通し、音の始まりごとに「指先が鍵の上にあるか」を測る ──
-     戻り値 { notes, misses: [{i, p, h, f, s, dx, dy, dz}], maxDx, maxDy, maxDz } */
-  rehearse(notes, pedal, beatToSec, { fps = 60, endBeat = null } = {}) {
-    const saved = { notes: this.notesRef, pedal: this.pedalRef, hs: JSON.parse(JSON.stringify(this.handState)), t: this.t };
-    this.setSong(notes, pedal);
-    const sorted = this.notesRef;
-    const end = endBeat ?? (sorted.length ? Math.max(...sorted.map((n) => n.s + n.d)) : 0);
-    const endSec = beatToSec(end) + 0.5;
-    const secToBeat = (sec) => { let lo = 0, hi = end + 8; for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (beatToSec(mid) < sec) lo = mid; else hi = mid; } return (lo + hi) / 2; };
-    const dt = 1 / fps; const T = new THREE.Vector3();
-    const onset = sorted.map((n) => beatToSec(n.s));
-    // {i, at} 音の始まりの次のフレームと、その 60ms 後 (60ms より短い音は始まりだけ見る。32 分音符の駆け上がりでは 60ms 後には指が次の鍵へ移っていてよい)
-    const checks = [];
-    for (let i = 0; i < sorted.length; i++) {
-      const dur = beatToSec(sorted[i].s + sorted[i].d) - onset[i];
-      checks.push({ i, at: onset[i], stage: 0 });
-      if (dur >= 0.06) checks.push({ i, at: onset[i] + 0.06, stage: 1 });
+  measureContact(n) {
+    const hand=this.hands[n.h==="L"?"Left":"Right"], f=hand.fingers[n._f];
+    const p=n.p, black=isBlack(p), T=new THREE.Vector3();f.tip.getWorldPosition(T);
+    const k=this.piano.keys[p],dx=T.x-keyX(p);
+    const zLo=black?-.145:-.120,zHi=black?-.060:-.004;
+    const dz=T.z<zLo?T.z-zLo:T.z>zHi?T.z-zHi:0;
+    const dip=(k?.press??0)*(KEY_DIP/(black?BLACK_L:WHITE_L))*(clamp(T.z,zLo,zHi)-KEY_PIVOT_Z);
+    const dy=T.y-((black?BLACK_TOP_Y:KEY_TOP_Y)-dip+TIP_R);
+    return {i:n._i,p,h:n.h,f:n._f+1,s:n.s,dx,dy,dz,
+      miss:Math.abs(dx)>(black?BLACK_W:WHITE_W)/2-.001 || Math.abs(dy)>.008 || Math.abs(dz)>0};
+  }
+
+  measureRelease(n) {
+    const key=this.piano.keys[n.p],point=V(keyX(n.p),key.black?BLACK_TOP_Y:KEY_TOP_Y,key.black?-.095:-.045);
+    let nearestTip=Infinity;
+    for(const hand of Object.values(this.hands))for(const finger of hand.fingers)nearestTip=Math.min(nearestTip,finger.tip.getWorldPosition(V(0,0,0)).distanceTo(point));
+    return {i:n._i,p:n.p,beat:n.s,keyPress:key.press,nearestTip,clear:key.press<.01&&nearestTip>.012};
+  }
+
+  // Exact onset probes are independent of the regular FPS samples. In particular,
+  // an onset is never rounded up to a later frame. Authorised visual releases
+  // are separately counted and checked, not presented as successful contacts.
+  rehearse(notes,pedal,beatToSec,{fps=60,endBeat=null,secToBeat:fromSec=null}={}) {
+    const saved={notes:this.notesRef,pedal:this.pedalRef,beat:this._lastBeat??0};
+    this.setSong(notes,pedal);this.update(0,beatToSec,0,true);
+    const timed=this.motion.notes;
+    const end=endBeat??Math.max(0,...timed.map(n=>n.s+n.d));
+    const toBeat=fromSec??((sec,near=0)=>{let lo=near,hi=near+.5;while(beatToSec(hi)<sec)hi+=1;for(let i=0;i<22;i++){const m=(lo+hi)/2;if(beatToSec(m)<sec)lo=m;else hi=m;}return (lo+hi)/2;});
+    const events=[];
+    for(const n of timed)if(n.s<=end){events.push({sec:n._s,n,stage:n._visualRelease?2:0});if(!n._visualRelease&&n._e-n._s>=.06&&n._release>n._s+.06)events.push({sec:n._s+.06,n,stage:1});}
+    events.sort((a,b)=>a.sec-b.sec);
+    const misses=[],released=[];let checked=0,maxDx=0,maxDy=0,maxDz=0;
+    for(const e of events){
+      this.update(e.stage!==1?e.n.s:toBeat(e.sec,e.n.s),beatToSec,1/fps,true);
+      if(e.stage===2){const r=this.measureRelease(e.n);released.push(r);if(!r.clear)misses.push({...r,stage:2});continue;}
+      const r=this.measureContact(e.n);checked++;
+      maxDx=Math.max(maxDx,Math.abs(r.dx));maxDy=Math.max(maxDy,Math.abs(r.dy));maxDz=Math.max(maxDz,Math.abs(r.dz));
+      if(r.miss)misses.push({...r,stage:e.stage});
     }
-    checks.sort((a, b) => a.at - b.at);
-    let ci = 0; const misses = []; let maxDx = 0, maxDy = 0, maxDz = 0, checked = 0;
-    for (let sec = 0; sec <= endSec; sec += dt) {
-      this.update(secToBeat(sec), beatToSec, dt, true);
-      while (ci < checks.length && checks[ci].at <= sec) {
-        const c = checks[ci++]; const n = sorted[c.i]; const p = n.p, black = isBlack(p);
-        const hand = this.hands[n.h === "L" ? "Left" : "Right"];
-        if (n._released) continue;
-        const f = hand.fingers[n._f ?? clamp((n.f ?? 3) - 1, 0, 4)];
-        f.tip.getWorldPosition(T);
-        const k = this.piano.keys[p];
-        const dx = T.x - keyX(p);
-        const zLo = black ? -0.145 : -0.120, zHi = black ? -0.060 : -0.004;
-        const dz = T.z < zLo ? T.z - zLo : T.z > zHi ? T.z - zHi : 0;
-        const dip = (k ? k.press : 0) * (KEY_DIP / (black ? BLACK_L : WHITE_L)) * (clamp(T.z, zLo, zHi) - KEY_PIVOT_Z);
-        const dy = T.y - ((black ? BLACK_TOP_Y : KEY_TOP_Y) - dip + TIP_R);
-        const halfW = (black ? BLACK_W : WHITE_W) / 2 - 0.001;
-        checked++;
-        maxDx = Math.max(maxDx, Math.abs(dx)); maxDy = Math.max(maxDy, Math.abs(dy)); maxDz = Math.max(maxDz, Math.abs(dz));
-        if (Math.abs(dx) > halfW || Math.abs(dz) > 0 || Math.abs(dy) > 0.008) misses.push({ i: c.i, stage: c.stage, p, h: n.h, f: n.f, s: n.s, dx: +dx.toFixed(4), dy: +dy.toFixed(4), dz: +dz.toFixed(4) });
-      }
-    }
-    this.notesRef = saved.notes; this.pedalRef = saved.pedal; this.handState = saved.hs; this.t = saved.t;
-    return { notes: sorted.length, checked, misses, maxDx: +maxDx.toFixed(4), maxDy: +maxDy.toFixed(4), maxDz: +maxDz.toFixed(4) };
+    this.setSong(saved.notes,saved.pedal);this.update(saved.beat,beatToSec,0,false);
+    return {notes:timed.length,checked,misses,maxDx,maxDy,maxDz,released};
+  }
+
+  poseAt(beat,beatToSec) {
+    for(const hand of Object.values(this.hands))for(const f of hand.fingers){f.exactPose=null;f.spread=0;f.press=0;}
+    this._eyeLook.set(0,KEY_TOP_Y,-.05);
+    this.closeTarget=this.closeMode==="auto"?"right":this.closeMode;
+    this._closeDwell=1;this._closePending=null;this._closeWait=0;
+    this._cameraSnap=true;this.update(beat,beatToSec,1,true);this._cameraSnap=false;
+    return this.handState;
   }
 
   _updateKeys(dt) {
@@ -703,12 +763,12 @@ export class PianoStage {
     let mechDirty = false;
     for (const k of Object.values(pn.keys)) {
       const prev = k.press;
-      k.press = lerp(k.press, k.target, Math.min(1, dt * (k.target ? 60 : 16)));
+      k.press = k.target;
       const moving = Math.abs(k.press - prev) > 1e-4 || k.press > 1e-3;
       if (!moving && !k.dirty && !pedalChanged) continue;
       k.dirty = moving;
       k.pivot.rotation.x = Math.atan(KEY_DIP / (k.black ? BLACK_L : WHITE_L)) * k.press;
-      k.mat.emissiveIntensity = k.press * (k.black ? 1.1 : 0.55);   // 押した鍵は金色に灯る
+      updateKeyIndicator(k);   // 押した鍵は金色に灯る
       const swing = Math.min(1, k.press * 1.4);
       const lift = k.hasDamper ? Math.max(k.press, this.pedalAmt) * 0.012 : 0.02;
       this._placeMechanics(k, swing, lift);
@@ -728,48 +788,50 @@ export class PianoStage {
   }
 
   update(beat, beatToSec, dt, playing) {
-    this.t += dt;
     const B = this.bones; const pn = this.piano;
     const nowSec = beatToSec(beat);
-    const LOOK = 0.5;
-    const LEAD = 0.10;   // この秒数だけ先の音まで「もう指を鍵に乗せておく」
-    const active = { L: [], R: [] }, lead = { L: [], R: [] }, upcoming = { L: [], R: [] };
-    let accent = 0;
-    for (const n of this.notesRef) {
-      const s = beatToSec(n.s), e = beatToSec(n.s + n.d);
-      if (e < nowSec - 0.3) continue;
-      if (s > nowSec + LOOK + 0.2) break;
-      const h = n.h === "L" ? "L" : "R";
-      const held = nowSec < Math.max(e, s + 0.09);
-      // 4ms 以内に始まる音は「もう鳴っている」扱い (フレームの境目で 1 フレーム遅れないように)
-      if (s <= nowSec + 0.004 && held) { active[h].push(n); lead[h].push(n); if (nowSec - s < 0.06) accent = Math.max(accent, n.v / 127); }
-      else if (s > nowSec && s <= nowSec + LEAD) { lead[h].push(n); upcoming[h].push(n); }
-      else if (s > nowSec && s <= nowSec + LOOK) upcoming[h].push(n);
+    this.t = nowSec; this._lastBeat = beat;
+    // Cache note times and contact assignments. A tempo edit invalidates the plan.
+    const tempoKey = [beatToSec(1), beatToSec(this.notesRef.at(-1)?.s ?? 0)].join(":");
+    if (!this.motion || this._motionTempo !== tempoKey) {
+      this.robot.position.x=0;
+      B.LowerBack.rotation.set(.07,0,0);B.Spine.rotation.set(.056,0,0);B.Spine1.rotation.set(.028,0,0);
+      this.robot.updateMatrixWorld(true);
+      this.motion = buildMotion(this.notesRef, beatToSec, {keyX, fingerOffsetX, palmFor:(h,list)=>this._palmFor(h,list),fitPalm:(h,g)=>this._fitPalm(h,g),canHold:(h,n,p)=>this._canHold(h,n,p)});
+      this._motionTempo = tempoKey;
+      const events=this.pedalRef.flatMap(p=>[{sec:beatToSec(p.s),target:1},{sec:beatToSec(p.s+p.d),target:0}]).sort((a,b)=>a.sec-b.sec||a.target-b.target);
+      let value=0,target=0,time=0;this._pedalTimeline=[];
+      for(const e of events){value=target+(value-target)*Math.exp(-14*(e.sec-time));time=e.sec;target=e.target;this._pedalTimeline.push({...e,value});}
     }
+    const poses = {L:motionAt(this.motion,"L",nowSec),R:motionAt(this.motion,"R",nowSec)};
+    const active = {L:poses.L?.contacts??[],R:poses.R?.contacts??[]};
+    const timed=this.motion.notes;
+    let lo=0,hi=timed.length;
+    while(lo<hi){const mid=(lo+hi)>>1;if(timed[mid]._s<nowSec-.9)lo=mid+1;else hi=mid;}
+    this._nearNotes=[];
+    for(let i=lo;i<timed.length&&timed[i]._s<nowSec+.6;i++)this._nearNotes.push(timed[i]);
+    let accent=0,bodyEnergy=0,nod=0;
+    for(const n of this._nearNotes){const age=nowSec-n._s;if(age<0)continue;const pulse=(1-Math.exp(-age*40))*Math.exp(-age*5)*n.v/127;bodyEnergy+=pulse;nod=Math.max(nod,pulse);if(age<.06)accent=Math.max(accent,n.v/127);}
     // ペダルと右足
     const pd = playing && this.pedalRef.some((p) => beat >= p.s - 1e-6 && beat < p.s + p.d - 1e-6);
     this.pedalDown = pd;
-    this.pedalAmt = lerp(this.pedalAmt, pd ? 1 : 0, Math.min(1, dt * 14));
+    let pedalEdge=null;
+    for(const event of this._pedalTimeline){if(event.sec>nowSec)break;pedalEdge=event;}
+    this.pedalAmt=playing&&pedalEdge?pedalEdge.target+(pedalEdge.value-pedalEdge.target)*Math.exp(-14*(nowSec-pedalEdge.sec)):0;
     pn.pedals[2].rotation.x = this.pedalAmt * 0.14;
     B.RightFoot.rotation.x = 0.42 - 0.08 + this.pedalAmt * 0.14;
     // 鍵・ハンマー・ダンパー
     for (const k of Object.values(pn.keys)) k.target = 0;
-    // 鍵は「その音を受け持つ指が鍵の上に来た時」に沈む (指が届く前に鍵だけ沈まない)。
-    // 指が遠すぎる場合は 80ms だけ待ってから沈める (音とのずれを大きくしないため)。
-    this._pendingKeys = [];
-    for (const h of ["L", "R"]) for (const n of active[h]) { const k = pn.keys[n.p]; if (k) this._pendingKeys.push({ k, n, h }); }
-    // (鍵の更新は指の判定のあとで行う: _updateKeys)
     // 体
-    const density = active.L.length + active.R.length;
-    this.energy = lerp(this.energy, clamp(density / 4 + accent * 0.6, 0, 1.2), Math.min(1, dt * 2.5));
-    if (accent > 0.72) this.headNod = Math.max(this.headNod, accent);
-    this.headNod = lerp(this.headNod, 0, Math.min(1, dt * 4));
+    this.robot.position.x=clamp(((poses.L?.palm.x??0)+(poses.R?.palm.x??0))*.24,-.14,.14);
+    this.energy = clamp(bodyEnergy*.42,0,1.2);
+    this.headNod = nod;
     const sway = Math.sin(this.t * 0.9) * 0.03 * (0.4 + this.energy) + Math.sin(this.t * 0.37) * 0.015;
     const lean = 0.10 + this.energy * 0.12;
     B.LowerBack.rotation.set(lean * 0.5, 0, sway * 0.5);
     B.Spine.rotation.set(lean * 0.4, sway * 0.3, sway * 0.5);
     B.Spine1.rotation.set(lean * 0.2, 0, sway * 0.3);
-    const cx = (this.handState.L.x + this.handState.R.x) / 2;
+    const cx = ((poses.L?.palm.x??this.handState.L.x) + (poses.R?.palm.x??this.handState.R.x)) / 2;
     B.Neck1.rotation.set(0.1, 0, 0);
     B.Head.rotation.set(0.42 + this.headNod * 0.18 + Math.sin(this.t * 1.3) * 0.015, clamp(cx * 0.9, -0.5, 0.5), -sway * 0.5);
     this.robotParts.visor.emissiveIntensity = 1.6 + this.energy * 1.4 + this.headNod * 2;
@@ -777,86 +839,29 @@ export class PianoStage {
     this.robot.updateMatrixWorld(true);
 
     // 鍵を沈める (音の始まりと同時)。指はこのあと、沈んだ鍵の上面に合わせて置く
-    for (const { k, n } of this._pendingKeys) k.target = 0.7 + 0.3 * (n.v / 127);
+    for(const n of this.motion.notes) {
+      if(n._visualRelease)continue;
+      if(nowSec<n._s-1e-7 || nowSec>n._release+.45)continue;
+      const k=pn.keys[n.p];if(k)k.target=Math.max(k.target,(.7+.3*n.v/127)*Math.exp(-16*Math.max(0,nowSec-n._release)));
+    }
     this._updateKeys(dt);
 
     const FI = (n) => n._f ?? clamp((n.f ?? 3) - 1, 0, 4);
 
     // 手と指
-    // 手の位置は LEAD 秒先の音で決める (音が鳴る瞬間には指がもう鍵の上にあるように)。
+    // Palm position comes from the score-time path, not the previous frame.
     for (const h of ["L", "R"]) {
       const st = this.handState[h];
       const side = h === "L" ? "Left" : "Right";
       const hand = this.hands[side];
-      // その手が「今」受け持つ音を決める。
-      //  1. 60ms 以内に始まる音が遠く (12cm 超) にあれば、今鳴らしている音は手放す (実際の手は跳ぶ前に鍵を離す。音はペダルが保つ)
-      //  2. 残った音に、手の届く範囲 (12cm) で始まりかけの音を足す
-      //  3. 何も鳴らしていなければ、次に始まる音のかたまり (先頭から 30ms 以内) に手を先回りさせる
-      let list;
-      {
-        const mean = (arr) => arr.reduce((a, n) => a + keyX(n.p), 0) / arr.length;
-        const act = active[h];
-        const up = lead[h].filter((n) => !act.includes(n));
-        // 「始まったばかり (120ms 以内)」か「60ms 以内に始まる」音 = 手が今いるべき場所
-        const soon = lead[h].filter((n) => { const ds = beatToSec(n.s) - nowSec; return ds >= -0.12 && ds <= 0.06; });
-        let kept = act;
-        if (soon.length) { const cx = mean(soon); kept = act.filter((n) => Math.abs(keyX(n.p) - cx) <= 0.12); }
-        if (kept.length) { const cx = mean(kept); list = kept.concat(up.filter((n) => Math.abs(keyX(n.p) - cx) <= 0.12)); }
-        else {
-          const src = up.length ? up : upcoming[h];
-          if (src.length) { const s0 = Math.min(...src.map((n) => beatToSec(n.s))); list = src.filter((n) => beatToSec(n.s) - s0 <= 0.03); }
-          else list = [];
-        }
-      }
-      // 同じ手で同時に鳴る音に同じ指が付いていたり、指の順番が音の高さと逆だったら (データの指番号の間違い)、その瞬間だけ振り直す。
-      // 右手は低い音から 1→5、左手は高い音から 1→5 に、音の数に応じて広げて割り当てる。
-      {
-        const conflict = (arr) => {
-          for (const n of arr) n._f = clamp((n.f ?? 3) - 1, 0, 4);
-          const used = new Map();
-          for (const n of arr) { const prev = used.get(n._f); if (prev && prev.p !== n.p) return true; used.set(n._f, n); }
-          const srt = arr.slice().sort((a, b) => a.p - b.p);
-          for (let i = 1; i < srt.length; i++) { if (srt[i].p === srt[i - 1].p) continue; if (h === "R" ? srt[i]._f < srt[i - 1]._f : srt[i]._f > srt[i - 1]._f) return true; }
-          return false;
-        };
-        let bad = conflict(list);
-        // 取り合いの相手が「楽譜上はもう終わっている古い音 (短い音を 90ms 保つ名残)」と「これから始まる音」なら、古い音を手放す。
-        // (同じ和音を 16 分で連打しながら形を変える所で、振り直しで指が付け替わり、次のフレームでまた戻る「ちらつき」を防ぐ)
-        if (bad && list.some((n) => beatToSec(n.s) > nowSec)) {
-          const fresh = list.filter((n) => !(beatToSec(n.s) <= nowSec && beatToSec(n.s + n.d) <= nowSec + 0.004));
-          if (fresh.length < list.length && !conflict(fresh)) { list = fresh; bad = false; }
-        }
-        // それでも取り合うなら、相手は「今鳴っている音」と「これから始まる音 (先回り)」。先回りを後回しにして今の音の指を守る
-        if (bad && list.some((n) => beatToSec(n.s) > nowSec) && list.some((n) => beatToSec(n.s) <= nowSec)) {
-          const now = list.filter((n) => beatToSec(n.s) <= nowSec);
-          if (!conflict(now)) { list = now; bad = false; }
-        }
-        if (bad) {
-          const uniq = [...new Map(list.map((n) => [n.p, n])).values()].sort((a, b) => (h === "R" ? a.p - b.p : b.p - a.p));
-          const k = Math.min(5, uniq.length);
-          const plan = { 1: [0], 2: [0, 4], 3: [0, 2, 4], 4: [0, 1, 3, 4], 5: [0, 1, 2, 3, 4] }[k];
-          uniq.forEach((n, i) => { const fi = plan[Math.min(i, k - 1)]; for (const m of list) if (m.p === n.p) m._f = fi; });
-        }
-      }
-      const inList = new Set(list);
-      for (const n of lead[h]) n._released = !inList.has(n);
-      for (const n of active[h]) n._released = !inList.has(n);
-      let palmX = st.x, palmZ = 0.055;
-      if (list.length) {
-        // x: 各指が受け持つ鍵の位置から、手の中心を逆算して平均
-        const offs = list.map((n) => keyX(n.p) - fingerOffsetX(h, FI(n)));
-        palmX = offs.reduce((a, b) => a + b, 0) / offs.length;
-        // z: 指ごとに届く長さが違う (親指は短い) ので、「鍵の上の狙い z + その指の届く長さ」の平均を手の z にする
-        let zsum = 0, wsum = 0;
-        for (const n of list) { const fi = FI(n); const w = FINGER_Z_WEIGHT[fi]; zsum += ((isBlack(n.p) ? -0.095 : -0.045) + FINGER_REACH_Z[fi]) * w; wsum += w; }
-        palmZ = zsum / wsum - 0.85 * ROBOT_SCALE;
-      } else if (playing) palmX = lerp(st.x, h === "L" ? keyX(48) : keyX(72), 0.002);
-      st.x = lerp(st.x, palmX, Math.min(1, dt * (lead[h].length ? 55 : 22)));
-      if (Math.abs(st.x - palmX) < 0.0004) st.x = palmX;
-      st.z = lerp(st.z, palmZ, Math.min(1, dt * (lead[h].length ? 40 : 12)));
-      if (Math.abs(st.z - palmZ) < 0.0004) st.z = palmZ;
-      const palmY = KEY_TOP_Y + 0.044;
-      st.y = palmY;
+      const pose=poses[h];
+      const list=pose?.contacts??[];
+      const readyNotes=pose?.ready??[];
+      const inList=new Set(list);
+
+      if(pose){st.x=pose.palm.x;st.z=pose.palm.z;}
+      const palmY=(pose?.palm.y??KEY_TOP_Y+.044)+(pose?.lift??0);
+      st.y=palmY;
       // 前のフレームの「手のずらし」を戻してから腕を解く
       hand.bone.position.copy(hand.restPos);
       this._solveArm(side, new THREE.Vector3(st.x, st.y, st.z + 0.85 * ROBOT_SCALE), dt);
@@ -864,14 +869,14 @@ export class PianoStage {
       const pressing = new Map();
       for (const n of active[h]) if (inList.has(n)) pressing.set(FI(n), n);
       const ready = new Map();
-      for (const n of lead[h]) { if (!inList.has(n)) continue; const i = FI(n); if (!pressing.has(i) && !ready.has(i)) ready.set(i, n); }
+      for(const n of readyNotes)if(!pressing.has(FI(n)))ready.set(FI(n),n);
       const nextByF = new Map();
-      for (const n of upcoming[h]) { const i = FI(n); if (!nextByF.has(i)) nextByF.set(i, n); }
+      for(const n of pose?.next?.notes??[])if(!nextByF.has(FI(n)))nextByF.set(FI(n),n);
       const exactList = [];
       hand.fingers.forEach((f, i) => {
         const n = pressing.get(i) ?? ready.get(i) ?? nextByF.get(i);
         const p = pressing.has(i) ? 1 : ready.has(i) ? 0.4 : nextByF.has(i) ? 0.2 : 0;
-        f.press = lerp(f.press, p, Math.min(1, dt * (p === 1 ? 70 : 18)));
+        f.press = p;
         // まず「だいたいの形」(休んでいる指もこの形)
         const keyTop = n && isBlack(n.p) ? BLACK_TOP_Y : KEY_TOP_Y;
         const restDrop = clamp((palmY - keyTop - 0.018) / f.lenM, 0, 0.95), pressDrop = clamp((palmY - keyTop + 0.006) / f.lenM, 0, 0.98);
@@ -881,56 +886,217 @@ export class PianoStage {
         let shift = 0;
         if (n) shift = keyX(n.p) - (st.x + fingerOffsetX(h, i));
         const target = clamp(shift / Math.max(0.03, f.lenM * 0.9), -0.8, 0.8);
-        f.spread = lerp(f.spread, target, Math.min(1, dt * 30));
+        f.spread = target;
         f.root.rotation.y = -Math.asin(f.spread);
         // 鳴っている音・すぐ鳴る音の指は、指先を鍵の上にぴったり合わせる
         if (n && (pressing.has(i) || ready.has(i))) exactList.push({ f, n, i, hover: pressing.has(i) ? 0 : 0.016 * (1 - Math.min(1, f.press / 0.4)) + 0.004 });
         else f.exactPose = null;
       });
-      // 指先合わせ (最大 3 回: 届かなかった指の残りを手全体のずらしで吸収してからもう 1 回。届いた指は曲げ直せるので残りには数えない)
-      let shiftAcc = new THREE.Vector3();
-      for (let pass = 0; pass < 3; pass++) {
-        const resid = new THREE.Vector3(); let nres = 0;
-        for (const e of exactList) {
-          const k = pn.keys[e.n.p];
-          const err = this._placeFinger(hand, e.f, e.n.p, k ? k.press : 0, e.hover);
-          if (pressing.has(e.i) && err.length() > 0.0003) { resid.add(err); nres++; }
-        }
-        if (pass < 2 && nres) {
-          resid.divideScalar(nres);
-          // world のずれ → 手の骨の親 (前腕) のローカルへ
-          const pq = new THREE.Quaternion(); hand.bone.parent.getWorldQuaternion(pq);
-          shiftAcc.add(resid.clone().applyQuaternion(pq.invert()).divideScalar(ROBOT_SCALE));
-          const maxShift = 0.045 / ROBOT_SCALE;
-          if (shiftAcc.length() > maxShift) shiftAcc.setLength(maxShift);
-          hand.bone.position.copy(hand.restPos).add(shiftAcc);
-          hand.bone.updateMatrixWorld(true);
-        } else break;
+      for(const e of exactList) {
+        const k=pn.keys[e.n.p];
+        if(pressing.has(e.i)&&pose.group.fingerPoses?.[e.i])e.f.exactPose=pose.group.fingerPoses[e.i];
+        this._placeFinger(hand,e.f,e.n.p,k?k.press:0,e.hover);
       }
     }
 
 
-    // カメラ 1: VESPER の目線
-    const eyePos = new THREE.Vector3(); this.robotParts.eye.getWorldPosition(eyePos);
-    const eyeTarget = new THREE.Vector3(clamp(cx * 0.6, -0.35, 0.35), KEY_TOP_Y - 0.02, -0.18);
-    this._eyeLook.lerp(eyeTarget, Math.min(1, dt * 3));
-    this.camEye.position.set(eyePos.x, eyePos.y + 0.02, eyePos.z + 0.02);
-    this.camEye.lookAt(this._eyeLook);
-    this.camEye.rotateZ(-sway * 0.35);
-    // カメラ 2: 鍵盤と両手のアップ
-    // (頭の前・上から見下ろす。頭は z≈0.6 にあるので、その手前 z=0.3 に置く)
-    const hx = lerp(this.camHands.position.x || cx, cx * 0.8, Math.min(1, dt * 2));
-    this.camHands.position.set(hx, 1.12, 0.30);
-    this.camHands.lookAt(hx * 0.85, KEY_TOP_Y - 0.02, -0.07);
-    // カメラ 3: 全体 (回せる)。auto のときはゆっくり回る
-    const o = this.orbit;
-    if (o.auto) { o.autoT = (o.autoT ?? 0) + dt; o.theta = 0.85 + 0.55 * Math.sin(o.autoT * 0.05); }   // 手前側だけをゆっくり行き来 (屋根の裏に回り込まない)
-    this.camWide.position.set(o.target.x + o.radius * Math.sin(o.phi) * Math.sin(o.theta), o.target.y + o.radius * Math.cos(o.phi), o.target.z + o.radius * Math.sin(o.phi) * Math.cos(o.theta));
+    this._updateCameras(poses,nowSec,dt,sway,beatToSec);
+  }
+
+  // 寄り・目線・全体のカメラ。毎コマの光線判定や境界箱の計算はしない (処理落ちの原因だった)。
+  // 動きは「ゆっくり・少なく」: 狙いは時定数 2 秒でなめらかに、10cm 未満のずれは追わない、寄る相手の切り替えは 6 秒以上あけて 1.2 秒迷ってから。
+  _updateCameras(poses,sec,dt,sway,toSec) {
+    const snap=this._cameraSnap;
+    const ease=(tau)=>snap?1:1-Math.exp(-Math.max(0,dt)/tau);
+    const stats={};
+    for(const h of ["L","R"]) {
+      const ns=this._nearNotes.filter(n=>(n.h==="L"?"L":"R")===h&&n._s>=sec-.6&&n._s<sec+.6);
+      const mean=ns.reduce((a,n)=>a+n.p,0)/Math.max(1,ns.length);
+      const strength=ns.reduce((a,n)=>a+n.v/127,0)/Math.sqrt(Math.max(1,ns.length));
+      const pose=poses[h];
+      stats[h]={score:strength*(.65+clamp((mean-45)/45,0,1)),x:pose?.palm.x??(h==="L"?-.2:.2),chord:pose?.contacts.length??0};
+    }
+    const L=stats.L,R=stats.R,spread=Math.abs(R.x-L.x);
+    // 主役の手の判定は 3 秒の時定数でならしてから (小節ごとにころころ変えない)
+    this._melody=this._melody??0;
+    this._melody+=((L.score-R.score)-this._melody)*ease(3);
+    let want=this.closeMode;
+    if(want==="auto"){
+      const cur=this.closeTarget;
+      want=this._melody>.35?"left":this._melody<-.35?"right":(cur==="left"||cur==="right")?cur:"both";
+      if(spread>.46)want="both";
+    }
+    if(want==="pedal"&&this.closeMode==="auto")want="both";
+    this._closeDwell=(this._closeDwell??0)+dt;
+    if(snap||this.closeMode!=="auto")this.closeTarget=want;
+    else if(want!==this.closeTarget){
+      if(this._closePending!==want){this._closePending=want;this._closeWait=0;}
+      this._closeWait+=dt;
+      if(this._closeWait>=1.2&&this._closeDwell>=6){this.closeTarget=want;this._closeDwell=0;this._closePending=null;}
+    }else{this._closePending=null;this._closeWait=0;}
+    const mode=this.closeTarget;
+    // 指先の広がり (今の姿勢から。手のひらの中心だけだと、伸ばした指が端に出る)
+    let tipLo=Infinity,tipHi=-Infinity;
+    for(const h of (mode==="left"?["Left"]:mode==="right"?["Right"]:["Left","Right"]))for(const f of this.hands[h].fingers){const x=f.tip.getWorldPosition(V(0,0,0)).x;if(x<tipLo)tipLo=x;if(x>tipHi)tipHi=x;}
+    const cxRaw=(tipLo+tipHi)/2, spanRaw=Math.max(mode==="both"?.42:.34,(tipHi-tipLo)+.18);
+    // 狙う点はゆっくり追う (6cm 未満のずれは追わない、時定数 2 秒)。指先が画面から出そうなときだけ速く追う
+    if(this._closeAnchorX==null||snap)this._closeAnchorX=cxRaw;
+    // 「急ぎ」は前のコマで指先が画面の端から出ていたときだけ (下の投影の判定が決める)。ふだんはゆっくり
+    const urgent=!!this._closeUrgent;
+    if(urgent)this._closeAnchorX+=(cxRaw-this._closeAnchorX)*ease(.3);
+    else if(Math.abs(cxRaw-this._closeAnchorX)>.06)this._closeAnchorX+=(cxRaw-this._closeAnchorX)*ease(2);
+    const cx=clamp(this._closeAnchorX,-.55,.55);
+    // 幅: 広げるのは速く (指が端に出ないように)、寄せるのはゆっくり (酔わないように)
+    this._closeSpan=this._closeSpan==null||snap?spanRaw:this._closeSpan+(spanRaw-this._closeSpan)*ease(spanRaw>this._closeSpan?.15:4);
+    // (急ぎの旗は下の投影の判定で決める)
+    // 位置と角度は v4 まで使っていた物 (頭の前・上から見下ろす)。手の中心 cx だけをゆっくり追う。両手が大きく離れたときは少し引く
+    const pull=Math.max(0,this._closeSpan-.48)*.8;
+    let look=V(cx*.85,KEY_TOP_Y-.02,-.07);
+    const narrow=1; // 縦長の画面では距離は変えず、画角だけ広げる (引きすぎると手が小さくなる)
+    const wantFov=Math.min(64,32*Math.max(1,1.6/Math.max(.4,this.camHands.aspect)));
+    if(Math.abs(this.camHands.fov-wantFov)>.01){this.camHands.fov=wantFov;this.camHands.updateProjectionMatrix();}
+    let position=look.clone().add(V(-.05*cx,.405+pull*.6,.37+pull*.5).multiplyScalar(narrow));
+    if(mode==="pedal"){position=V(.95,1.02,.60);look=V(.04,.40,.02);}
+    if(this.closeMode!=="manual"){
+      if(snap||!this._closePos){this._closePos=(this._closePos??V(0,0,0)).copy(position);this._closeLook=(this._closeLook??V(0,0,0)).copy(look);}
+      else{
+        const a=ease(this._closeUrgent?.25:mode==="pedal"?1.2:2.0); // 指が端に出そうなときだけ速く動く
+        this._closePos.lerp(position,a);this._closeLook.lerp(look,a);
+        // 速さの上限 (酔わないように): カメラは 1 秒に 8cm まで
+        const maxStep=(this._closeUrgent?.80:.08)*Math.max(0,dt); // ふだんは 1 秒に 8cm。指が端に出そうなときだけ速く
+        const dv=this._closePos.clone().sub(this._prevClosePos??this._closePos);
+        if(dv.length()>maxStep){this._closePos.copy(this._prevClosePos).addScaledVector(dv.normalize(),maxStep);}
+      }
+      this._prevClosePos=(this._prevClosePos??V(0,0,0)).copy(this._closePos);
+    }
+    this.camHands.position.copy(this._closePos);this.camHands.lookAt(this._closeLook);
+    // それでも指先が画面の端から出るなら、その場で引く (引く動きは酔わない。寄り戻しはふだんの遅さで)
+    if(this.closeMode!=="manual"&&mode!=="pedal"&&tipLo<Infinity){
+      const tips=[];for(const h of (mode==="left"?["Left"]:mode==="right"?["Right"]:["Left","Right"]))for(const f of this.hands[h].fingers)tips.push(f.tip.getWorldPosition(V(0,0,0)));
+      let widened=false,budget=snap?Infinity:1.0*Math.max(1/120,dt),lookBudget=snap?Infinity:.6*Math.max(1/120,dt); // 1 コマに引ける量の合計 (1 秒に 1m まで。撮影の瞬間は上限なし)。足りない分は次のコマで続ける
+      for(let k=0;k<5&&budget>1e-5;k++){
+        this.camHands.updateMatrixWorld(true);
+        const out=tips.some(t=>{const p=t.clone().project(this.camHands);return Math.abs(p.x)>.94||Math.abs(p.y)>.94;});
+        if(!out)break; widened=true;
+        const off=this._closePos.clone().sub(this._closeLook),grow=Math.min(off.length()*.12,budget);budget-=grow;
+        off.setLength(off.length()+grow);
+        const shift=clamp((cxRaw-this._closeLook.x)*.5,-lookBudget,lookBudget);lookBudget-=Math.abs(shift);
+        this._closePos.copy(this._closeLook).add(off);this._closeLook.x+=shift;
+        this.camHands.position.copy(this._closePos);this.camHands.lookAt(this._closeLook);
+      }
+      if(this._prevClosePos)this._prevClosePos.copy(this._closePos);
+      this._closeUrgent=widened;
+    } else this._closeUrgent=false;
+    // 目線カメラ: 主役の手のあたりをゆっくり見る
+    const eyePos=V(0,0,0);this.robotParts.eye.getWorldPosition(eyePos);
+    this._eyeLook.lerp(V(clamp(cx,-.5,.5),KEY_TOP_Y-.02,-.13),ease(1.5));
+    this.camEye.position.copy(eyePos).add(V(0,.02,.02));this.camEye.lookAt(this._eyeLook);this.camEye.rotateZ(-sway*.35);
+    // 全体カメラ: ゆっくり行き来。演奏者が収まる距離は 1 秒に 1 回だけ計算し、時定数 3 秒で寄せる (毎コマ合わせない)
+    const o=this.orbit;
+    if(o.auto){o.theta=.64+.38*Math.sin(sec*.045);o.phi=1.25+.025*Math.sin(sec*.031);}
+    const wideDirection=V(Math.sin(o.phi)*Math.sin(o.theta),Math.cos(o.phi),Math.sin(o.phi)*Math.cos(o.theta));
+    if(o.auto){
+      if(snap||this._wideFitAt==null||sec-this._wideFitAt>=1||sec<this._wideFitAt){
+        const head=V(0,0,0);this.bones.HeadEnd.getWorldPosition(head);
+        const performer=[V(L.x,KEY_TOP_Y+.10,.05),V(R.x,KEY_TOP_Y+.10,.05),V(-.65,.72,-.17),V(.65,.72,-.17),V(0,.10,.70),V(0,.05,.45),head,head.clone().add(V(0,.12,0))];
+        this._wideFit=this.frameDistance(this.camWide,o.target,wideDirection,performer,2.2);this._wideFitAt=sec;
+      }
+      this._wideRadius=this._wideRadius==null||snap?this._wideFit:this._wideRadius+(this._wideFit-this._wideRadius)*ease(3);
+    } else this._wideRadius=o.radius;
+    this.camWide.position.copy(o.target).addScaledVector(wideDirection,this._wideRadius);
     this.camWide.lookAt(o.target);
+    this.cameraInfo={mode,requested:this.closeMode,jump:false,span:this._closeSpan,melody:this._melody>0?"L":"R",pedalEdge:false,subjects:mode==="left"?["L"]:mode==="right"?["R"]:["L","R"]};
+  }
+
+  // 切れの判定に使う点: 指先 5 本 (箱の角より現実的)
+  handKeyPoints(subjects=["L","R"]) {
+    const points=[];
+    for(const h of subjects){const hand=this.hands[h==="L"?"Left":"Right"];for(const f of hand.fingers)points.push(f.tip.getWorldPosition(V(0,0,0)));} // 手首の丸みは画面の下端にかかってよいので指先だけ
+    return points;
+  }
+
+  handFramePoints(subjects=["L","R"]) {
+    const points=[];
+    for(const h of subjects){
+      const hand=this.hands[h==="L"?"Left":"Right"],box=new THREE.Box3().setFromObject(hand.bone);
+      for(const x of[box.min.x,box.max.x])for(const y of[box.min.y,box.max.y])for(const z of[box.min.z,box.max.z])points.push(V(x,y,z));
+    }
+    return points;
+  }
+
+  frameDistance(camera,look,direction,points,minDistance) {
+    const right=V(0,1,0).cross(direction).normalize(),up=direction.clone().cross(right);
+    const tanY=Math.tan(THREE.MathUtils.degToRad(camera.fov/2)),tanX=tanY*camera.aspect;
+    let distance=minDistance;
+    for(const point of points){const d=point.clone().sub(look);distance=Math.max(distance,d.dot(direction)+Math.abs(d.dot(right))/(tanX*.84),d.dot(direction)+Math.abs(d.dot(up))/(tanY*.84));}
+    return distance;
+  }
+
+  chooseCloseAngle(look,points,subjects,current=null) {
+    const camera=this._cameraProbe??=this.camHands.clone();camera.fov=this.camHands.fov;camera.aspect=this.camHands.aspect;camera.updateProjectionMatrix();
+    const directions=[V(.28,.92,.12),V(-.28,.92,.12),V(0,1,-.35),V(0,1,-.50),V(.05,1,-.20),V(.05,1,.30),V(.4,1,-.4),V(-.4,1,-.4)].map(v=>v.normalize());
+    if(current)directions.unshift(current);
+    let best=null;const geometry={};
+    for(const direction of directions){
+      camera.position.copy(look).addScaledVector(direction,this.frameDistance(camera,look,direction,points,.54));camera.lookAt(look);
+      const reports=this.keyVisibility(camera,subjects,geometry);
+      const penalty=reports.reduce((a,k)=>a+(!k.inFrame?100:0)+(!k.tipVisible?20:0)+Math.max(0,3-k.visible)*12+Math.max(0,2-k.indicatorVisible)*6,0);
+      if(!best||penalty<best.penalty)best={direction,penalty};
+      if(!penalty)break;
+    }
+    return best.direction.clone();
+  }
+
+  // Cast through the real meshes, including both hands and the piano case.
+  // One key is represented by a 3x3 patch of its exposed playing surface.
+  keyVisibility(camera=this.camHands,subjects=this.cameraInfo?.subjects??["L","R"],geometry=null) {
+    // Angle candidates share one frozen pose. Build its world bounds once,
+    // without keeping stale bounds across animation frames or external calls.
+    const meshes=geometry?.meshes??[];
+    if(!geometry?.meshes){this.scene.updateMatrixWorld(true);this.scene.traverseVisible(o=>{if(o.isMesh){
+      if(o.isInstancedMesh)o.computeBoundingBox();else if(!o.geometry.boundingBox)o.geometry.computeBoundingBox();
+      meshes.push({object:o,box:(o.isInstancedMesh?o.boundingBox:o.geometry.boundingBox).clone().applyMatrix4(o.matrixWorld)});
+    }});if(geometry)geometry.meshes=meshes;}
+    camera.updateMatrixWorld(true);
+    const ray=new THREE.Raycaster(),origin=camera.getWorldPosition(V(0,0,0));
+    const hitPoint=V(0,0,0),hits=(own=null)=>ray.intersectObjects(meshes.filter(({object,box})=>object!==own&&ray.ray.intersectBox(box,hitPoint)&&origin.distanceToSquared(hitPoint)<(ray.far+.002)**2).map(m=>m.object),false);
+    const visible=(point,own)=>{
+      const ndc=point.clone().project(camera),inside=Math.abs(ndc.x)<.96&&Math.abs(ndc.y)<.96&&Math.abs(ndc.z)<1;
+      if(!inside)return {inside,clear:false};
+      const dir=point.clone().sub(origin);ray.set(origin,dir.clone().normalize());ray.far=dir.length()-.0004;
+      return {inside,clear:!hits(own).length};
+    };
+    const reports=[];
+    for(const h of subjects)for(const n of motionAt(this.motion,h,this.t)?.contacts??[]) {
+      const key=this.piano.keys[n.p],width=key.black?BLACK_W:WHITE_W,zs=key.black?[-.130,-.103,-.080]:[-.062,-.040,-.012];
+      const samples=[];
+      for(const dx of[-.27,0,.27])for(const z of zs){const dip=key.press*(KEY_DIP/(key.black?BLACK_L:WHITE_L))*(z-KEY_PIVOT_Z);samples.push(visible(V(keyX(n.p)+width*dx,(key.black?BLACK_TOP_Y:KEY_TOP_Y)-dip+.0006,z),key.mesh));}
+      const finger=this.hands[h==="L"?"Left":"Right"].fingers[n._f],tip=finger.tip.getWorldPosition(V(0,0,0));
+      // The last phalanx may cover its own contact pad from above. Seeing that
+      // terminal link is seeing the fingertip; any other finger/hand is a blocker.
+      const projected=tip.clone().project(camera),tipInFrame=Math.abs(projected.x)<.96&&Math.abs(projected.y)<.96;
+      const dir=tip.clone().sub(origin);ray.set(origin,dir.clone().normalize());ray.far=dir.length()+TIP_R;
+      const hit=hits()[0];let tipVisible=false;
+      for(let o=hit?.object;o;o=o.parent)if(o===finger.joint){tipVisible=true;break;}
+      const indicator=key.indicator,indicatorVisible=[-.3,0,.3].filter(x=>visible(indicator.light.localToWorld(V(indicator.width*x,indicator.height/2,0)),indicator.light).clear).length;
+      reports.push({h,p:n.p,beat:n.s,visible:samples.filter(s=>s.clear).length,samples:samples.length,inFrame:samples.every(s=>s.inside),tipVisible:tipInFrame&&tipVisible,indicatorVisible});
+    }
+    return reports;
+  }
+
+  setShot(view=null) {
+    this.shotCamera=null;
+    if(view===null){this._resize();return;}
+    if(["left","right","both","keys"].includes(view)){this.setClose(view==="keys"?"auto":view);this.shotCamera=this.camHands;}
+    else if(view==="pedal"){this.camDetail.position.set(.56,.39,.75);this.camDetail.lookAt(.055,.10,.03);this.shotCamera=this.camDetail;}
+    else {this.setView(view==="full"?"wide":view);this.shotCamera=view==="eye"?this.camEye:this.camWide;}
+    this.shotCamera.aspect=this.w/this.h;this.shotCamera.updateProjectionMatrix();
   }
 
   render() {
     const r = this.renderer;
+    this.needsRender = false;
+    if (this.shotCamera) { r.setScissorTest(false); r.setViewport(0,0,this.w,this.h); r.render(this.scene,this.shotCamera); return; }
     const main = this.view === "eye" ? this.camEye : this.camWide;
     r.setScissorTest(true);
     const [mx, my, mw, mh] = this.rects.main; r.setViewport(mx, my, mw, mh); r.setScissor(mx, my, mw, mh); r.render(this.scene, main);

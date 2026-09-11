@@ -1,0 +1,7 @@
+{
+  "pass": true,
+  "tipDeltaMm": 0,
+  "unchangedTransforms": 32,
+  "meshesBeforeBatch": 416,
+  "meshesAfterBatch": 204
+}

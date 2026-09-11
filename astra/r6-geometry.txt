@@ -1,0 +1,4 @@
+(node:38221) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+--import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("./tools/band-node-loader.mjs", pathToFileURL("./"));'
+(Use `node --trace-warnings ...` to show where the warning was created)
+/Users/satorun/Documents/agent/product/toys/music_app/astra/shots/geometry-knob.png (geometry diagnostic only)

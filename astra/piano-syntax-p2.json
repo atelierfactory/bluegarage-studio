@@ -1,0 +1,27 @@
+{
+  "passed": 21,
+  "hashes": {
+    "public/js/fingering.js": "fbfdbfb496ac3708c8609d254018b07fd87854310b01a435fc4ccf886eb62e8a",
+    "public/js/audio.js": "bcebeb0c4f9b1e30b8644009e347eee689dba0d18fe636112e3d561639e6fb1d",
+    "public/js/sampler.js": "48d3b1f58545fc1770042a327b2e78090d2c90a6421af6752cb103e167f2c390",
+    "public/js/mix.js": "0a23c5981e027d779918d9c0bf78f76da01e9792b6ca6ab9a8009cd64546c941",
+    "public/piano/scene.js": "cade4d1ec2e0f3bbaf10e79a576593e04bd23fcec673b412ce5b44d2b7d5124a",
+    "public/piano/motion.js": "234e499eabcdd106df81faf5dcefe529172780636b62d442a65058282be8c146",
+    "public/piano/loudness.js": "a5f56978381388a97b1f97b2dbe9d20f0d56eb858729ec58c5d3fccafc7d0180",
+    "public/piano/piano.js": "e278a8529ed4a606e76c2afc00e401f22c0d7005b30cfea16d070537318c855c",
+    "tools/piano-data.mjs": "022a0a11f4987d2b42f5e0b699e84b3e16aa3db0cbc977c174d1364cbb601362",
+    "tools/piano-headless.mjs": "88ce2cd5589fadbf3a27597a247ce28c428366393f7585b5f1ff982d30ae8622",
+    "tools/piano-motion-check.mjs": "a8604a9f429730e615205e5961e29a8a61b5d7a386d8726cfedf952215acdb24",
+    "tools/piano-fingering-check.mjs": "766933878f13051af441883e8d503af805731c74607b67386bc4b2ed2bc8c138",
+    "tools/piano-level-check.mjs": "29454eb21603bf73e2b522024c10ef0387f9b98cefb133d313de9020aca68836",
+    "tools/piano-page-check.mjs": "d4bc7867eb43e1597ee155d7697d0a4ce96f6c383e36e8bf15075ee872600f50",
+    "tools/piano-camera-check.mjs": "f6422b179956e703ef63b055bc8b01dd784c129efc8fcd3145157dc08de254cf",
+    "tools/piano-sample-energy.mjs": "2f55bf2d2a9860001cffa2c25999d40149eb5e4ab264fa7eda4c18b37aa73fa7",
+    "tools/build-single.mjs": "89d4232e56d04e2bdb08766c9f4dc0833dae0332dba791464db1bfd8484b62fc",
+    "astra/shot.mjs": "57b95547fec4a8a7026127a94018514132a43ba62511b4eaa59332e17030fc30",
+    "public/js/robot-hardware.js": "d4ab0d70837fc0f7da4a497a719117047cac5818c1117e45a5b09dca1f4de341",
+    "public/band/hardware.js": "2f17eb26c53199f3f3c7f233f12c6cb1eaf5dab24d9300d92e6c6c45aae74a20",
+    "tools/piano-hardware-check.mjs": "56e363836aac6fd83e417e4a14aeaf129e37cf5a5211ba57e1a50b0d25426971"
+  },
+  "unchangedRepertoireFiles": 19
+}

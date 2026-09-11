@@ -20,7 +20,8 @@ export function createMixGraph(master, { destination = null, sampleCtx = null } 
   const m = { glue: 0.3, hallDecay: 2.4, roomDecay: 0.6, width: 1, volume: -4, ...(master ?? {}) };
   const out = destination ?? Tone.getDestination();
   const limiter = new Tone.Limiter(-1).connect(out);
-  const volume = new Tone.Volume(m.volume).connect(limiter);
+  const pianoTrim = () => clamp(m.pianoGainDb ?? 0, 0, 18);
+  const volume = new Tone.Volume(m.volume + pianoTrim()).connect(limiter);
   const glue = new Tone.Compressor(compressorParams(m.glue * 0.6)).connect(volume);
   const widener = new Tone.StereoWidener(clamp(m.width, 0, 2) / 2).connect(glue);
   const input = new Tone.Gain(1).connect(widener);
@@ -41,11 +42,11 @@ export function createMixGraph(master, { destination = null, sampleCtx = null } 
     input, hall, room, limiter, volume, glue, widener, meter,
     update(next) {
       Object.assign(m, next ?? {});
-      volume.volume.value = m.volume;
+      volume.volume.value = m.volume + pianoTrim();
       glue.set(compressorParams(m.glue * 0.6));
       widener.width.value = clamp(m.width, 0, 2) / 2;
     },
-    setMasterVolume(db) { m.volume = db; volume.volume.value = db; },
+    setMasterVolume(db) { m.volume = db; volume.volume.value = db + pianoTrim(); },
     dispose() { for (const n of nodes) { try { n.dispose(); } catch {} } },
   };
 }

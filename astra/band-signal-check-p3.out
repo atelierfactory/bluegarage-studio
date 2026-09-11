@@ -1,0 +1,2 @@
+{"firstProbePairMs":119,"cachedPairMs":0.09,"nativeEffects":"recorded, not rendered in Node"}
+PASS: 28 measured audio / graph lifecycle assertions; native browser effects remain to be checked.

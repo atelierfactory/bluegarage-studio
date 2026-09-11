@@ -1,0 +1,1 @@
+PASS: 45 page assertions (actual band.js / THREE geometry; DOM, audio and AI mocked)

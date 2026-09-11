@@ -1,0 +1,44 @@
+{
+  "motionExitCode": 0,
+  "motionSongsPassed": 11,
+  "visualReleases": [
+    {
+      "file": "matsuri-overdrive.vesper.json",
+      "kind": "speed",
+      "h": "R",
+      "beat": 144,
+      "fromBeat": 143.9333,
+      "required": 9.164291815668156,
+      "available": 0.02194753246753578,
+      "metres": 0.18504290479304134,
+      "missingMs": 45.09699825458065,
+      "i": 1473,
+      "p": 59,
+      "f": 1,
+      "reason": "unreachable isolated attack; release and travel to the following note"
+    }
+  ],
+  "camera": {
+    "poses": 144,
+    "closeViews": 72,
+    "rays": 1280,
+    "movingFrames": 37,
+    "failures": 0
+  },
+  "hardware": {
+    "pass": true,
+    "tipDeltaMm": 0,
+    "unchangedTransforms": 32,
+    "meshesBeforeBatch": 416,
+    "meshesAfterBatch": 204
+  },
+  "syntaxFiles": 21,
+  "unchangedRepertoireFiles": 19,
+  "loudnessCalculationUnchanged": true,
+  "pianoPage": "PASS: 56 piano page assertions (mock DOM/audio; real controller, PianoRoll and THREE pose)",
+  "bandRegression": "PASS: 46 regression assertions (mock audio clock; actual audio.js and processor bundle)",
+  "bandPage": "PASS: 45 page assertions (actual band.js / THREE geometry; DOM, audio and AI mocked)",
+  "bandScores": "PASS: 6 scores; 7911 notes; 94 gestures",
+  "browserCheckedAfterSecondPass": false,
+  "deployed": false
+}

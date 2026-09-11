@@ -1,0 +1,22 @@
+┌─────────┬─────────────────────────────────┬───────────┬───────┬─────────┬───────┬──────┬───────┬───────┬──────┬───────┬─────────┬────────────┬─────────┬──────────┬─────────────┬─────────┬───────┬────────┬────────┬────────────┐
+│ (index) │ file                            │ candidate │ meter │ seconds │ notes │ keys │ pedal │ drums │ kick │ knobs │ crashes │ keysPerBar │ range   │ shortest │ bassKickPct │ changed │ fixes │ issues │ errors │ advisories │
+├─────────┼─────────────────────────────────┼───────────┼───────┼─────────┼───────┼──────┼───────┼───────┼──────┼───────┼─────────┼────────────┼─────────┼──────────┼─────────────┼─────────┼───────┼────────┼────────┼────────────┤
+│ 0       │ 'glass-current.band.json'       │ false     │ 4     │ 116.364 │ 1789  │ 839  │ 237   │ 482   │ 231  │ 16    │ 48      │ 13.11      │ '48–83' │ 0.075    │ 0.4         │ 0       │ 0     │ 0      │ 0      │ 0          │
+│ 1       │ 'copper-hinge.band.json'        │ false     │ 4     │ 124.8   │ 1501  │ 705  │ 248   │ 391   │ 157  │ 14    │ 47      │ 13.56      │ '48–83' │ 0.14     │ 16.5        │ 0       │ 0     │ 0      │ 0      │ 0          │
+│ 2       │ 'porcelain-tide.band.json'      │ false     │ 3     │ 120     │ 1796  │ 1047 │ 214   │ 400   │ 135  │ 15    │ 48      │ 14.54      │ '48–84' │ 0.08     │ 7.5         │ 0       │ 0     │ 0      │ 0      │ 0          │
+│ 3       │ 'hayate-cyber-sakura.band.json' │ true      │ 4     │ 60.8    │ 988   │ 427  │ 174   │ 244   │ 143  │ 15    │ 25      │ 11.24      │ '48–84' │ 0.1      │ 61.5        │ 0       │ 0     │ 0      │ 0      │ 4          │
+│ 4       │ 'neon-circuit.band.json'        │ true      │ 4     │ 73.22   │ 979   │ 336  │ 185   │ 302   │ 156  │ 20    │ 20      │ 9.33       │ '60–84' │ 0.15     │ 47.6        │ 0       │ 0     │ 0      │ 0      │ 4          │
+│ 5       │ 'overdrive-332.band.json'       │ true      │ 4     │ 57.6    │ 858   │ 344  │ 174   │ 199   │ 141  │ 14    │ 43      │ 9.56       │ '48–84' │ 0.2      │ 71.3        │ 0       │ 0     │ 0      │ 0      │ 3          │
+└─────────┴─────────────────────────────────┴───────────┴───────┴─────────┴───────┴──────┴───────┴───────┴──────┴───────┴─────────┴────────────┴─────────┴──────────┴─────────────┴─────────┴───────┴────────┴────────┴────────────┘
+hayate-cyber-sakura.band.json: candidate / Duration outside 90–180 seconds
+hayate-cyber-sakura.band.json: candidate / Fewer than 30 crash accents
+hayate-cyber-sakura.band.json: candidate / Right hand average below 12 notes per bar
+hayate-cyber-sakura.band.json: candidate / Bass duplicates kick more than 40%
+neon-circuit.band.json: candidate / Duration outside 90–180 seconds
+neon-circuit.band.json: candidate / Fewer than 30 crash accents
+neon-circuit.band.json: candidate / Right hand average below 12 notes per bar
+neon-circuit.band.json: candidate / Bass duplicates kick more than 40%
+overdrive-332.band.json: candidate / Duration outside 90–180 seconds
+overdrive-332.band.json: candidate / Right hand average below 12 notes per bar
+overdrive-332.band.json: candidate / Bass duplicates kick more than 40%
+PASS: 6 scores; 7911 notes; 94 gestures

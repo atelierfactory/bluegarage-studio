@@ -1,0 +1,14 @@
+(node:67118) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+--import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("./tools/band-node-loader.mjs", pathToFileURL("./"));'
+(Use `node --trace-warnings ...` to show where the warning was created)
+entertainer.mid: onset 0, motion 0, prep 0, fps 0/0/0/0
+fur_Elise_WoO59.mid: onset 0, motion 0, prep 0, fps 0/0/0/0
+debussy_Ste_Bergamesq_Clair.mid: onset 0, motion 0, prep 0, fps 0/0/0/0
+TroisNouvellesEtudes_Chopin_n1.mid: onset 0, motion 0, prep 0, fps 0/0/0/0
+op-10-12-wfi.mid: onset 0, motion 0, prep 0, fps 0/0/0/0
+matsuri-overdrive.vesper.json: onset 0, motion 0, prep 0, fps 0/0/0/0
+KV331_3_RondoAllaTurca.mid: onset 0, motion 0, prep 0, fps 0/0/0/0
+chopin_fantaisie-impromptu.mid: onset 0, motion 0, prep 0, fps 0/0/0/0
+chopin_valse_op64_no1.mid: onset 0, motion 0, prep 0, fps 0/0/0/0
+gymnopedie_1.mid: onset 0, motion 0, prep 0, fps 0/0/0/0
+pathetique-2.mid: onset 0, motion 0, prep 0, fps 0/0/0/0

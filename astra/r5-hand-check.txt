@@ -1,0 +1,12 @@
+(node:34423) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+--import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("./tools/band-node-loader.mjs", pathToFileURL("./"));'
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "checks": 498150,
+  "frames": 1845,
+  "meanAnimationMs": 5.420338056368562,
+  "minimumFingerClearanceMm": 1.8842071237000804,
+  "maximumContactErrorMm": 1.538901185661685,
+  "failures": 0,
+  "examples": []
+}

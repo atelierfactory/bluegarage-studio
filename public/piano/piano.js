@@ -20,6 +20,7 @@ lib.configureLibrary("vesper"); // ピアノ専用の保管庫 (STUDIO とは別
 import { PianoStage } from "./scene.js";
 import { parseMidi } from "../js/midiread.js";
 import { autoFinger } from "../js/fingering.js";
+import { applyPianoBalance } from "./loudness.js";
 import { DEFAULT_BANK, Improviser, buildJamBankRequest } from "./jam.js";
 
 const $ = (s) => document.querySelector(s);
@@ -73,25 +74,40 @@ on("song", () => { syncTransportFields(); setTitleUi(); const tr = selectedTrack
 
 /* ─────────── stage (VESPER) — 常時表示 ─────────── */
 const stage = new PianoStage($("#stage-canvas"));
+let energyTable=null, frozenShot=false, shotRevision=0, shotRestore=null, loadRevision=0, booting=true;
+let bootShotPending=new URLSearchParams(location.search).has("shot");
+window.pianoShotStatus={state:"loading"};
+function balancePiano() { if(energyTable&&!state.playing)window.pianoLoudness=applyPianoBalance(state.song,energyTable); }
+on("song",()=>{if(frozenShot)window.pianoShotEnd();balancePiano();});on("notes",()=>{if(frozenShot)window.pianoShotEnd();balancePiano();});
 window.vesperStage = stage; window.vesperRoll = proll;
 { const d = document.createElement("div"); d.className = "divider"; $("#stage").appendChild(d); }
-let lastFrame = performance.now();
+let lastFrame = performance.now(); let lastCloseMode=null, lastCloseTarget=null;
 function frame(now) {
   requestAnimationFrame(frame);
+  if(booting||bootShotPending)return;
   const cw = stage.canvas.clientWidth, ch = stage.canvas.clientHeight;
   if (cw > 0 && ch > 0 && (Math.abs(cw - stage.w) > 1 || Math.abs(ch - stage.h) > 1)) stage._resize();
-  const dt = Math.min(0.05, (now - lastFrame) / 1000); lastFrame = now;
+  if(frozenShot){if(stage.needsRender){stage.poseAt(state.playheadBeat,b=>beatToSec(b));stage.render();}return;}
+  if(stage.frameRate && now-lastFrame<1000/stage.frameRate-.2)return;
+  const dt = Math.max(0, (now - lastFrame) / 1000); lastFrame = now;
   const beat = audio.currentBeat();
   stage.update(beat, (b) => beatToSec(b), dt, state.playing);
   stage.render();
+  if(stage.closeMode!==lastCloseMode||stage.closeTarget!==lastCloseTarget){ // 変わったときだけ画面の文字を触る (毎コマ触ると重い)
+    lastCloseMode=stage.closeMode; lastCloseTarget=stage.closeTarget;
+    document.querySelectorAll(".cbtn[data-close]").forEach(b=>b.classList.toggle("on",b.dataset.close===stage.closeMode));
+    const cameraNames={left:"左手",right:"右手",both:"両手",pedal:"ペダル",manual:"手動"};
+    $("#stage-label-hands").textContent=cameraNames[stage.closeTarget]??"指先";
+  }
   const ts = state.song.timeSig;
   $("#stage-info").textContent = state.playing ? `bar ${Math.floor(beat / ts) + 1} · ♩=${Math.round(tempoAt(beat))}` : "";
 }
 requestAnimationFrame(frame);
-document.querySelectorAll(".vbtn[data-view]").forEach((b) => b.addEventListener("click", () => { stage.setView(b.dataset.view); document.querySelectorAll(".vbtn[data-view]").forEach((x) => x.classList.toggle("on", x === b)); }));
+document.querySelectorAll(".vbtn[data-view]").forEach((b) => b.addEventListener("click", () => { window.pianoShotEnd();stage.setView(b.dataset.view); document.querySelectorAll(".vbtn[data-view]").forEach((x) => x.classList.toggle("on", x === b)); }));
+document.querySelectorAll(".cbtn[data-close]").forEach(b=>b.addEventListener("click",()=>{window.pianoShotEnd();stage.setClose(b.dataset.close);}));
 function setFullscreen(on) { document.body.classList.toggle("stage-full", on); stage.setLayout(on ? "side" : "stack"); $("#btn-fullscreen").classList.toggle("on", on); }
-$("#btn-fullscreen").addEventListener("click", () => setFullscreen(!document.body.classList.contains("stage-full")));
-window.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.body.classList.contains("stage-full")) setFullscreen(false); });
+$("#btn-fullscreen").addEventListener("click", () => { if(frozenShot){window.pianoShotEnd();return;}setFullscreen(!document.body.classList.contains("stage-full")); });
+window.addEventListener("keydown", (e) => { if (e.key === "Escape") { window.pianoShotEnd();if(document.body.classList.contains("stage-full"))setFullscreen(false); } });
 
 /* ─────────── transport ─────────── */
 function syncTransportFields() { $("#inp-tempo").value = state.song.tempo; $("#inp-timesig").value = String(state.song.timeSig === 3 ? 3 : state.song.timeSig === 6 ? 6 : 4); $("#inp-key").value = state.song.key; $("#inp-master").value = state.song.master.volume; }
@@ -101,14 +117,15 @@ $("#inp-key").addEventListener("change", (e) => { state.song.key = e.target.valu
 $("#inp-master").addEventListener("input", (e) => audio.setMasterVolume(parseFloat(e.target.value)));
 const btnPlay = $("#btn-play");
 async function play(fromBeat = null) {
-  pianoTrack();
+  window.pianoShotEnd();balancePiano();pianoTrack();
+  stage.poseAt(fromBeat ?? state.playheadBeat, b => beatToSec(b));
   try { await audio.play(fromBeat, (m) => (m ? showLoader(m) : hideLoader())); }
   catch (err) { hideLoader(); console.error(err); toast(err.message, true); }
 }
 async function togglePlay() { if (state.playing) audio.stop(); else await play(); }
 btnPlay.addEventListener("click", togglePlay);
-$("#btn-stop").addEventListener("click", () => audio.stop(true));
-$("#btn-rew").addEventListener("click", () => { proll.resetFollow(); audio.seek(0); });
+$("#btn-stop").addEventListener("click", () => { window.pianoShotEnd();audio.stop(true); });
+$("#btn-rew").addEventListener("click", () => { window.pianoShotEnd();proll.resetFollow(); audio.seek(0); });
 $("#btn-loop").addEventListener("click", (e) => { state.loop = !state.loop; e.currentTarget.classList.toggle("active", state.loop); if (state.playing) { audio.stop(); audio.play(); } });
 $("#btn-met").addEventListener("click", () => { state.metronome = !state.metronome; $("#btn-met").classList.toggle("active", state.metronome); if (state.playing) { audio.stop(); audio.play(); } });
 on("transport", () => { if (state.playing) proll.resetFollow(); btnPlay.textContent = state.playing ? "❚❚" : "▶"; btnPlay.classList.toggle("active", state.playing); if (!state.playing && jam) jamStop(); });
@@ -128,6 +145,7 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "Space") { e.preventDefault(); togglePlay(); return; }
   if (e.key === "Home") { proll.resetFollow(); audio.seek(0); }
   if (e.key === "m" && !e.metaKey && !e.ctrlKey) $("#btn-met").click();
+  if(!proll.canEdit())return;
   if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
   if ((e.metaKey || e.ctrlKey) && (e.key === "Z" || (e.shiftKey && e.key === "z"))) { e.preventDefault(); redo(); }
   const tr = selectedTrack(); if (!tr || !proll.selection.size) return;
@@ -163,9 +181,10 @@ $("#inp-import-json").addEventListener("change", async (e) => { const f = e.targ
 
 /* ─────────── MIDI 読み込み・同梱の名曲 ─────────── */
 function loadMidiIntoSong(buffer, title, meta = {}) {
+  window.pianoShotEnd();if(state.playing)audio.stop();
   const m = parseMidi(buffer);
   if (!m.notes.length) throw new Error("音符が見つかりません");
-  const notes = autoFinger(m.notes.filter((n) => n.p >= 21 && n.p <= 108).map((n) => ({ p: n.p, s: +n.s.toFixed(4), d: +Math.max(0.05, n.d).toFixed(4), v: Math.max(1, Math.min(127, n.v)), track: n.track })), { tracks: m.tracks });
+  const notes = autoFinger(m.notes.filter((n) => n.p >= 21 && n.p <= 108).map((n) => ({ p: n.p, s: +n.s.toFixed(4), d: +Math.max(0.05, n.d).toFixed(4), v: Math.max(1, Math.min(127, n.v)), track: n.track })), { tracks: m.tracks, tempo: Math.round(m.tempo) });
   const song = pianoSong();
   song.title = title; song.tempo = Math.round(m.tempo);
   const ts = m.timeSig.den === 8 ? (m.timeSig.num === 6 ? 6 : 3) : m.timeSig.num; song.timeSig = [3, 4, 6].includes(ts) ? ts : 4;
@@ -186,18 +205,22 @@ $("#inp-import-midi").addEventListener("change", async (e) => { const f = e.targ
 let repertoireCache = null;
 // 公開サイトは途中に CDN (CloudFront) が挟まり、古い一覧を最大 10 分返す。毎回違う番号を付けて必ず新しい物を取る (小さいファイルなので毎回でよい)
 async function listRepertoire() { if (repertoireCache) return repertoireCache; try { const r = await fetch(`repertoire/index.json?v=${Date.now()}`, { cache: "no-cache" }); repertoireCache = r.ok ? await r.json() : []; } catch { repertoireCache = []; } return repertoireCache; }
-async function playRepertoire(item) {
+async function playRepertoire(item,revision=++loadRevision) {
+  window.pianoShotEnd();
+  if(state.playing)audio.stop();
   if (item.perf) {
     // Fable / Opus が演奏解釈済み (強弱・間・指・ペダル入り) の完成データ
     const r = await fetch(`repertoire/${item.perf}?v=${Date.now()}`, { cache: "no-cache" }); if (!r.ok) throw new Error("演奏データが読めません");
     const data = await r.json();
+    if(revision!==loadRevision)return null;
     if (state.playing) audio.stop();
     data.song.kind = "repertoire";
     state.songId = lib.newId(); resetSong(data.song); pianoTrack(); emit("selection");
     return `「${data.song.title}」(${pianoTrack().notes.length}音、${totalBars()}小節) ${item.perfBy ?? ""} の演奏解釈`;
   }
   const r = await fetch(`repertoire/${item.file}`); if (!r.ok) throw new Error("楽譜が読めません");
-  return loadMidiIntoSong(await r.arrayBuffer(), `${item.title} — ${item.composer}`, { credit: `${item.license} · ${item.source}`, piece: { title: item.title, composer: item.composer, year: item.year, note: item.note ?? "" }, kind: "repertoire" });
+  const buffer=await r.arrayBuffer();if(revision!==loadRevision)return null;
+  return loadMidiIntoSong(buffer, `${item.title} — ${item.composer}`, { credit: `${item.license} · ${item.source}`, piece: { title: item.title, composer: item.composer, year: item.year, note: item.note ?? "" }, kind: "repertoire" });
 }
 
 /* ─────────── 演奏解釈: 楽譜はそのまま、弾き方 (強弱・間・切り方・手・指・ペダル) を Claude が決める ─────────── */
@@ -279,7 +302,7 @@ async function renderSongs() {
   const el = $("#lib-list"); el.innerHTML = "";
   const head = (txt) => { const h = document.createElement("div"); h.className = "lib-head"; h.textContent = txt; el.appendChild(h); };
   head("同梱の曲 (著作権切れの名曲 = Mutopia Project の Public Domain 版、と このアプリで作ったオリジナル曲)");
-  for (const it of await listRepertoire()) el.appendChild(row(it.title, `${it.composer} · ${it.year} · ${it.license}`, "選択", async () => { try { status(await playRepertoire(it) + "。▶ で再生", "lit"); dlg.close(); audio.seek(0); } catch (err) { toast(err.message, true); } }));
+  for (const it of await listRepertoire()) el.appendChild(row(it.title, `${it.composer} · ${it.year} · ${it.license}`, "選択", async () => { try { const message=await playRepertoire(it);if(message===null)return;status(message + "。▶ で再生", "lit"); dlg.close(); audio.seek(0); } catch (err) { toast(err.message, true); } }));
   const all = await lib.listSongs();
   const groups = [["作った曲 (作曲したもの)", all.filter((m) => m.kind === "composed")], ["読み込んだ曲 (自分の MIDI / JSON)", all.filter((m) => m.kind === "imported")]];
   for (const [title, list] of groups) {
@@ -513,21 +536,70 @@ $("#btn-go").addEventListener("click", async () => {
 $("#btn-cancel").addEventListener("click", () => { cancelFlag = true; if (jam) jamStop(); else status("止めています…"); });
 $("#inp-theme").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#btn-go").click(); });
 
+/* ─────────── repeatable, silent capture ─────────── */
+window.pianoShotEnd=()=>{
+  shotRevision++;bootShotPending=false;
+  if(frozenShot){
+    frozenShot=false;document.body.classList.remove("piano-shot");
+    if(shotRestore){
+      const s=shotRestore;shotRestore=null;setFullscreen(s.fullscreen);
+      stage.view=s.view;Object.assign(stage.orbit,s.orbit);stage.orbit.target=s.orbit.target.clone();
+      stage.closeMode=s.closeMode;stage.closeTarget=s.closeTarget;stage._closePos.copy(s.pos);stage._closeLook.copy(s.look);
+    }
+    stage.setShot(null);
+  }
+  window.pianoShotStatus={state:"idle"};delete document.body.dataset.pianoShot;
+  lastFrame=performance.now();
+};
+window.pianoLoad=async file=>{
+  const revision=++loadRevision;
+  const item=(await listRepertoire()).find(it=>it.file===file||it.perf===file);
+  if(!item)throw new Error(`同梱曲が見つかりません: ${file}`);
+  if(revision!==loadRevision)return {cancelled:true};
+  const message=await playRepertoire(item,revision);if(revision!==loadRevision||message===null)return {cancelled:true};audio.seek(0);balancePiano();return message;
+};
+window.pianoShot=(options={})=>(window.pianoShotReady=captureShot(options));
+async function captureShot({view="full",beat=state.playheadBeat}={}) {
+  if(running)throw new Error("作曲・即興中は撮影できません");
+  if(!["full","wide","side","top","eye","left","right","both","keys","pedal"].includes(view))throw new Error("撮影の向きが不正です");
+  if(!Number.isFinite(+beat))throw new Error("撮影の拍は数で指定してください");
+  const revision=++shotRevision,started=performance.now(),song=state.song;
+  if(!frozenShot)shotRestore={fullscreen:document.body.classList.contains("stage-full"),view:stage.view,orbit:{...stage.orbit,target:stage.orbit.target.clone()},closeMode:stage.closeMode,closeTarget:stage.closeTarget,pos:stage._closePos.clone(),look:stage._closeLook.clone()};
+  audio.stop();beat=clamp(+beat,0,songEndBeat());audio.seek(beat);
+  frozenShot=true;bootShotPending=false;setFullscreen(true);document.body.classList.add("piano-shot");
+  window.pianoShotStatus={state:"posing",view,beat};document.body.dataset.pianoShot="posing";
+  try {
+    await document.fonts.ready;
+    if(revision!==shotRevision||song!==state.song)return {cancelled:true};
+    stage._resize();stage.setShot(view);stage.poseAt(beat,b=>beatToSec(b));stage.render();
+    window.pianoShotStatus={state:"ready",view,beat,ms:Math.round(performance.now()-started)};
+    document.body.dataset.pianoShot="ready";
+    return {...window.pianoShotStatus,hands:structuredClone(stage.handState),camera:stage.cameraInfo};
+  }catch(error){if(revision===shotRevision){window.pianoShotStatus={state:"error",view,beat,error:error.message};document.body.dataset.pianoShot="error";}throw error;}
+}
+window.addEventListener("pagehide",()=>audio.releaseSongEngines());
+
 /* ─────────── settings / boot ─────────── */
 const settingsUi = initSettings({ onLangChange: () => applyDom(), toast });
 async function boot() {
+  const query=new URLSearchParams(location.search),requested=query.get("song");
+  const response=await fetch("sample-energy.json");if(!response.ok)throw new Error("音量の表が読めません");energyTable=await response.json();
   // v4: 一度だけ、以前の「開いていた曲」を捨てる (即興や検証用の曲が残らないように)
   let hasSaved = false;
   try { if (!localStorage.getItem("vesper:reset:v4")) { localStorage.removeItem("bluegarage.project.v1"); localStorage.setItem("vesper:reset:v4", "1"); } else hasSaved = loadLocal(); } catch { hasSaved = loadLocal(); }
-  if (!hasSaved || !state.song.tracks.some((x) => x.instrument === "piano") || !SAVE_KINDS.has(state.song.kind)) {
+  if (requested) { await window.pianoLoad(requested); }
+  else if (!hasSaved || !state.song.tracks.some((x) => x.instrument === "piano") || !SAVE_KINDS.has(state.song.kind)) {
     // 何も無ければ、同梱の名曲の 1 曲目 (エンターテイナー) を開いておく
     state.songId = lib.newId(); resetSong(pianoSong());
     try { const list = await listRepertoire(); if (list[0]) await playRepertoire(list[0]); } catch {}
   }
   pianoTrack();
   syncTransportFields(); setTitleUi(); emit("song"); emit("selection");
-  const tr = await resolveTransport();
-  status(tr === "none" ? "API キーが未設定です (⚙ から入れてください)" : "「曲を選ぶ」で曲を選ぶか、即興・作曲でお題を入れてください");
+  status(`「${state.song.title}」を開きました。▶ で再生できます`,"lit");
   if (saveable()) lib.saveSong(ensureSongId(), state.song).catch(() => {});
+  if(query.has("shot"))await window.pianoShot({view:query.get("shot"),beat:query.has("beat")?Number(query.get("beat")):0});
+  else window.pianoShotStatus={state:"idle"};
+  bootShotPending=false;booting=false;
+  return {title:state.song.title,loudness:window.pianoLoudness};
 }
-boot();
+window.pianoReady=boot().catch(error=>{booting=false;bootShotPending=false;window.pianoShotStatus={state:"error",error:error.message};document.body.dataset.pianoShot="error";status(`曲を開けませんでした: ${error.message}`);console.error(error);return {error:error.message};});

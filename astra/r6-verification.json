@@ -1,0 +1,127 @@
+{
+  "syntax": [
+    {
+      "file": "public/band/knob-motion.js",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "file": "public/band/scene.js",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "file": "public/band/hardware.js",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "file": "tools/band-check.mjs",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "file": "tools/make-band-repertoire.mjs",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "file": "tools/band-page-check.mjs",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "file": "tools/band-hand-check.mjs",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "file": "tools/band-visual-check.mjs",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "file": "tools/band-knob-check.mjs",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "file": "tools/band-repertoire-check.mjs",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "protectedChecks": [
+    {
+      "file": "public/band/prompts.js",
+      "unchanged": true,
+      "sha256": "9689830486da691a660c383ab51d70e41879e73cfc00796b605143f53daa4139"
+    },
+    {
+      "file": "public/band/critic.js",
+      "unchanged": true,
+      "sha256": "4cfbad62cbf85036d0af1af9d6c722001d188d5735aabec7c166fe6a852e47c5"
+    },
+    {
+      "file": "public/js/claude.js",
+      "unchanged": true,
+      "sha256": "b282193675d018baf155fba0a6f5b2be338275529a6d4a9317c64ec209af2861"
+    },
+    {
+      "file": "public/js/api-schema.js",
+      "unchanged": true,
+      "sha256": "5b8c4638779c91bf359a0da61887ee7c3665144eedfc872cfc26ac28e5ff4881"
+    },
+    {
+      "file": "public/piano/scene.js",
+      "unchanged": true,
+      "sha256": "e77147fd853ff4c2fac3eec91aafef54a4a9130a8e3525463f2d9f782a3d88c0"
+    },
+    {
+      "file": "public/band/repertoire/copper-hinge.band.json",
+      "unchanged": true,
+      "sha256": "8fea87a4155e89eb08fe2e37942d055caad0f6fe112b60b8c577c22581a2c8a8"
+    },
+    {
+      "file": "public/band/repertoire/glass-current.band.json",
+      "unchanged": true,
+      "sha256": "3d4dd4dc4ada1ca21d15644e3a6b1f8b14aef512680cae7fd1d7343f3289ca12"
+    },
+    {
+      "file": "public/band/repertoire/hayate-cyber-sakura.band.json",
+      "unchanged": true,
+      "sha256": "433c2385ffaee9308b8b06449abec4901bb025aa3870c00184d6cd69151391e8"
+    },
+    {
+      "file": "public/band/repertoire/index.json",
+      "unchanged": true,
+      "sha256": "7072d626ce8cdf463c4b7ca3b5d2ec844ff05be5e0243ea015f73b95fa955185"
+    },
+    {
+      "file": "public/band/repertoire/neon-circuit.band.json",
+      "unchanged": true,
+      "sha256": "8c651babfa5959d5f09947ad9c236370068dbd48444c825f96331f02234b3fbf"
+    },
+    {
+      "file": "public/band/repertoire/overdrive-332.band.json",
+      "unchanged": true,
+      "sha256": "4ba242921ebe78f6de58fd82b0cec600b3da91c0a8b5010edafc4c84211f658c"
+    },
+    {
+      "file": "public/band/repertoire/porcelain-tide.band.json",
+      "unchanged": true,
+      "sha256": "8232551bba500c41fdc417d1e69fd3b4e824328c26a4e1a722841afd0b48e91f"
+    },
+    {
+      "file": "compose",
+      "unchanged": true,
+      "sha256": "d80915d38dd1098d1b033bb854ff1260fcea7682570725b08e1a34482efca332"
+    },
+    {
+      "file": "handoffPrefix",
+      "unchanged": true,
+      "sha256": "dd12f4e3ac0fd57a524cd335f6e2deeb7d26b33447646737d60c836ca988595c"
+    }
+  ],
+  "passed": true
+}

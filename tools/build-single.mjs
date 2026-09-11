@@ -36,6 +36,7 @@ vfs["samples/piano/index.json"] = { t: "application/json", s: JSON.stringify(sli
 for (const u of sampleUrls) vfs[u] = { t: "audio/ogg", b: b64(u) };
 vfs["repertoire/index.json"] = { t: "application/json", s: JSON.stringify([item]) };
 vfs[`repertoire/${perfFile}`] = { t: "application/json", s: JSON.stringify(perf) };
+vfs["sample-energy.json"] = { t: "application/json", s: rd("piano/sample-energy.json").toString() };
 vfs["banks/index.json"] = { t: "application/json", s: "[]" };
 
 // 3. JS を 1 本に (three.js は "three" の別名、audio.js の音源の場所は仮の住所に)
@@ -71,7 +72,7 @@ const loader = `
   const orig = window.fetch.bind(window);
   window.fetch = (input, init) => {
     const url = typeof input === "string" ? input : input?.url ?? String(input);
-    const key = keys.find((k) => url === k || url.endsWith("/" + k));
+    const key = keys.find((k) => url.split(/[?#]/)[0] === k || url.split(/[?#]/)[0].endsWith("/" + k));
     if (!key) return orig(input, init).catch(() => new Response("", { status: 404 }));
     const e = VFS[key];
     const body = e.s != null ? e.s : bytesOf(e.b);

@@ -195,7 +195,7 @@ async function makeDrums(track = {}) {
 
 /* ─────────── melodic instrument factory ─────────── */
 export function patchOf(track) { return normalizePatch(track.patch ?? presetFor(track.instrument)); }
-const patchKeyOf = (track) => (track.instrument === "drums" ? JSON.stringify(track.drumSampleGains??{}) : track.synth2 ? "v2:" + JSON.stringify(track.synth2) : SYNTH_INSTRUMENTS.has(track.instrument) ? JSON.stringify(patchOf(track)) : "");
+const patchKeyOf = (track) => (track.instrument === "drums" ? JSON.stringify(track.drumSampleGains??{}) : track.synth2 ? "v2:" + JSON.stringify(track.synth2) : SYNTH_INSTRUMENTS.has(track.instrument) ? JSON.stringify(patchOf(track)) : track.instrument === "piano" ? JSON.stringify(track.pianoPlayback ?? null) : "");
 
 async function makeMelodic(track) {
   const instrument = track.instrument;
@@ -214,7 +214,7 @@ async function makeMelodic(track) {
     const sfz = await loadSfz(instrument);
     if (sfz) {
       const ctx = rawCtx();
-      const out = sfz.createOutput(ctx);
+      const out = sfz.createOutput(ctx, { velocityTracking: instrument === "piano" ? track.pianoPlayback?.velocityTracking ?? null : null });
       const extra = [];
       let tail = out;
       if (instrument.startsWith("guitar-electric")) {

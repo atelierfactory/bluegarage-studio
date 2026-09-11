@@ -128,3 +128,43 @@ body.stage-full #stage-title { font-size: 18px; }
 body.piano-app .gbtn.tiny { white-space: nowrap; }
 body.piano-app .transport { flex-wrap: nowrap; }
 body.piano-app #topbar { gap: 10px; }
+
+#stage-close { position:absolute; left:10px; bottom:10px; display:flex; gap:4px; z-index:4; }
+body.piano-shot .divider, body.piano-shot #stage-close, body.piano-shot #stage-label-hands { display:none; }
+
+/* Main-view controls stay in the main image; close controls stay in the close image. */
+#stage-tools { bottom:calc(42% + 10px); }
+body.stage-full #stage-close { left:calc(60% + 14px); bottom:14px; }
+body.piano-shot #stage-tools { bottom:14px; }
+
+@media (max-width: 699px) {
+  body.piano-app #topbar { flex-wrap:wrap; padding:7px 10px; gap:7px; flex-shrink:0; }
+  body.piano-app .logo { font-size:22px; }
+  body.piano-app .logo-sub { font-size:7px; }
+  body.piano-app .topbar-right { flex:1 1 100%; justify-content:space-between; min-width:0; }
+  body.piano-app .transport { order:3; flex:1 1 100%; display:grid; grid-template-columns:repeat(5,36px) minmax(64px,1fr); gap:4px; }
+  body.piano-app .transport .tbtn { width:36px; height:32px; }
+  body.piano-app .transport .lcd { grid-column:1/-1; grid-row:2; min-width:0; padding:3px 8px; font-size:12px; }
+  body.piano-app .transport .lcd-time { font-size:12px; margin-left:auto; }
+  body.piano-app .transport > .tfield { grid-column:6; grid-row:1; flex-direction:row; align-items:center; gap:4px; }
+  body.piano-app .transport > .tfield input { min-width:0; width:100%; padding:3px; }
+  body.piano-app #workspace { flex-direction:column; overflow-y:auto; }
+  body.piano-app #aipanel { order:0; width:100%; min-width:0; min-height:270px; flex:1 0 48%; border-left:0; border-bottom:1px solid #333; }
+  body.piano-app #center { order:1; flex:1 0 260px; min-height:260px; }
+  body.piano-app #proll-wrap { min-height:110px; }
+  body.piano-app #proll-head .song-title { max-width:100%; font-size:12px; }
+  #prompt-bar { flex-wrap:wrap; padding:6px 8px; gap:6px; }
+  #prompt-bar .mtab { padding:7px 8px; font-size:11px; }
+  #prompt-bar #btn-songs { padding:0 10px; }
+  #prompt-bar #play-hint { flex:1 1 100%; font-size:11px; }
+  #prompt-bar #inp-theme { min-width:0; flex:1 1 170px; }
+  #stage-title, body.stage-full #stage-title { font-size:12px; letter-spacing:1px; max-width:85%; overflow-wrap:anywhere; }
+  #stage-info { font-size:9px; }
+  body.stage-full #aipanel { min-height:0; width:100%; }
+  body.stage-full:not(.piano-shot) #stage .divider { top:58%; bottom:auto; left:0; right:0; width:auto; height:1px; }
+  body.stage-full:not(.piano-shot) #stage-tools { left:10px; bottom:calc(42% + 10px); }
+  body.stage-full #stage-close { left:10px; bottom:10px; }
+  body.piano-app dialog, body.piano-app dialog.wide { min-width:0; width:calc(100% - 24px); max-width:calc(100% - 24px); padding:14px; }
+  body.piano-app .lib-row { grid-template-columns:minmax(0,1fr) auto; gap:6px; padding:8px; }
+  body.piano-app .lib-row .lib-title, body.piano-app .lib-row .lib-meta { overflow-wrap:anywhere; }
+}

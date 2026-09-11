@@ -14,3 +14,5 @@ proxy/.wrangler/
 
 # GPT-6 Astra とのやりとりの記録（大きい）
 astra/logs/
+
+astra/shots/

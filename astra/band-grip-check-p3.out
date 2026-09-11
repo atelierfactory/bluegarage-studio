@@ -1,0 +1,132 @@
+{
+  "rows": [
+    {
+      "file": "glass-current.band.json",
+      "attacks": 482,
+      "frames": 6560,
+      "minDorsalY": 0.9817,
+      "maxWristBend": 5.728,
+      "minStickAngle": 64.7104,
+      "maxStickAngle": 66.061,
+      "maxTipErrorMm": 0,
+      "maxPadGapMm": 8.2553,
+      "maxGripGapMm": 1.7485,
+      "minDownwardAngle": 4.7827,
+      "byDrum": {
+        "cr": 48,
+        "hh": 204,
+        "sn": 166,
+        "t1": 23,
+        "t2": 23,
+        "t3": 18
+      }
+    },
+    {
+      "file": "copper-hinge.band.json",
+      "attacks": 391,
+      "frames": 7243,
+      "minDorsalY": 0.9817,
+      "maxWristBend": 5.7176,
+      "minStickAngle": 64.7097,
+      "maxStickAngle": 66.0592,
+      "maxTipErrorMm": 0,
+      "maxPadGapMm": 8.2553,
+      "maxGripGapMm": 1.7485,
+      "minDownwardAngle": 4.7918,
+      "byDrum": {
+        "cr": 47,
+        "hh": 227,
+        "sn": 93,
+        "t1": 10,
+        "t3": 10,
+        "t2": 4
+      }
+    },
+    {
+      "file": "porcelain-tide.band.json",
+      "attacks": 400,
+      "frames": 6832,
+      "minDorsalY": 0.9817,
+      "maxWristBend": 5.7241,
+      "minStickAngle": 64.7104,
+      "maxStickAngle": 66.0603,
+      "maxTipErrorMm": 0,
+      "maxPadGapMm": 8.2553,
+      "maxGripGapMm": 1.7485,
+      "minDownwardAngle": 4.8456,
+      "byDrum": {
+        "cr": 48,
+        "hh": 153,
+        "sn": 92,
+        "t1": 66,
+        "t2": 34,
+        "t3": 7
+      }
+    },
+    {
+      "file": "hayate-cyber-sakura.band.json",
+      "attacks": 244,
+      "frames": 3342,
+      "minDorsalY": 0.9809,
+      "maxWristBend": 5.7296,
+      "minStickAngle": 64.6542,
+      "maxStickAngle": 66.0613,
+      "maxTipErrorMm": 0,
+      "maxPadGapMm": 8.2553,
+      "maxGripGapMm": 1.7485,
+      "minDownwardAngle": 4.7805,
+      "byDrum": {
+        "hh": 99,
+        "sn": 75,
+        "cr": 25,
+        "t1": 19,
+        "t2": 14,
+        "t3": 12
+      }
+    },
+    {
+      "file": "neon-circuit.band.json",
+      "attacks": 302,
+      "frames": 4225,
+      "minDorsalY": 0.9817,
+      "maxWristBend": 5.6692,
+      "minStickAngle": 64.7104,
+      "maxStickAngle": 66.0506,
+      "maxTipErrorMm": 0,
+      "maxPadGapMm": 8.2553,
+      "maxGripGapMm": 1.7485,
+      "minDownwardAngle": 4.8106,
+      "byDrum": {
+        "hh": 175,
+        "cr": 20,
+        "t1": 14,
+        "t2": 10,
+        "t3": 7,
+        "sn": 76
+      }
+    },
+    {
+      "file": "overdrive-332.band.json",
+      "attacks": 199,
+      "frames": 3197,
+      "minDorsalY": 0.9809,
+      "maxWristBend": 5.7296,
+      "minStickAngle": 64.6542,
+      "maxStickAngle": 66.0613,
+      "maxTipErrorMm": 0,
+      "maxPadGapMm": 8.2553,
+      "maxGripGapMm": 1.7485,
+      "minDownwardAngle": 4.784,
+      "byDrum": {
+        "hh": 73,
+        "sn": 46,
+        "cr": 43,
+        "t1": 13,
+        "t2": 12,
+        "t3": 12
+      }
+    }
+  ],
+  "failures": 0,
+  "examples": []
+}

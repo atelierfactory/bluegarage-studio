@@ -1,0 +1,4 @@
+(node:36520) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+--import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("./tools/band-node-loader.mjs", pathToFileURL("./"));'
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"file":"hayate-cyber-sakura.band.json","counts":{"synth":427,"drum":244,"pedal":174,"knob":45,"kick":143,"grip":1220},"misses":5,"examples":[{"kind":"knob","param":"reverb","s":109.2,"f":1,"dist":0.0016,"surfaceGap":0.3737},{"kind":"knob","param":"reverb","s":109.2,"f":2,"dist":0.0007,"surfaceGap":0.3989},{"kind":"knob","param":"delay","s":110.6,"f":1,"dist":0.0006,"surfaceGap":0.0021},{"kind":"knob","param":"delay","s":150.85,"f":1,"dist":0.0006,"surfaceGap":0.0444},{"kind":"knob","param":"delay","s":150.85,"f":2,"dist":0,"surfaceGap":0.0445}]}

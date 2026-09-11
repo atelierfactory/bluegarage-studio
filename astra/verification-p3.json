@@ -1,0 +1,160 @@
+{
+  "hashes": {
+    "public/piano/scene.js": "621dfe5a1263e7891c8a86430402dcde2a51e43e2312e7f6e0c94385ad6c185a",
+    "public/band/scene.js": "46a7399ca4aaa9576333c3b5fcb8e2f3f880aced79ec0485211c30bd4dca610f",
+    "public/band/hardware.js": "a02f1b2a5cdd73563029a2dba29f98afc2d30217f66637b6680c748095add048",
+    "public/js/key-visual.js": "e6004b5bd4a94119c281fd94439bf754abbdc365553e031295bd15668cf78bf1",
+    "public/band/drum-grip.js": "5dae4e5bb65cff7ba4eaa1964d4ac31d46b0874b59397fcd3b868aac3f9da859",
+    "tools/key-visual-check.mjs": "5d84c2f0b86c9bdee9c158356ee9eb69e2b7859557f569917f74894f5cd79604",
+    "tools/band-grip-check.mjs": "d523508f07d6781699f8f1fd2bebb81566844faa4c55d7f00fb5722f547232c0",
+    "tools/band-geometry-preview.mjs": "5f22da744b14805d5a79d31117cf678616a933bc648c982e16e700011144b6cc",
+    "astra/verify-p3.mjs": "785cc9993bc45c08c4e2e194beeaeee6920ab0b2062b8b34e99a10de8b34d671"
+  },
+  "results": [
+    {
+      "name": "band-grip-check",
+      "exitCode": 0,
+      "seconds": 35.1,
+      "out": "astra/band-grip-check-p3.out",
+      "err": "astra/band-grip-check-p3.err"
+    },
+    {
+      "name": "band-visual-check",
+      "exitCode": 0,
+      "seconds": 5.9,
+      "out": "astra/band-visual-check-p3.out",
+      "err": "astra/band-visual-check-p3.err"
+    },
+    {
+      "name": "band-rehearse",
+      "exitCode": 0,
+      "seconds": 9.1,
+      "out": "astra/band-rehearse-p3.out",
+      "err": "astra/band-rehearse-p3.err"
+    },
+    {
+      "name": "band-hand-check",
+      "exitCode": 0,
+      "seconds": 3.1,
+      "out": "astra/band-hand-check-p3.out",
+      "err": "astra/band-hand-check-p3.err"
+    },
+    {
+      "name": "band-signal-check",
+      "exitCode": 0,
+      "seconds": 0.4,
+      "out": "astra/band-signal-check-p3.out",
+      "err": "astra/band-signal-check-p3.err"
+    },
+    {
+      "name": "band-drum-check",
+      "exitCode": 0,
+      "seconds": 1,
+      "out": "astra/band-drum-check-p3.out",
+      "err": "astra/band-drum-check-p3.err"
+    },
+    {
+      "name": "band-knob-check",
+      "exitCode": 0,
+      "seconds": 3,
+      "out": "astra/band-knob-check-p3.out",
+      "err": "astra/band-knob-check-p3.err"
+    },
+    {
+      "name": "band-repertoire-check",
+      "exitCode": 0,
+      "seconds": 0.1,
+      "out": "astra/band-repertoire-check-p3.out",
+      "err": "astra/band-repertoire-check-p3.err"
+    },
+    {
+      "name": "band-audio-check",
+      "exitCode": 1,
+      "seconds": 36.4,
+      "out": "astra/band-audio-check-p3.out",
+      "err": "astra/band-audio-check-p3.err"
+    },
+    {
+      "name": "key-visual-check",
+      "exitCode": 0,
+      "seconds": 19.5,
+      "out": "astra/key-visual-check-p3.out",
+      "err": "astra/key-visual-check-p3.err"
+    },
+    {
+      "name": "piano-fingering-check",
+      "exitCode": 0,
+      "seconds": 0.4,
+      "out": "astra/piano-fingering-check-p3.out",
+      "err": "astra/piano-fingering-check-p3.err"
+    },
+    {
+      "name": "piano-level-check",
+      "exitCode": 0,
+      "seconds": 0.6,
+      "out": "astra/piano-level-check-p3.out",
+      "err": "astra/piano-level-check-p3.err"
+    },
+    {
+      "name": "piano-camera-check",
+      "exitCode": 0,
+      "seconds": 20.7,
+      "out": "astra/piano-camera-check-p3.out",
+      "err": "astra/piano-camera-check-p3.err"
+    },
+    {
+      "name": "piano-headless",
+      "exitCode": 0,
+      "seconds": 0.1,
+      "out": "astra/piano-headless-p3.out",
+      "err": "astra/piano-headless-p3.err"
+    },
+    {
+      "name": "piano-hardware-check",
+      "exitCode": 0,
+      "seconds": 0.3,
+      "out": "astra/piano-hardware-check-p3.out",
+      "err": "astra/piano-hardware-check-p3.err"
+    },
+    {
+      "name": "band-check",
+      "exitCode": 0,
+      "seconds": 0.1,
+      "out": "astra/band-check-p3.out",
+      "err": "astra/band-check-p3.err"
+    },
+    {
+      "name": "band-regression",
+      "exitCode": 0,
+      "seconds": 0.1,
+      "out": "astra/band-regression-p3.out",
+      "err": "astra/band-regression-p3.err"
+    },
+    {
+      "name": "piano-page-check",
+      "exitCode": 0,
+      "seconds": 4,
+      "out": "astra/piano-page-check-p3.out",
+      "err": "astra/piano-page-check-p3.err"
+    },
+    {
+      "name": "band-page-check",
+      "exitCode": 0,
+      "seconds": 4.2,
+      "out": "astra/band-page-check-p3.out",
+      "err": "astra/band-page-check-p3.err"
+    },
+    {
+      "name": "piano-motion-check",
+      "exitCode": 0,
+      "seconds": 405.9,
+      "out": "astra/piano-motion-check-p3.out",
+      "err": "astra/piano-motion-check-p3.err"
+    }
+  ],
+  "protectedScoresUnchanged": true,
+  "syntaxPassed": 9,
+  "passedCommands": 19,
+  "failedCommands": 1,
+  "knownFailure": "band-audio-check: porcelain-tide dry parts differ by about 6.9 dB; existing limit 6 dB, audio and scores unchanged"
+}

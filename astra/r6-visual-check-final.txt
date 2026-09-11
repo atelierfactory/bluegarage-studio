@@ -1,0 +1,12 @@
+(node:38222) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+--import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("./tools/band-node-loader.mjs", pathToFileURL("./"));'
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"placementChecks":38,"placements":[{"label":"full@185.94","cards":1,"heights":[178]},{"label":"knob@185.94","cards":1,"heights":[178]},{"label":"synth@185.94","cards":1,"heights":[178]},{"label":"ar@185.94","cards":1,"heights":[178]},{"label":"main 960x900@185.94","cards":1,"heights":[178]},{"label":"main 600x429@185.94","cards":1,"heights":[178]},{"label":"main 390x284@185.94","cards":1,"heights":[82]},{"label":"close 640x900@185.94","cards":1,"heights":[178]},{"label":"close 600x311@185.94","cards":1,"heights":[82]},{"label":"close 390x206@185.94","cards":1,"heights":[82]},{"label":"full@189.94","cards":2,"heights":[178,178]},{"label":"knob@189.94","cards":2,"heights":[178,178]},{"label":"synth@189.94","cards":2,"heights":[178,178]},{"label":"ar@189.94","cards":2,"heights":[178,178]},{"label":"main 960x900@189.94","cards":2,"heights":[178,178]},{"label":"main 600x429@189.94","cards":2,"heights":[178,178]},{"label":"main 390x284@189.94","cards":2,"heights":[82,82]},{"label":"close 640x900@189.94","cards":1,"heights":[178]},{"label":"close 600x311@189.94","cards":2,"heights":[34,144]},{"label":"close 390x206@189.94","cards":1,"heights":[82]},{"label":"full@196","cards":1,"heights":[178]},{"label":"knob@196","cards":1,"heights":[178]},{"label":"synth@196","cards":1,"heights":[178]},{"label":"ar@196","cards":1,"heights":[178]},{"label":"main 960x900@196","cards":1,"heights":[178]},{"label":"main 600x429@196","cards":1,"heights":[178]},{"label":"main 390x284@196","cards":1,"heights":[82]},{"label":"close 640x900@196","cards":1,"heights":[178]},{"label":"close 600x311@196","cards":1,"heights":[82]},{"label":"close 390x206@196","cards":1,"heights":[82]}]}
+┌─────────┬─────────┬─────────┬───────┬────────┐
+│ (index) │ view    │ visible │ width │ height │
+├─────────┼─────────┼─────────┼───────┼────────┤
+│ 0       │ 'full'  │ '32/32' │ 105   │ 38     │
+│ 1       │ 'drums' │ '32/32' │ 202   │ 78     │
+│ 2       │ 'crash' │ '32/32' │ 481   │ 272    │
+└─────────┴─────────┴─────────┴───────┴────────┘
+PASS: 223 geometry/AR checks; contact sweep checked separately. Rendering/font aesthetics require browser review.

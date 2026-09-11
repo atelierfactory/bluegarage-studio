@@ -1,0 +1,9 @@
+(node:38219) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+--import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("./tools/band-node-loader.mjs", pathToFileURL("./"));'
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"file":"glass-current.band.json","counts":{"synth":839,"drum":482,"pedal":237,"knob":48,"kick":231,"grip":2410},"misses":0,"examples":[]}
+{"file":"copper-hinge.band.json","counts":{"synth":705,"drum":391,"pedal":248,"knob":42,"kick":157,"grip":1955},"misses":0,"examples":[]}
+{"file":"porcelain-tide.band.json","counts":{"synth":1047,"drum":400,"pedal":214,"knob":45,"kick":135,"grip":2000},"misses":0,"examples":[]}
+{"file":"hayate-cyber-sakura.band.json","counts":{"synth":427,"drum":244,"pedal":174,"knob":45,"kick":143,"grip":1220},"misses":0,"examples":[]}
+{"file":"neon-circuit.band.json","counts":{"synth":336,"drum":302,"pedal":185,"knob":60,"kick":156,"grip":1510},"misses":0,"examples":[]}
+{"file":"overdrive-332.band.json","counts":{"synth":344,"drum":199,"pedal":174,"knob":42,"kick":141,"grip":995},"misses":0,"examples":[]}

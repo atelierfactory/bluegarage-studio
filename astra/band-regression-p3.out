@@ -1,0 +1,3 @@
+[audio] ローカル音源: piano ← test piano (0 regions)
+[audio] ローカル音源: drums ← test piano (0 regions)
+PASS: 46 regression assertions (mock audio clock; actual audio.js and processor bundle)

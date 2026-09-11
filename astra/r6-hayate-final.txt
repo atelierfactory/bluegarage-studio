@@ -1,0 +1,4 @@
+(node:36914) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+--import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("./tools/band-node-loader.mjs", pathToFileURL("./"));'
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"file":"hayate-cyber-sakura.band.json","counts":{"synth":427,"drum":244,"pedal":174,"knob":45,"kick":143,"grip":1220},"misses":0,"examples":[]}

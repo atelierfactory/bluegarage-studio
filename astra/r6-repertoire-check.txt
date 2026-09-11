@@ -1,0 +1,3 @@
+(node:37085) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: 3 candidate entries and files preserved; owned-candidate collision rejects before writing. Actual repertoire untouched.

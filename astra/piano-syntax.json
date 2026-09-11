@@ -1,0 +1,43 @@
+{
+  "passed": 18,
+  "files": [
+    "public/js/fingering.js",
+    "public/js/audio.js",
+    "public/js/sampler.js",
+    "public/js/mix.js",
+    "public/piano/scene.js",
+    "public/piano/motion.js",
+    "public/piano/loudness.js",
+    "public/piano/piano.js",
+    "tools/piano-data.mjs",
+    "tools/piano-headless.mjs",
+    "tools/piano-motion-check.mjs",
+    "tools/piano-fingering-check.mjs",
+    "tools/piano-level-check.mjs",
+    "tools/piano-page-check.mjs",
+    "tools/piano-camera-check.mjs",
+    "tools/piano-sample-energy.mjs",
+    "tools/build-single.mjs",
+    "astra/shot.mjs"
+  ],
+  "hashes": {
+    "public/js/fingering.js": "fbfdbfb496ac3708c8609d254018b07fd87854310b01a435fc4ccf886eb62e8a",
+    "public/js/audio.js": "bcebeb0c4f9b1e30b8644009e347eee689dba0d18fe636112e3d561639e6fb1d",
+    "public/js/sampler.js": "48d3b1f58545fc1770042a327b2e78090d2c90a6421af6752cb103e167f2c390",
+    "public/js/mix.js": "0a23c5981e027d779918d9c0bf78f76da01e9792b6ca6ab9a8009cd64546c941",
+    "public/piano/scene.js": "def7483947e0bc36464a8a93d711e7c122cbe8054dba117e25c688bcfb765072",
+    "public/piano/motion.js": "640b76a78b8f99a1d80e6a38a5cab0ab1f602f0405eac7813c6d0d85bfa9e420",
+    "public/piano/loudness.js": "a5f56978381388a97b1f97b2dbe9d20f0d56eb858729ec58c5d3fccafc7d0180",
+    "public/piano/piano.js": "703f686d711c311dbc869369dd743fca6e93fc92d3f8bc1f0c7e2e83aa1b350a",
+    "tools/piano-data.mjs": "022a0a11f4987d2b42f5e0b699e84b3e16aa3db0cbc977c174d1364cbb601362",
+    "tools/piano-headless.mjs": "88ce2cd5589fadbf3a27597a247ce28c428366393f7585b5f1ff982d30ae8622",
+    "tools/piano-motion-check.mjs": "24c43e6bc687c31efaf8a69bed108050df6aebf0b3320e60deddf32f06263139",
+    "tools/piano-fingering-check.mjs": "766933878f13051af441883e8d503af805731c74607b67386bc4b2ed2bc8c138",
+    "tools/piano-level-check.mjs": "29454eb21603bf73e2b522024c10ef0387f9b98cefb133d313de9020aca68836",
+    "tools/piano-page-check.mjs": "fcbb6496f7850afec9e00deaf9ce6a5c0b26c4182de836ee747afc100032020b",
+    "tools/piano-camera-check.mjs": "d7ccdd3f7a6389981c25648af556239c0b44ae7d95ceaca7c6f019a9e1e8d182",
+    "tools/piano-sample-energy.mjs": "2f55bf2d2a9860001cffa2c25999d40149eb5e4ab264fa7eda4c18b37aa73fa7",
+    "tools/build-single.mjs": "89d4232e56d04e2bdb08766c9f4dc0833dae0332dba791464db1bfd8484b62fc",
+    "astra/shot.mjs": "43e2962054e45c4b3ab06aabd85e84318d96cdc56b87f4dd1dead1a796c0d37d"
+  }
+}

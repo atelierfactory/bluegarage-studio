@@ -1,0 +1,804 @@
+{
+  "sourceHashes": {
+    "public/piano/scene.js": "def7483947e0bc36464a8a93d711e7c122cbe8054dba117e25c688bcfb765072",
+    "public/piano/motion.js": "640b76a78b8f99a1d80e6a38a5cab0ab1f602f0405eac7813c6d0d85bfa9e420",
+    "public/js/fingering.js": "fbfdbfb496ac3708c8609d254018b07fd87854310b01a435fc4ccf886eb62e8a",
+    "public/js/state.js": "57461c5ba5b4fa6677121e8907ef8fa48481e8a6b01b39cea96e51f601017d2e",
+    "tools/piano-motion-check.mjs": "24c43e6bc687c31efaf8a69bed108050df6aebf0b3320e60deddf32f06263139"
+  },
+  "limits": {
+    "speed": 3,
+    "minContact": 0.012,
+    "settle": 0.006,
+    "minTravel": 0.065,
+    "maxLead": 0.48
+  },
+  "reports": [
+    {
+      "file": "entertainer.mid",
+      "title": "The Entertainer",
+      "notes": 2621,
+      "before": 816,
+      "after": 816,
+      "displayChanges": 816,
+      "preparation": {
+        "checked": 2621,
+        "misses": 0,
+        "examples": []
+      },
+      "onsets": {
+        "checked": 5242,
+        "misses": 0,
+        "maxDx": 0.00021521247819401151,
+        "maxDy": 0.0004078077925839807,
+        "maxDz": 0,
+        "examples": []
+      },
+      "fps": [
+        {
+          "fps": 60,
+          "checked": 41436,
+          "misses": 0,
+          "maxSpeed": 2.6197425889803787,
+          "positionDrift": 3.0558888752807434e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 30,
+          "checked": 20572,
+          "misses": 0,
+          "maxSpeed": 2.5764925137397743,
+          "positionDrift": 3.0558888752807434e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 20,
+          "checked": 13809,
+          "misses": 0,
+          "maxSpeed": 2.5799498052994685,
+          "positionDrift": 3.0558888752807434e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 12,
+          "checked": 8773,
+          "misses": 0,
+          "maxSpeed": 2.076538879929548,
+          "positionDrift": 4.08006961549745e-15,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        }
+      ],
+      "pathMaxSpeed": 2.6305137636762663,
+      "issues": [],
+      "failed": false,
+      "ms": 4615
+    },
+    {
+      "file": "fur_Elise_WoO59.mid",
+      "title": "Für Elise (WoO 59)",
+      "notes": 905,
+      "before": 356,
+      "after": 11,
+      "displayChanges": 11,
+      "preparation": {
+        "checked": 905,
+        "misses": 0,
+        "examples": []
+      },
+      "onsets": {
+        "checked": 1805,
+        "misses": 0,
+        "maxDx": 3.552713678800501e-15,
+        "maxDy": 1.2323475573339238e-14,
+        "maxDz": 0,
+        "examples": []
+      },
+      "fps": [
+        {
+          "fps": 60,
+          "checked": 14156,
+          "misses": 0,
+          "maxSpeed": 2.616553826452263,
+          "positionDrift": 3.6540215297975465e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 30,
+          "checked": 7091,
+          "misses": 0,
+          "maxSpeed": 2.592533344186,
+          "positionDrift": 1.6112111644872584e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 20,
+          "checked": 4752,
+          "misses": 0,
+          "maxSpeed": 2.5100325268991157,
+          "positionDrift": 3.645694857112858e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 2,
+          "examples": []
+        },
+        {
+          "fps": 12,
+          "checked": 2869,
+          "misses": 0,
+          "maxSpeed": 2.0785419606186544,
+          "positionDrift": 4.107825191113079e-15,
+          "assignmentChanges": 0,
+          "betweenFrames": 2,
+          "examples": []
+        }
+      ],
+      "pathMaxSpeed": 2.6316002195705024,
+      "issues": [],
+      "failed": false,
+      "ms": 1582
+    },
+    {
+      "file": "debussy_Ste_Bergamesq_Clair.mid",
+      "title": "Clair de Lune (Suite Bergamasque)",
+      "notes": 1468,
+      "before": 628,
+      "after": 123,
+      "displayChanges": 127,
+      "preparation": {
+        "checked": 1468,
+        "misses": 0,
+        "examples": []
+      },
+      "onsets": {
+        "checked": 2936,
+        "misses": 0,
+        "maxDx": 0.0002507347229214023,
+        "maxDy": 0.00004758178144315117,
+        "maxDz": 0,
+        "examples": []
+      },
+      "fps": [
+        {
+          "fps": 60,
+          "checked": 68041,
+          "misses": 0,
+          "maxSpeed": 2.7390910072956394,
+          "positionDrift": 0,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 30,
+          "checked": 34052,
+          "misses": 0,
+          "maxSpeed": 2.7343432315620486,
+          "positionDrift": 0,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 20,
+          "checked": 22740,
+          "misses": 0,
+          "maxSpeed": 2.7284699593842965,
+          "positionDrift": 0,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 12,
+          "checked": 13744,
+          "misses": 0,
+          "maxSpeed": 2.577835510849273,
+          "positionDrift": 0,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        }
+      ],
+      "pathMaxSpeed": 2.740683204081878,
+      "issues": [],
+      "failed": false,
+      "ms": 4965
+    },
+    {
+      "file": "TroisNouvellesEtudes_Chopin_n1.mid",
+      "title": "Trois Nouvelles Études No. 1 (F minor)",
+      "notes": 829,
+      "before": 495,
+      "after": 6,
+      "displayChanges": 6,
+      "preparation": {
+        "checked": 829,
+        "misses": 0,
+        "examples": []
+      },
+      "onsets": {
+        "checked": 1658,
+        "misses": 0,
+        "maxDx": 0.00013292539996653807,
+        "maxDy": 0.0005005107628912597,
+        "maxDz": 0,
+        "examples": []
+      },
+      "fps": [
+        {
+          "fps": 60,
+          "checked": 18050,
+          "misses": 0,
+          "maxSpeed": 2.50181888906698,
+          "positionDrift": 1.9595436384634013e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 30,
+          "checked": 9056,
+          "misses": 0,
+          "maxSpeed": 2.2358376095662753,
+          "positionDrift": 7.049916206369744e-15,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 20,
+          "checked": 6007,
+          "misses": 0,
+          "maxSpeed": 1.8505196809968347,
+          "positionDrift": 3.635980405647388e-15,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 12,
+          "checked": 3612,
+          "misses": 0,
+          "maxSpeed": 1.5127680945247655,
+          "positionDrift": 7.049916206369744e-15,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        }
+      ],
+      "pathMaxSpeed": 2.5247328446423087,
+      "issues": [],
+      "failed": false,
+      "ms": 1982
+    },
+    {
+      "file": "op-10-12-wfi.mid",
+      "title": "Étude Op. 10 No. 12 「革命」(C minor)",
+      "notes": 2082,
+      "before": 777,
+      "after": 777,
+      "displayChanges": 777,
+      "preparation": {
+        "checked": 2082,
+        "misses": 0,
+        "examples": []
+      },
+      "onsets": {
+        "checked": 3910,
+        "misses": 0,
+        "maxDx": 0.0005018722723201807,
+        "maxDy": 0.0011386212575873467,
+        "maxDz": 0,
+        "examples": []
+      },
+      "fps": [
+        {
+          "fps": 60,
+          "checked": 21976,
+          "misses": 0,
+          "maxSpeed": 2.70565932333114,
+          "positionDrift": 3.6942671144402084e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 30,
+          "checked": 11008,
+          "misses": 0,
+          "maxSpeed": 2.696007819730337,
+          "positionDrift": 3.6942671144402084e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 19,
+          "examples": []
+        },
+        {
+          "fps": 20,
+          "checked": 7381,
+          "misses": 0,
+          "maxSpeed": 2.698631137200907,
+          "positionDrift": 4.801714581503802e-15,
+          "assignmentChanges": 0,
+          "betweenFrames": 53,
+          "examples": []
+        },
+        {
+          "fps": 12,
+          "checked": 4472,
+          "misses": 0,
+          "maxSpeed": 2.619271748627626,
+          "positionDrift": 4.801714581503802e-15,
+          "assignmentChanges": 0,
+          "betweenFrames": 135,
+          "examples": []
+        }
+      ],
+      "pathMaxSpeed": 2.708949349002995,
+      "issues": [],
+      "failed": false,
+      "ms": 2519
+    },
+    {
+      "file": "matsuri-overdrive.vesper.json",
+      "title": "祭囃子オーバードライブ",
+      "notes": 1513,
+      "before": 423,
+      "after": 423,
+      "displayChanges": 422,
+      "preparation": {
+        "checked": 1513,
+        "misses": 1,
+        "examples": [
+          {
+            "i": 1473,
+            "p": 59,
+            "h": "R",
+            "f": 1,
+            "s": 144,
+            "dx": 0.12115190046580282,
+            "dy": 0.008156957776568663,
+            "dz": 0,
+            "miss": true
+          }
+        ]
+      },
+      "onsets": {
+        "checked": 2671,
+        "misses": 1,
+        "maxDx": 0.12191953694379748,
+        "maxDy": 0.011382795428354076,
+        "maxDz": 0,
+        "examples": [
+          {
+            "i": 1473,
+            "p": 59,
+            "h": "R",
+            "f": 1,
+            "s": 144,
+            "dx": 0.12191953694379748,
+            "dy": 0.011382795428354076,
+            "dz": 0,
+            "miss": true,
+            "stage": 0
+          }
+        ]
+      },
+      "fps": [
+        {
+          "fps": 60,
+          "checked": 12825,
+          "misses": 1,
+          "maxSpeed": 2.999999999999837,
+          "positionDrift": 2.1316282072803006e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 13,
+          "examples": [
+            {
+              "i": 1473,
+              "p": 59,
+              "h": "R",
+              "f": 1,
+              "s": 144,
+              "dx": 0.12191953694379754,
+              "dy": 0.011382795428354076,
+              "dz": 0,
+              "miss": true,
+              "sec": 56.11666666666667
+            }
+          ]
+        },
+        {
+          "fps": 30,
+          "checked": 6423,
+          "misses": 0,
+          "maxSpeed": 2.999999999999832,
+          "positionDrift": 2.1316282072803006e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 42,
+          "examples": []
+        },
+        {
+          "fps": 20,
+          "checked": 4266,
+          "misses": 0,
+          "maxSpeed": 2.999999999999827,
+          "positionDrift": 2.1316282072803006e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 97,
+          "examples": []
+        },
+        {
+          "fps": 12,
+          "checked": 2561,
+          "misses": 0,
+          "maxSpeed": 2.829859193067131,
+          "positionDrift": 7.549516567451064e-15,
+          "assignmentChanges": 0,
+          "betweenFrames": 218,
+          "examples": []
+        }
+      ],
+      "pathMaxSpeed": 3.0000000000024007,
+      "issues": [
+        {
+          "kind": "speed",
+          "h": "R",
+          "beat": 144,
+          "fromBeat": 143.9333,
+          "required": 9.164291815668156,
+          "available": 0.02194753246753578,
+          "metres": 0.18504290479304134,
+          "missingMs": 45.09699825458065
+        }
+      ],
+      "failed": true,
+      "ms": 1389
+    },
+    {
+      "file": "KV331_3_RondoAllaTurca.mid",
+      "title": "トルコ行進曲 (ピアノソナタ第 11 番 K.331 第 3 楽章)",
+      "notes": 1614,
+      "before": 396,
+      "after": 396,
+      "displayChanges": 396,
+      "preparation": {
+        "checked": 1614,
+        "misses": 0,
+        "examples": []
+      },
+      "onsets": {
+        "checked": 2977,
+        "misses": 0,
+        "maxDx": 0.00010011438904262981,
+        "maxDy": 0.0011649894365217683,
+        "maxDz": 0,
+        "examples": []
+      },
+      "fps": [
+        {
+          "fps": 60,
+          "checked": 14343,
+          "misses": 0,
+          "maxSpeed": 2.148020030810636,
+          "positionDrift": 1.2101430968414206e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 30,
+          "checked": 7227,
+          "misses": 0,
+          "maxSpeed": 2.13370515812528,
+          "positionDrift": 1.2101430968414206e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 48,
+          "examples": []
+        },
+        {
+          "fps": 20,
+          "checked": 4776,
+          "misses": 0,
+          "maxSpeed": 1.547337585522551,
+          "positionDrift": 6.050715484207103e-15,
+          "assignmentChanges": 0,
+          "betweenFrames": 99,
+          "examples": []
+        },
+        {
+          "fps": 12,
+          "checked": 2883,
+          "misses": 0,
+          "maxSpeed": 1.3167294670920586,
+          "positionDrift": 4.551914400963142e-15,
+          "assignmentChanges": 0,
+          "betweenFrames": 152,
+          "examples": []
+        }
+      ],
+      "pathMaxSpeed": 2.1755653378454354,
+      "issues": [],
+      "failed": false,
+      "ms": 2563
+    },
+    {
+      "file": "chopin_fantaisie-impromptu.mid",
+      "title": "幻想即興曲 (Op.66)",
+      "notes": 3014,
+      "before": 952,
+      "after": 952,
+      "displayChanges": 952,
+      "preparation": {
+        "checked": 3014,
+        "misses": 0,
+        "examples": []
+      },
+      "onsets": {
+        "checked": 5923,
+        "misses": 0,
+        "maxDx": 0.0004459651962847033,
+        "maxDy": 0.0012964910868262791,
+        "maxDz": 0,
+        "examples": []
+      },
+      "fps": [
+        {
+          "fps": 60,
+          "checked": 31197,
+          "misses": 0,
+          "maxSpeed": 2.692941414432963,
+          "positionDrift": 1.5142054277106354e-13,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 30,
+          "checked": 15576,
+          "misses": 0,
+          "maxSpeed": 2.6752498339188615,
+          "positionDrift": 1.513789094076401e-13,
+          "assignmentChanges": 0,
+          "betweenFrames": 5,
+          "examples": []
+        },
+        {
+          "fps": 20,
+          "checked": 10412,
+          "misses": 0,
+          "maxSpeed": 2.6697721182321117,
+          "positionDrift": 1.513789094076401e-13,
+          "assignmentChanges": 0,
+          "betweenFrames": 22,
+          "examples": []
+        },
+        {
+          "fps": 12,
+          "checked": 6238,
+          "misses": 0,
+          "maxSpeed": 2.599173375743461,
+          "positionDrift": 7.568945470382005e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 64,
+          "examples": []
+        }
+      ],
+      "pathMaxSpeed": 2.6949133447497546,
+      "issues": [],
+      "failed": false,
+      "ms": 8902
+    },
+    {
+      "file": "chopin_valse_op64_no1.mid",
+      "title": "子犬のワルツ (Op.64-1)",
+      "notes": 1370,
+      "before": 414,
+      "after": 414,
+      "displayChanges": 414,
+      "preparation": {
+        "checked": 1370,
+        "misses": 0,
+        "examples": []
+      },
+      "onsets": {
+        "checked": 2691,
+        "misses": 0,
+        "maxDx": 0.00006753391999539393,
+        "maxDy": 0.0009479108816801141,
+        "maxDz": 0,
+        "examples": []
+      },
+      "fps": [
+        {
+          "fps": 60,
+          "checked": 10494,
+          "misses": 0,
+          "maxSpeed": 2.6127392473391966,
+          "positionDrift": 1.8055001937966608e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 30,
+          "checked": 5285,
+          "misses": 0,
+          "maxSpeed": 2.5064762452035403,
+          "positionDrift": 1.3822276656583199e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 3,
+          "examples": []
+        },
+        {
+          "fps": 20,
+          "checked": 3519,
+          "misses": 0,
+          "maxSpeed": 2.5180006050399424,
+          "positionDrift": 5.440092820663267e-15,
+          "assignmentChanges": 0,
+          "betweenFrames": 8,
+          "examples": []
+        },
+        {
+          "fps": 12,
+          "checked": 2174,
+          "misses": 0,
+          "maxSpeed": 1.4484633387683976,
+          "positionDrift": 1.8055001937966608e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 33,
+          "examples": []
+        }
+      ],
+      "pathMaxSpeed": 2.664985209540414,
+      "issues": [],
+      "failed": false,
+      "ms": 1876
+    },
+    {
+      "file": "gymnopedie_1.mid",
+      "title": "ジムノペディ 第 1 番",
+      "notes": 282,
+      "before": 87,
+      "after": 87,
+      "displayChanges": 87,
+      "preparation": {
+        "checked": 282,
+        "misses": 0,
+        "examples": []
+      },
+      "onsets": {
+        "checked": 564,
+        "misses": 0,
+        "maxDx": 3.552713678800501e-15,
+        "maxDy": 1.1102230246251565e-14,
+        "maxDz": 0,
+        "examples": []
+      },
+      "fps": [
+        {
+          "fps": 60,
+          "checked": 30318,
+          "misses": 0,
+          "maxSpeed": 2.614002218983472,
+          "positionDrift": 0,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 30,
+          "checked": 15160,
+          "misses": 0,
+          "maxSpeed": 2.5867174936768857,
+          "positionDrift": 0,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 20,
+          "checked": 10103,
+          "misses": 0,
+          "maxSpeed": 1.9065403311436966,
+          "positionDrift": 0,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 12,
+          "checked": 6072,
+          "misses": 0,
+          "maxSpeed": 1.9229053708331476,
+          "positionDrift": 0,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        }
+      ],
+      "pathMaxSpeed": 2.6240956711393997,
+      "issues": [],
+      "failed": false,
+      "ms": 1879
+    },
+    {
+      "file": "pathetique-2.mid",
+      "title": "悲愴ソナタ 第 2 楽章 (Op.13)",
+      "notes": 1629,
+      "before": 361,
+      "after": 361,
+      "displayChanges": 361,
+      "preparation": {
+        "checked": 1629,
+        "misses": 0,
+        "examples": []
+      },
+      "onsets": {
+        "checked": 3255,
+        "misses": 0,
+        "maxDx": 3.4416913763379853e-15,
+        "maxDy": 1.2212453270876722e-14,
+        "maxDz": 0,
+        "examples": []
+      },
+      "fps": [
+        {
+          "fps": 60,
+          "checked": 43099,
+          "misses": 0,
+          "maxSpeed": 2.6020142026868194,
+          "positionDrift": 5.750955267558311e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 30,
+          "checked": 21674,
+          "misses": 0,
+          "maxSpeed": 2.5827374680132418,
+          "positionDrift": 5.437317263101704e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 0,
+          "examples": []
+        },
+        {
+          "fps": 20,
+          "checked": 14360,
+          "misses": 0,
+          "maxSpeed": 2.519696153726985,
+          "positionDrift": 5.750955267558311e-14,
+          "assignmentChanges": 0,
+          "betweenFrames": 1,
+          "examples": []
+        },
+        {
+          "fps": 12,
+          "checked": 8803,
+          "misses": 0,
+          "maxSpeed": 1.4981234297561965,
+          "positionDrift": 1.1726730697603216e-15,
+          "assignmentChanges": 0,
+          "betweenFrames": 1,
+          "examples": []
+        }
+      ],
+      "pathMaxSpeed": 2.6197762448586976,
+      "issues": [],
+      "failed": false,
+      "ms": 4098
+    }
+  ]
+}

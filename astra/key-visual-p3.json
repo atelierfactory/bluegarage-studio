@@ -1,0 +1,102 @@
+{
+  "checks": 18482,
+  "pressedSamples": 668,
+  "rows": [
+    {
+      "instrument": "piano",
+      "keys": 88,
+      "blackLuminance": 0.008829112430656715,
+      "ivoryLuminance": 0.7938436363753955,
+      "maxIndicatorAreaPercent": 0.8045425831459464
+    },
+    {
+      "instrument": "synth",
+      "keys": 37,
+      "blackLuminance": 0.001778546712688941,
+      "ivoryLuminance": 0.7938436363753955,
+      "maxIndicatorAreaPercent": 0.9112519040187604
+    },
+    {
+      "instrument": "pedals",
+      "keys": 13,
+      "blackLuminance": 0.001778546712688941,
+      "ivoryLuminance": 0.7938436363753955,
+      "maxIndicatorAreaPercent": 0.5157142832082044
+    }
+  ],
+  "visibility": [
+    {
+      "label": "piano op-10-12-wfi.mid@17.55",
+      "pitch": 75,
+      "black": true,
+      "visible": 6
+    },
+    {
+      "label": "piano debussy_Ste_Bergamesq_Clair.mid@100",
+      "pitch": 54,
+      "black": true,
+      "visible": 6
+    },
+    {
+      "label": "piano debussy_Ste_Bergamesq_Clair.mid@100",
+      "pitch": 58,
+      "black": true,
+      "visible": 4
+    },
+    {
+      "label": "piano debussy_Ste_Bergamesq_Clair.mid@100",
+      "pitch": 61,
+      "black": true,
+      "visible": 6
+    },
+    {
+      "label": "piano entertainer.mid@32",
+      "pitch": 48,
+      "black": false,
+      "visible": 6
+    },
+    {
+      "label": "piano entertainer.mid@32",
+      "pitch": 60,
+      "black": false,
+      "visible": 6
+    },
+    {
+      "label": "piano entertainer.mid@32",
+      "pitch": 76,
+      "black": false,
+      "visible": 4
+    },
+    {
+      "label": "piano entertainer.mid@32",
+      "pitch": 88,
+      "black": false,
+      "visible": 6
+    },
+    {
+      "label": "band glass@60",
+      "pitch": 61,
+      "black": true,
+      "visible": 3
+    },
+    {
+      "label": "band glass@60",
+      "pitch": 64,
+      "black": false,
+      "visible": 4
+    },
+    {
+      "label": "band glass@60",
+      "pitch": 69,
+      "black": false,
+      "visible": 6
+    },
+    {
+      "label": "band glass@60",
+      "pitch": 73,
+      "black": true,
+      "visible": 6
+    }
+  ],
+  "scope": "material/geometry/ray tests; displayed pixel colours need browser review"
+}

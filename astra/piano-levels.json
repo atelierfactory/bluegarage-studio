@@ -1,0 +1,141 @@
+{
+  "calibration": {
+    "reference": "The Entertainer, original playback, master -4 dB, measured by Claude",
+    "medianDb": -30.5,
+    "modelOffsetDb": -2.1507369254867186
+  },
+  "reports": [
+    {
+      "file": "entertainer.mid",
+      "title": "The Entertainer",
+      "gainDb": 6,
+      "velocityTracking": 0.35,
+      "targetDb": -20.963048454788247,
+      "predictedBeforeDb": -30.5,
+      "predictedMedianDb": -20.9888446454453,
+      "predictedTopDb": -18.992995928813095,
+      "curveLiftDb": 3.511155354554699,
+      "method": "sample-energy estimate, calibrated to the supplied Entertainer median; allow ±4 dB"
+    },
+    {
+      "file": "fur_Elise_WoO59.mid",
+      "title": "Für Elise (WoO 59)",
+      "gainDb": 9,
+      "velocityTracking": 0.35,
+      "targetDb": -21.76,
+      "predictedBeforeDb": -35.07925004782611,
+      "predictedMedianDb": -21.719518669107003,
+      "predictedTopDb": -18.668039675581927,
+      "curveLiftDb": 4.359731378719104,
+      "method": "sample-energy estimate, calibrated to the supplied Entertainer median; allow ±4 dB"
+    },
+    {
+      "file": "debussy_Ste_Bergamesq_Clair.mid",
+      "title": "Clair de Lune (Suite Bergamasque)",
+      "gainDb": 7,
+      "velocityTracking": 0.35,
+      "targetDb": -20.5,
+      "predictedBeforeDb": -29.72511672232177,
+      "predictedMedianDb": -20.465355558577148,
+      "predictedTopDb": -16.118748463467625,
+      "curveLiftDb": 2.2597611637446207,
+      "method": "sample-energy estimate, calibrated to the supplied Entertainer median; allow ±4 dB"
+    },
+    {
+      "file": "TroisNouvellesEtudes_Chopin_n1.mid",
+      "title": "Trois Nouvelles Études No. 1 (F minor)",
+      "gainDb": 4.7,
+      "velocityTracking": 0.35,
+      "targetDb": -20.5,
+      "predictedBeforeDb": -27.414980214837836,
+      "predictedMedianDb": -20.52949953454163,
+      "predictedTopDb": -18.516856378748958,
+      "curveLiftDb": 2.185480680296209,
+      "method": "sample-energy estimate, calibrated to the supplied Entertainer median; allow ±4 dB"
+    },
+    {
+      "file": "op-10-12-wfi.mid",
+      "title": "Étude Op. 10 No. 12 「革命」(C minor)",
+      "gainDb": 0,
+      "velocityTracking": 0.35,
+      "targetDb": -20.5,
+      "predictedBeforeDb": -21.919580127371894,
+      "predictedMedianDb": -20.400033196723214,
+      "predictedTopDb": -17.840110518735457,
+      "curveLiftDb": 1.51954693064868,
+      "method": "sample-energy estimate, calibrated to the supplied Entertainer median; allow ±4 dB"
+    },
+    {
+      "file": "matsuri-overdrive.vesper.json",
+      "title": "祭囃子オーバードライブ",
+      "gainDb": 0,
+      "velocityTracking": 0.35,
+      "targetDb": -20.5,
+      "predictedBeforeDb": -21.015757506387544,
+      "predictedMedianDb": -19.44684232527578,
+      "predictedTopDb": -16.5373001200755,
+      "curveLiftDb": 1.5689151811117625,
+      "method": "sample-energy estimate, calibrated to the supplied Entertainer median; allow ±4 dB"
+    },
+    {
+      "file": "KV331_3_RondoAllaTurca.mid",
+      "title": "トルコ行進曲 (ピアノソナタ第 11 番 K.331 第 3 楽章)",
+      "gainDb": 6.8,
+      "velocityTracking": 0.35,
+      "targetDb": -20.599312267657993,
+      "predictedBeforeDb": -31.028484894458227,
+      "predictedMedianDb": -20.617120183329842,
+      "predictedTopDb": -16.800232934066013,
+      "curveLiftDb": 3.6113647111283846,
+      "method": "sample-energy estimate, calibrated to the supplied Entertainer median; allow ±4 dB"
+    },
+    {
+      "file": "chopin_fantaisie-impromptu.mid",
+      "title": "幻想即興曲 (Op.66)",
+      "gainDb": 7.3,
+      "velocityTracking": 0.35,
+      "targetDb": -22.026745189117452,
+      "predictedBeforeDb": -34.32239484039708,
+      "predictedMedianDb": -22.052675086546962,
+      "predictedTopDb": -17.261964000860512,
+      "curveLiftDb": 4.969719753850118,
+      "method": "sample-energy estimate, calibrated to the supplied Entertainer median; allow ±4 dB"
+    },
+    {
+      "file": "chopin_valse_op64_no1.mid",
+      "title": "子犬のワルツ (Op.64-1)",
+      "gainDb": 5.8,
+      "velocityTracking": 0.35,
+      "targetDb": -21.952613138686132,
+      "predictedBeforeDb": -31.931877428816815,
+      "predictedMedianDb": -21.918600615833824,
+      "predictedTopDb": -20.180756034015005,
+      "curveLiftDb": 4.21327681298299,
+      "method": "sample-energy estimate, calibrated to the supplied Entertainer median; allow ±4 dB"
+    },
+    {
+      "file": "gymnopedie_1.mid",
+      "title": "ジムノペディ 第 1 番",
+      "gainDb": 14.8,
+      "velocityTracking": 0.35,
+      "targetDb": -24,
+      "predictedBeforeDb": -44.80036056188309,
+      "predictedMedianDb": -24.01519431694314,
+      "predictedTopDb": -19.14212052906765,
+      "curveLiftDb": 5.985166244939947,
+      "method": "sample-energy estimate, calibrated to the supplied Entertainer median; allow ±4 dB"
+    },
+    {
+      "file": "pathetique-2.mid",
+      "title": "悲愴ソナタ 第 2 楽章 (Op.13)",
+      "gainDb": 8.2,
+      "velocityTracking": 0.35,
+      "targetDb": -23.42524861878453,
+      "predictedBeforeDb": -37.041884185668714,
+      "predictedMedianDb": -23.43242473445135,
+      "predictedTopDb": -19.851551688545527,
+      "curveLiftDb": 5.409459451217366,
+      "method": "sample-energy estimate, calibrated to the supplied Entertainer median; allow ±4 dB"
+    }
+  ]
+}
