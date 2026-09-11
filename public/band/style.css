@@ -1,0 +1,112 @@
+/* ═══════════ VESPER BAND — ピアノ版の黒・白・銀に、レーン表示を足す ═══════════ */
+body.band-app #proll-wrap { flex: 1 1 55%; min-height: 120px; }
+#lanes-wrap { flex: 0 0 168px; min-height: 168px; background: #050505; border-top: 1px solid #262626; position: relative; }
+#lanes { display: block; width: 100%; height: 100%; }
+body.band-app #proll-head .dim { font-family: var(--font-mono); font-size: 10.5px; color: #8a8a8a; margin-left: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#stage-close-tools { position: absolute; right: 10px; bottom: 32px; display: flex; gap: 4px; }
+.cbtn { background: rgba(0,0,0,.6); color: #cfcfcf; border: 1px solid #3a3a3a; border-radius: 4px; font-family: var(--font-mono); font-size: 10px; padding: 3px 8px; cursor: pointer; }
+.cbtn:hover { color: #fff; border-color: #cfcfcf; }
+.cbtn.on { background: #e0b95a; color: #000; border-color: #e0b95a; }
+body.stage-full #stage-close-tools { bottom: 36px; right: 14px; }
+body.band-app .logo span { color: #e0b95a; }
+body.band-app .logo { text-shadow: none; transform: none; white-space: nowrap; }
+body.band-app .logo-sub { letter-spacing: 1.3px; }
+body.band-app #proll-head { min-height: 36px; }
+body.band-app #proll-head .song-title { flex-shrink: 0; }
+body.band-app #stage-tools { flex-wrap: wrap; right: 6px; bottom: 8px; }
+body.band-app #stage-close-tools { bottom: 45px; flex-wrap: wrap; }
+body.band-app #stage-label-hands { display: none; }
+body.band-app #stage-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; }
+body.band-app #prompt-bar { flex-wrap: wrap; }
+body.band-app #inp-theme { min-width: 180px; }
+body.band-app #stage-canvas { touch-action: none; }
+body.band-app button:focus-visible, body.band-app a:focus-visible { outline: 2px solid #e0b95a; outline-offset: 3px; }
+body.band-app button:disabled { cursor: default; opacity: .45; }
+body.band-app .lib-row > div { min-width: 0; overflow-wrap: anywhere; }
+body.band-app .lib-meta { line-height: 1.7; }
+body.band-shot #stage > :not(canvas) { display: none; }
+@media (max-width: 1200px) {
+  body.band-app #topbar { flex-wrap: wrap; }
+  body.band-app .logo-block { flex: 1; }
+  body.band-app .topbar-right { order: 1; }
+  body.band-app .transport { order: 2; flex-basis: 100%; flex-wrap: wrap; }
+  body.band-app #aipanel { min-width: 340px; width: 43%; }
+}
+@media (max-width: 900px) {
+  body.band-app { overflow-y: auto; height: 100dvh; }
+  body.band-app #workspace { flex: none; flex-direction: column-reverse; min-height: 0; }
+  body.band-app #aipanel { width: 100%; min-width: 0; flex: none; height: max(440px, 58dvh); border-left: none; border-bottom: 1px solid #333; }
+  body.band-app #center { flex: none; height: 510px; }
+  body.band-app #play-hint { flex-basis: 100%; }
+  body.band-app #stage-close-tools { bottom: 47px; }
+  body.band-app .lib-row { grid-template-columns: minmax(0,1fr) auto; }
+  body.band-app .lib-row > span { display: none; }
+  body.band-app #dlg-songs { max-width: calc(100vw - 24px); padding: 14px; }
+  body.band-app.stage-full #aipanel { position: fixed; width: 100vw; height: 100dvh; }
+}
+@media (max-width: 700px) {
+  body.band-app .transport { gap: 5px; }
+  body.band-app .tbtn { width: 34px; }
+  body.band-app .lcd { padding: 5px; }
+  body.band-app .lcd-time { margin-left: 5px; font-size: 11px; letter-spacing: 0; }
+  body.band-app .logo { font-size: 22px; }
+  body.band-app #topbar { padding: 9px; }
+  body.band-app .topbar-right { flex-wrap: wrap; gap: 6px; }
+  body.band-app .tfield.master { display: flex; }
+  body.band-app .tfield.master input { width: 76px; }
+  body.band-app #prompt-bar { padding: 8px; }
+  body.band-app #prompt-bar .mtab { padding: 8px 10px; letter-spacing: 0; }
+  body.band-app #proll-head .dim { display: none; }
+  body.band-app #proll-head .song-title { max-width: 100%; }
+  body.band-app.stage-full #stage .divider { left: 0; right: 0; top: 58%; bottom: auto; height: 1px; width: auto; }
+}
+
+/* AR is text in CSS pixels, projected from the real 3D control in each viewport. */
+body.band-shot #stage > .band-ar { display: block; }
+.band-ar { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 5; font-family: var(--font-mono), sans-serif; }
+.ar-viewport { position: absolute; overflow: hidden; }
+.ar-wires { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; }
+.ar-wires path { fill: none; stroke: #d8b76b; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.ar-wires circle { fill: #ead199; stroke: #17130b; stroke-width: 1; }
+.ar-card { position: absolute; box-sizing: border-box; color: #ead199; border: 1px solid rgba(213,182,112,.55); border-left: 2px solid #d6b468; border-radius: 3px; background: rgba(7,9,12,.90); box-shadow: 0 8px 28px #0006; padding: 10px 12px; overflow: hidden; }
+.ar-card[hidden], .ar-viewport[hidden] { display: none; }
+.ar-title { display: flex; align-items: baseline; justify-content: space-between; gap: 7px; white-space: nowrap; }
+.ar-title b { font-size: 15px; font-weight: 500; letter-spacing: 1px; }
+.ar-title span { color: #dedbd1; font: 13px/1.3 sans-serif; }
+.ar-values { display: flex; justify-content: space-between; align-items: baseline; margin: 7px 0 5px; }
+.ar-values strong { font-size: 27px; font-weight: 400; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.ar-values small { color: #aaa99f; font: 10px sans-serif; }
+.ar-meter { height: 3px; background: #373328; position: relative; }
+.ar-meter i { display: block; height: 100%; background: #e0b95a; }
+.ar-meter em { position: absolute; top: -2px; width: 1px; height: 7px; background: #ebe7dd; }
+.ar-graph { display: block; width: 100%; height: 40px; margin: 9px 0 5px; }
+.ar-graph path { fill: none; vector-effect: non-scaling-stroke; }
+.ar-before { stroke: #77766d; stroke-width: 1; stroke-dasharray: 3 3; }
+.ar-current { stroke: #e0b95a; stroke-width: 1.4; }
+.ar-message { color: #f2ead8; font: 13px/1.3 sans-serif; white-space: nowrap; }
+.ar-caption { color: #92918a; font: 10px/1.2 sans-serif; margin-top: 3px; }
+#lanes-wrap { flex-basis: 182px; min-height: 182px; }
+@media (max-width: 600px) { .ar-card { padding: 8px 10px; } .ar-title { gap: 4px; } .ar-title b { font-size: 12px; } }
+
+.ar-card.compact { padding: 8px 10px; }
+.ar-card.compact .ar-values { margin: 5px 0; }
+.ar-card.compact .ar-values strong { font-size: 21px; }
+.ar-card.compact .ar-graph { height: 22px; margin: 5px 0 2px; }
+.ar-card.compact .ar-caption { margin-top: 2px; font-size: 8px; }
+
+.ar-card.summary .ar-title span, .ar-card.summary .ar-values small,
+.ar-card.summary .ar-meter, .ar-card.summary .ar-graph, .ar-card.summary .ar-message, .ar-card.summary .ar-caption { display: none; }
+.ar-card.summary .ar-values { position: absolute; right: 10px; top: 9px; margin: 0; }
+.ar-card.summary .ar-values strong { font-size: 13px; }
+.ar-card.summary .ar-title b { font-size: 12px; }
+
+.ar-card.banner { padding: 7px 10px; }
+.ar-card.banner .ar-title b { font-size: 11px; }
+.ar-card.banner .ar-title span { font-size: 10px; }
+.ar-card.banner .ar-values { position: absolute; left: 10px; top: 25px; margin: 0; gap: 8px; }
+.ar-card.banner .ar-values strong { font-size: 20px; }
+.ar-card.banner .ar-values small { font-size: 9px; }
+.ar-card.banner .ar-graph { position: absolute; right: 10px; top: 23px; width: 92px; height: 24px; margin: 0; }
+.ar-card.banner .ar-meter { position: absolute; left: 10px; right: 10px; bottom: 7px; }
+.ar-card.banner .ar-message { position: absolute; left: 10px; bottom: 16px; font-size: 11px; }
+.ar-card.banner .ar-caption { position: absolute; right: 10px; bottom: 16px; font-size: 8px; }

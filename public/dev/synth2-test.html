@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>SYNTH2 audition</title>
+<style>
+  body { font: 13px/1.4 system-ui, sans-serif; background: #14181f; color: #dfe6ee; margin: 0; padding: 16px; }
+  h1 { font-size: 16px; margin: 0 0 12px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .knobs { display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px; max-width: 900px; }
+  .knob { background: #1e2430; padding: 8px; border-radius: 6px; }
+  .knob label { display: block; font-size: 11px; letter-spacing: .08em; color: #9fb0c4; }
+  .knob input { width: 100%; }
+  .knob output { font-variant-numeric: tabular-nums; }
+  .keys { display: flex; gap: 2px; margin-top: 12px; }
+  .keys button { width: 34px; height: 90px; border: 1px solid #333; background: #f4f4f4; color: #222; cursor: pointer; }
+  .keys button.b { background: #222; color: #ddd; height: 60px; align-self: flex-start; }
+  button.act { padding: 6px 12px; background: #2d6cdf; border: 0; color: white; border-radius: 4px; cursor: pointer; }
+  select { padding: 4px; }
+  #log { font: 11px/1.4 ui-monospace, monospace; white-space: pre-wrap; color: #9fb0c4; margin-top: 12px; max-height: 200px; overflow: auto; }
+  canvas { background: #0d1015; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>VESPER SYNTH2 — audition</h1>
+<div class="row">
+  <button class="act" id="start">start audio</button>
+  <select id="preset"></select>
+  <button class="act" id="phrase">play phrase (4 bars, cutoff sweep)</button>
+  <button class="act" id="panic">panic</button>
+  <span id="desc"></span>
+</div>
+<div class="knobs" id="knobs"></div>
+<div class="keys" id="keys"></div>
+<div class="row" style="margin-top:12px"><canvas id="scope" width="600" height="120"></canvas></div>
+<div id="log"></div>
+<script type="module">
+import { createSynth2, SYNTH2_PRESETS, KNOBS, knobDefaults, knobValue } from "../js/synth2.js";
+
+const log = (...a) => { const el = document.getElementById("log"); el.textContent += a.join(" ") + "\n"; el.scrollTop = el.scrollHeight; console.log(...a); };
+let ctx = null, synth = null, analyser = null, tempo = 120;
+const presetSel = document.getElementById("preset");
+for (const name of Object.keys(SYNTH2_PRESETS)) { const o = document.createElement("option"); o.value = name; o.textContent = name; presetSel.appendChild(o); }
+presetSel.value = "Supersaw Lead";
+
+const knobEls = {};
+for (const k of KNOBS) {
+  const div = document.createElement("div"); div.className = "knob";
+  div.innerHTML = `<label>${k.label}</label><input type="range" min="0" max="1" step="0.001" value="0.5"><output>0.50</output>`;
+  const input = div.querySelector("input"), out = div.querySelector("output");
+  input.addEventListener("input", () => { out.textContent = knobValue(k.id, +input.value, synth?.patch); if (synth) synth.setKnob(k.id, +input.value, ctx.currentTime, 0.02); });
+  document.getElementById("knobs").appendChild(div); knobEls[k.id] = { input, out };
+}
+function showKnobs(patch) { const d = knobDefaults(patch); for (const k of KNOBS) { knobEls[k.id].input.value = d[k.id]; knobEls[k.id].out.textContent = knobValue(k.id, d[k.id], patch); } }
+
+async function loadPreset(name) {
+  const patch = SYNTH2_PRESETS[name];
+  document.getElementById("desc").textContent = patch.description;
+  if (!ctx) { showKnobs(patch); return; }
+  if (synth) synth.dispose();
+  synth = await createSynth2(patch, { context: ctx, tempo });
+  synth.outs[0].connect(analyser); analyser.connect(ctx.destination);
+  showKnobs(patch);
+  window.synth = synth;
+  log("loaded", name);
+}
+document.getElementById("start").addEventListener("click", async () => {
+  if (ctx) return;
+  ctx = new AudioContext({ latencyHint: "interactive" });
+  await ctx.resume();
+  analyser = ctx.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.6;
+  window.ctx = ctx; window.analyser = analyser;
+  await loadPreset(presetSel.value);
+  draw();
+});
+presetSel.addEventListener("change", () => loadPreset(presetSel.value));
+document.getElementById("panic").addEventListener("click", () => synth?.panic());
+
+// keyboard C3..C5
+const keys = document.getElementById("keys");
+for (let p = 48; p <= 72; p++) {
+  const b = document.createElement("button"); const black = [1, 3, 6, 8, 10].includes(p % 12); if (black) b.className = "b";
+  b.textContent = black ? "" : ["C", "", "D", "", "E", "F", "", "G", "", "A", "", "B"][p % 12] + (Math.floor(p / 12) - 1);
+  const down = (e) => { e.preventDefault(); if (!synth) return; synth.noteOn(p, 100, ctx.currentTime); };
+  const up = () => { if (!synth) return; synth.noteOff(p, ctx.currentTime); };
+  b.addEventListener("pointerdown", down); b.addEventListener("pointerup", up); b.addEventListener("pointerleave", up);
+  keys.appendChild(b);
+}
+// phrase: 4 bars arpeggio @120, scheduled ahead; cutoff sweep with rampSec
+document.getElementById("phrase").addEventListener("click", () => {
+  if (!synth) return;
+  const t0 = ctx.currentTime + 0.1, beat = 60 / tempo, step = beat / 2;
+  const chords = [[48, 55, 60, 64], [45, 52, 57, 60], [41, 48, 53, 57], [43, 50, 55, 59]];
+  let i = 0;
+  for (let bar = 0; bar < 4; bar++) for (let s = 0; s < 8; s++) { const c = chords[bar]; const p = c[s % c.length] + (s >= 4 ? 12 : 0); synth.trigger(p, t0 + i * step, step * 0.8, 80 + (s % 4 === 0 ? 30 : 0)); i++; }
+  const dflt = knobDefaults(synth.patch).cutoff;
+  synth.setKnob("cutoff", 0.15, t0, 0);
+  synth.setKnob("cutoff", 1.0, t0 + 0.5, 2);          // 2 秒で開く
+  synth.setKnob("cutoff", dflt, t0 + 8 * step, 3);    // 3 秒で戻す
+  synth.setKnob("delay", 0.5, t0 + 16 * step, 1);
+  synth.setKnob("delay", knobDefaults(synth.patch).delay, t0 + 32 * step, 0.5);
+  log("phrase scheduled at", t0.toFixed(3));
+});
+// scope
+const cv = document.getElementById("scope"), g = cv.getContext("2d"), td = new Float32Array(2048);
+function draw() {
+  requestAnimationFrame(draw); if (!analyser) return;
+  analyser.getFloatTimeDomainData(td);
+  g.fillStyle = "#0d1015"; g.fillRect(0, 0, cv.width, cv.height); g.strokeStyle = "#5ad1ff"; g.beginPath();
+  for (let i = 0; i < td.length; i++) { const x = i / td.length * cv.width, y = cv.height / 2 - td[i] * cv.height / 2; i ? g.lineTo(x, y) : g.moveTo(x, y); }
+  g.stroke();
+}
+// 計測用 (javascript_tool から呼ぶ): RMS とスペクトル重心
+window.measure = () => {
+  const n = analyser.frequencyBinCount, f = new Float32Array(n); analyser.getFloatFrequencyData(f); analyser.getFloatTimeDomainData(td);
+  let rms = 0; for (const v of td) rms += v * v; rms = Math.sqrt(rms / td.length);
+  let num = 0, den = 0; for (let i = 1; i < n; i++) { const m = Math.pow(10, f[i] / 20); const hz = i * ctx.sampleRate / analyser.fftSize; num += hz * m; den += m; }
+  return { rms, centroid: den > 0 ? num / den : 0 };
+};
+loadPreset(presetSel.value);
+</script>
+</body>
+</html>

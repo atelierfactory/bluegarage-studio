@@ -11,6 +11,9 @@
 import { state, totalBeats, emit, beatToSec, secToBeat, tempoAt, noteEndBeat, SYNTH_INSTRUMENTS, INSTRUMENT_DEFS } from "./state.js";
 import { SfzInstrument, sampleCacheStats } from "./sampler.js";
 import { createSynth, presetFor, normalizePatch } from "./synth.js";
+import { createSynth2, knobDefaults } from "./synth2.js";
+import { knobStateAt, knobTimeline } from "./synth-automation.js";
+import { createDrumOutputs } from "./drum-balance.js";
 import { createMixGraph, createTrackChain } from "./mix.js";
 import { normalizeLoudness, measureLoudness } from "./loudness.js";
 import * as midi from "./midiio.js";
@@ -132,7 +135,7 @@ function makePercSynths() {
   return { openHats, crashes, rides, claps, percs };
 }
 
-async function makeDrums() {
+async function makeDrums(track = {}) {
   const pools = makePercSynths();
   const { openHats, crashes, rides, claps, percs } = pools;
   const poolNodes = [...openHats.nodes, ...crashes.nodes, ...rides.nodes, ...claps.nodes, ...percs.nodes];
@@ -140,11 +143,12 @@ async function makeDrums() {
   if (sfz) {
     const ctx = rawCtx();
     const out = sfz.createOutput(ctx);
+    const outputs=createDrumOutputs(ctx,out,track.drumSampleGains);
     let counter = 0;
     function trigger(p, time, vel, noteIdx = null) {
       const g = vel / 127;
       const key = DRUM_MAP[p];
-      if (key != null && sfz.byKey[key].length) { sfz.noteOn(ctx, out, key, time, 0.25, vel, noteIdx ?? counter++); return; }
+      if (key != null && sfz.byKey[key].length) { sfz.noteOn(ctx, outputs.at(p), key, time, 0.25, vel, noteIdx ?? counter++); return; }
       switch (p) {
         case 39: claps.next().trigger("16n", time, g); break;
         case 54: case 56: case 69: case 70: percs.next().trigger("16n", time, g); break;
@@ -159,7 +163,7 @@ async function makeDrums() {
       preload: (notes, tempo, cb) => sfz.preload(ctx, remapDrumNotes(notes), tempo, cb),
       ensure: (p, v) => sfz.ensure(ctx, DRUM_MAP[p] ?? p, v),
       reset: () => sfz.resetCounters(), panic: (t) => sfz.allNotesOff(t),
-      dispose: () => { sfz.allNotesOff(ctx.currentTime); try { out.disconnect(); } catch {} Object.values(pools).forEach((p) => p.dispose()); },
+      dispose: () => { sfz.allNotesOff(ctx.currentTime); outputs.dispose(); try { out.disconnect(); } catch {} Object.values(pools).forEach((p) => p.dispose()); },
     };
   }
   const players = new Tone.Players({ urls: { kick: "kick.mp3", snare: "snare.mp3", hihat: "hihat.mp3", tom1: "tom1.mp3", tom2: "tom2.mp3", tom3: "tom3.mp3" }, baseUrl: TONEJS + "drum-samples/acoustic-kit/", fadeOut: 0.05 });
@@ -191,10 +195,15 @@ async function makeDrums() {
 
 /* ─────────── melodic instrument factory ─────────── */
 export function patchOf(track) { return normalizePatch(track.patch ?? presetFor(track.instrument)); }
-const patchKeyOf = (track) => (SYNTH_INSTRUMENTS.has(track.instrument) ? JSON.stringify(patchOf(track)) : "");
+const patchKeyOf = (track) => (track.instrument === "drums" ? JSON.stringify(track.drumSampleGains??{}) : track.synth2 ? "v2:" + JSON.stringify(track.synth2) : SYNTH_INSTRUMENTS.has(track.instrument) ? JSON.stringify(patchOf(track)) : "");
 
 async function makeMelodic(track) {
   const instrument = track.instrument;
+  // -1. VESPER SYNTH (AudioWorklet の自作シンセ。つまみを曲の途中で回せる)
+  if (track.synth2) {
+    const s = await createSynth2(track.synth2, { context: Tone.getContext(), tempo: tempoAt(0) });   // Tone の Context を渡す (包みの中の worklet 読み込みを使う)
+    return { ...s, kind: "synth2", patchKey: "v2:" + JSON.stringify(track.synth2) };
+  }
   // 0. シンセ (パッチ)
   if (SYNTH_INSTRUMENTS.has(instrument)) {
     const s = createSynth(patchOf(track), { tempo: tempoAt(0) });
@@ -244,24 +253,35 @@ async function makeMelodic(track) {
 }
 
 /* ─────────── track engine management ─────────── */
+const pendingEngines = new Map();
 async function ensureEngine(track) {
   ensureGraph();
-  let eng = engines.get(track.id);
-  const pk = patchKeyOf(track);
-  if (eng && eng.instKind === track.instrument && eng.patchKey === pk) return eng;
-  if (eng) disposeEngine(track.id);
-  const chain = createTrackChain(track, graph);
-  const inst = track.instrument === "drums" ? await makeDrums() : await makeMelodic(track);
-  if (inst.ready) await inst.ready;
-  inst.outs.forEach((o) => Tone.connect(o, chain.input));
-  eng = { trackId: track.id, chain, inst, instKind: track.instrument, patchKey: pk, part: null };
-  engines.set(track.id, eng);
-  return eng;
+  const pk=patchKeyOf(track), eng=engines.get(track.id);
+  if(eng && eng.instKind===track.instrument && eng.patchKey===pk && !eng.needsReset)return eng;
+  const pending=pendingEngines.get(track.id);
+  if(pending) { await pending.catch(()=>{}); return ensureEngine(track); }
+  if(eng)disposeEngine(track.id);
+  const job=(async()=>{
+    const chain=createTrackChain(track,graph); let inst;
+    try {
+      inst=track.instrument==="drums"?await makeDrums(track):await makeMelodic(track);
+      if(inst.ready)await inst.ready;
+      if(trackById(track.id)!==track)throw new Error("曲が切り替わりました");
+      inst.outs.forEach(o=>Tone.connect(o,chain.input));
+      const engine={trackId:track.id,chain,inst,instKind:track.instrument,patchKey:pk,part:null};
+      engines.set(track.id,engine);return engine;
+    } catch(error) { inst?.dispose();chain.dispose();throw error; }
+  })();
+  pendingEngines.set(track.id,job);
+  try {return await job;} finally {if(pendingEngines.get(track.id)===job)pendingEngines.delete(track.id);}
 }
+
 function disposeEngine(id) {
   const eng = engines.get(id);
   if (!eng) return;
   eng.part?.dispose();
+  eng.knobPart?.dispose();
+  eng.tempoPart?.dispose();
   eng.inst.dispose();
   eng.chain.dispose();
   engines.delete(id);
@@ -317,7 +337,7 @@ function midiTarget(track) {
   return { out, ch };
 }
 
-function scheduleParts() {
+function scheduleParts(startBeat = 0) {
   Tone.Transport.bpm.value = 120; // 拍→秒は beatToSec で計算するので Transport の bpm は使わない
   const ctx = rawCtx();
   usedMidi.clear();
@@ -325,13 +345,27 @@ function scheduleParts() {
     const eng = engines.get(t.id);
     if (!eng) continue;
     eng.part?.dispose();
+    eng.knobPart?.dispose(); eng.knobPart = null;
+    if (eng.inst.setKnob) scheduleKnobs(eng, t, startBeat);
     eng.inst.reset?.();
-    eng.inst.setTempo?.(tempoAt(0));
+    eng.inst.setTempo?.(tempoAt(startBeat));
+    eng.tempoPart?.dispose(); eng.tempoPart = null;
+    if (eng.inst.kind === "synth2" && state.song.tempoMap?.length) {
+      const tempos = [];
+      for (let b = 0; b < totalBeats(); b += 0.25) tempos.push([beatToSec(b), tempoAt(b)]);
+      eng.tempoPart = new Tone.Part((time, bpm) => eng.inst.setTempo(bpm, time), tempos).start(0);
+    }
     const mt = midiTarget(t);
     if (mt && t.instrument !== "drums") midi.sendProgram(mt.out, mt.ch, INSTRUMENT_DEFS[t.instrument]?.gm ?? 0);
     const silent = !!t.midiOut?.silent && mt;
     const events = t.notes.map((n, i) => [beatToSec(n.s), { n, i }]);
-    eng.part = new Tone.Part((time, { n, i }) => {
+    // Resume held BAND notes at a seek point. Only once, not on later loops.
+    if (t.synth2) t.notes.forEach((n, i) => {
+      if (n.s < startBeat && n.s + n.d > startBeat) events.push([beatToSec(startBeat), { n: { ...n, s: startBeat, d: n.s + n.d - startBeat }, i, resume: true }]);
+    });
+    const resumed = new Set();
+    eng.part = new Tone.Part((time, { n, i, resume }) => {
+      if (resume) { if (resumed.has(i)) return; resumed.add(i); }
       const durSec = Math.max(0.03, beatToSec(t.instrument === "piano" || t.instrument === "epiano" ? noteEndBeat(n) : n.s + n.d) - beatToSec(n.s));
       if (mt) midi.sendNote(mt.out, t.instrument === "drums" ? 9 : mt.ch, n.p, n.v, midi.audioTimeToPerf(ctx, time), durSec * 1000);
       if (silent) return;
@@ -342,13 +376,42 @@ function scheduleParts() {
   }
 }
 
-let posTimer = null;
+// つまみの自動操作 (track.knobs = [{param, s, d, to}], s は曲頭からの拍)。再生開始位置より前の分は今の値として先に当てる
+function scheduleKnobs(eng, t, startBeat) {
+  const defaults = knobDefaults(t.synth2 ?? eng.inst.patch);
+  const events = knobTimeline(defaults, t.knobs ?? [], beatToSec);
+  const cur = knobStateAt(defaults, events, startBeat, beatToSec);
+  for (const [id, v] of Object.entries(cur)) eng.inst.setKnob(id, v, rawCtx().currentTime, 0, v);
+  const timeline = [[0, { reset: true }], ...events.map((k) => [beatToSec(k.s), k])];
+  for (const k of events) if (k.s < startBeat && k.s + k.d > startBeat) {
+    timeline.push([beatToSec(startBeat), { ...k, from: cur[k.param], seconds: beatToSec(k.s + k.d) - beatToSec(startBeat), resume: true }]);
+  }
+  let resumed = false;
+  eng.knobPart = new Tone.Part((time, k) => {
+    if (k.reset) { for (const [id, v] of Object.entries(defaults)) eng.inst.setKnob(id, v, time, 0, v); return; }
+    if (k.resume) { if (resumed) return; resumed = true; }
+    eng.inst.setKnob(k.param, k.to, time, k.seconds, k.from);
+  }, timeline);
+  eng.knobPart.start(0);
+}
+
+let posTimer = null, playRevision = 0, preparing = Promise.resolve();
 export async function play(fromBeat = null, onProgress = null) {
-  await ensureAudio();
-  await rebuildAll(onProgress);
-  await preloadAll(onProgress);
-  onProgress?.(null);
-  scheduleParts();
+  const revision = ++playRevision, song = state.song;
+  const report = (message) => { if(revision === playRevision && song === state.song)onProgress?.(message); };
+  const previous = preparing; let release;
+  preparing = new Promise((resolve) => { release = resolve; });
+  try {
+    await previous;
+    if (revision !== playRevision || song !== state.song) return;
+    await ensureAudio();
+    await rebuildAll(report);
+    if (revision !== playRevision || song !== state.song) return;
+    await preloadAll(report);
+    if (revision !== playRevision || song !== state.song) return;
+    const requested = fromBeat ?? state.playheadBeat;
+    const startBeat = requested >= totalBeats() ? 0 : Math.max(0, requested);
+  scheduleParts(startBeat);
   scheduleClick();
   if (state.loop) {
     Tone.Transport.loop = true;
@@ -357,7 +420,6 @@ export async function play(fromBeat = null, onProgress = null) {
   } else {
     Tone.Transport.loop = false;
   }
-  const startBeat = fromBeat ?? state.playheadBeat;
   Tone.Transport.seconds = beatToSec(startBeat);
   Tone.Transport.start();
   state.playing = true;
@@ -368,13 +430,17 @@ export async function play(fromBeat = null, onProgress = null) {
     if (!state.loop && state.playheadBeat >= totalBeats()) stop(true);
     emit("playhead");
   }, 33);
+  } catch(error) { if(revision===playRevision && song===state.song)throw error; }
+  finally { onProgress?.(null); release(); }
 }
 
 export function stop(resetToStart = false) {
+  ++playRevision;
+  if (state.playing) state.playheadBeat = currentBeat();
   Tone.Transport.stop();
   Tone.Transport.cancel();
   const now = rawCtx().currentTime;
-  for (const eng of engines.values()) { eng.part?.dispose(); eng.part = null; eng.inst.panic?.(now); }
+  for (const eng of engines.values()) { eng.part?.dispose(); eng.part = null; eng.knobPart?.dispose(); eng.knobPart = null; eng.tempoPart?.dispose(); eng.tempoPart = null; eng.inst.panic?.(now); eng.needsReset = eng.inst.kind === "synth2"; }
   clickPart?.dispose(); clickPart = null;
   for (const [id, chs] of usedMidi) { const out = midi.findOutput(id); for (const ch of chs) midi.allNotesOff(out, ch); midi.allNotesOff(out, 9); }
   clearInterval(posTimer);
@@ -384,9 +450,17 @@ export function stop(resetToStart = false) {
   emit("playhead");
 }
 
+export function releaseSongEngines() {
+  stop(true);
+  for (const id of [...engines.keys()]) disposeEngine(id);
+}
+
 export function seek(beat) {
-  state.playheadBeat = Math.max(0, beat);
-  if (state.playing) Tone.Transport.seconds = beatToSec(state.playheadBeat);
+  const restartBand = state.playing && state.song.tracks.some((t) => t.role === "keys" && t.synth2);
+  if (restartBand) stop();
+  state.playheadBeat = Math.min(totalBeats(), Math.max(0, Number.isFinite(beat) ? beat : 0));
+  if (restartBand) play(state.playheadBeat).catch((error) => emit("audio-error", error));
+  else if (state.playing) Tone.Transport.seconds = beatToSec(state.playheadBeat);
   emit("playhead");
 }
 
@@ -451,7 +525,7 @@ export async function renderSong(onProgress, { normalize = true } = {}) {
       onProgress?.(`音源を準備中: ${t.name}…`);
       const chain = createTrackChain(t, g);
       chain.update(t, { muted: false });
-      const inst = t.instrument === "drums" ? await makeDrums() : await makeMelodic(t);
+      const inst = t.instrument === "drums" ? await makeDrums(t) : await makeMelodic(t);
       if (inst.ready) await inst.ready;
       inst.outs.forEach((o) => Tone.connect(o, chain.input));
       inst.reset?.();
@@ -531,3 +605,6 @@ export async function refreshTrack(track) {
     if (wasPlaying) await play();
   }
 }
+
+// Read-only, allocated lazily by SYNTH2; BAND is the only caller.
+export function sampleSynthSignal(trackId) { return engines.get(trackId)?.inst.sampleSignal?.() ?? null; }

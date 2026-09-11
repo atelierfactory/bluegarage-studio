@@ -113,6 +113,8 @@ export function migrateSong(song) {
   for (const t of song.tracks ?? []) {
     t.fx = { ...defaultFx(t.instrument), ...(t.fx ?? {}) };
     t.patch ??= null;
+    t.synth2 ??= null;
+    if (t.role === "keys") t.knobs ??= [];
     t.midiOut ??= null;
     t.notes ??= [];
     t.volume ??= -6; t.pan ??= 0;
@@ -279,7 +281,9 @@ function reselect() {
 }
 
 /* ─────────── persistence ─────────── */
-const LS_KEY = "bluegarage.project.v1";
+let LS_KEY = "bluegarage.project.v1";
+// Opt-in: existing piano/STUDIO persistence keeps its original key.
+export function configureProjectStorage(key) { LS_KEY = key; }
 let autosaveTimer = null;
 export function scheduleAutosave() {
   clearTimeout(autosaveTimer);

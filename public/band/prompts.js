@@ -84,6 +84,10 @@ export const SYSTEM_BAND = `あなたは世界トップクラスのシンセ奏�
 - バスドラは左足で独立に入るので、キックのパターンは自由 (4 つ打ち、シンコペーション、ダブル)。
 
 # 音楽の品質
+- 一度で覚える短い主旋律を作り、戻ってきたときに音域・和音・強弱で大きくする。速い曲では16分の分散和音・駆け上がりを交え、曲全体で2オクターブ以上を使う。音数だけの無意味な羅列にはしない。
+- 入り→つまみと連打で溜める→クラッシュと全パートで解放→音数を落として響きを広げる→さらに大きな最後の山、という見通しを作る。
+- 足鍵盤はキックの隙間へ置く。裏拍、経過音、大きな跳びの前の休符を使い、四分音符でキックをなぞるだけにしない。
+- クラッシュは節目と強いアクセントを担い、8小節に4回以上を目安に。遠い打点から移動する時間は必ず空ける。つまみは8小節に2回ほど、大きく変えて耳で違いが分かるように。
 - 右手は旋律 (単音) と和音 (3〜4 音のスタブ・パッド) を曲想で使い分ける。足鍵盤はベースライン (ルート中心、経過音、オクターブ跳び)。足鍵盤 + 右手の和音 + ドラム で 1 人でもバンドの厚みを出す。
 - 強弱 (v): ハイハット 50〜85、スネア 90〜120、キック 95〜120、タム 90〜115、クラッシュ 100〜120。右手の旋律 80〜115、和音 60〜95。足鍵盤 90〜115。
 - つまみは「音楽の場面を変える」ために使う: A メロは cutoff 低め、サビ前の 2 拍で cutoff を上げる、ブレイクで resonance を上げてから戻す、アウトロで reverb を増やす、など。1 つの範囲 (8 小節) に 1〜3 回。回す前後に右手を空ける段取りを組む (例: 4 拍目に和音を切って、次の小節頭までにつまみを回す)。
@@ -151,7 +155,7 @@ ${secs.length ? `- 構成:\n${secs.join("\n")}` : ""}
 ${extraDirection ? `\n## 追加の指示\n${extraDirection}` : ""}
 
 この範囲の演奏を書いてください。`;
-  return { system: SYSTEM_BAND, userText, schema: BAND_SCHEMA, label: mode === "revise" ? "revise" : "band" };
+  return { system: SYSTEM_BAND, userText, schema: BAND_SCHEMA, label: mode === "revise" ? "revise" : "track" };
 }
 
 /* ─────────── 設計図 (既存の BLUEPRINT を、ワンマンバンド用の注意付きで) ─────────── */
@@ -164,7 +168,7 @@ ${theme}
 ## この曲の楽器 (固定)
 ロボット VESPER-01 の 1 人バンド: 右手のシンセ (鍵盤 37 鍵 C3〜C6)、右足の足鍵盤ベース (C1〜C2、単音)、左手のスティック 1 本のドラム (ハイハット・スネア・タム 3・クラッシュ)、左足のバスドラ。
 trackPlan は必ずこの 3 つだけにする: { instrument: "synth", role: "keys" } (stylePrompt に右手の音色と役割: 例「太いスーパーソーのリード、サビは 3 和音のスタブ」)、{ instrument: "synth-bass", role: "pedal" } (stylePrompt に足鍵盤の音色: 例「丸いサブベース、少しドライブ」)、{ instrument: "drums", role: "drums" } (stylePrompt に片手ドラムの狙い: 例「タイトな 8 ビート、フィルはタム回し」)。
-${deep ? "構成は 24〜40 小節で、各セクションの役割と山場、つまみ (フィルター等) で場面を変える所を具体的に書く。" : "構成は 16〜32 小節。"}テンポは 84〜150 の間。`;
+${deep ? "構成は 24〜40 小節で、各セクションの役割と山場、つまみ (フィルター等) で場面を変える所を具体的に書く。" : "構成は 16〜32 小節。"}テンポは 84〜150 の間で曲全体を一定にする。tempoChanges は空配列。`;
   return { system: SYSTEM_ARRANGER, userText, schema: BLUEPRINT_SCHEMA, label: "blueprint" };
 }
 
@@ -181,8 +185,15 @@ export const BAND_SOUNDS_SCHEMA = {
 export const SYSTEM_BAND_SOUNDS = `あなたは世界トップクラスのシンセサイザー音色デザイナーです。ロボットが弾くワンマンバンド (右手のシンセ + 右足の足鍵盤ベース) のために、2 つの音色を減算方式シンセのパラメータで設計します。
 - keys: 右手の鍵盤の音色。曲のジャンルに合う主役の音 (リード / スタブ / パッド / プラック)。8 つのつまみ (cutoff, resonance, envAmount, lfoRate, lfoDepth, drive, delay, reverb) を曲の途中で回して表情を変えるので、cutoff を動かしたときに変化がはっきり出る設計 (フィルターは ladder か svf-lp、cutoff は 0.3〜0.6 あたりに余地を残す) にする。lfo1 の行き先は、そのジャンルで回して気持ちいいもの (ワウなら cutoff、ビブラートなら pitch、トレモロなら amp)。
 - pedal: 足鍵盤 (C1〜C2 = MIDI 24〜36) の音色。低い音がはっきり聞こえる (サブ + 倍音少し、mono、glide 少し)。
-${KNOB_DOC}`;
+${KNOB_DOC}
+
+## 返し方
+JSON だけを返す (前後に説明文やコードブロックを付けない)。形は次の JSON Schema のとおり。keys と pedal はどちらも SYNTH2 のパッチで、項目名はこの Schema に書かれた名前をそのまま使い、数値は minimum〜maximum の範囲に収める。
+${JSON.stringify(BAND_SOUNDS_SCHEMA)}`;
+// Use the already deployed relay's track category for sounds and performance.
+// 2 つのパッチ (各 89 項目) を structured outputs で縛ると API が "compiled grammar is too large" で 400 を返す。
+// そこで Schema は指示文で渡して JSON を書かせ、受け取った後に normalizePatch2 で範囲と既定値を整える (band.js compose)。
 export function buildBandSoundsRequest({ song, keysStyle, bassStyle }) {
-  const userText = `曲: ${song.title ?? ""} / ${song.tempo} BPM / ${song.key ?? ""}\nコンセプト: ${song.concept ?? ""}\n\n## 右手の音色 (keys)\n${keysStyle ?? "ジャンルに合う主役の音"}\n\n## 足鍵盤の音色 (pedal)\n${bassStyle ?? "太くて丸いシンセベース"}\n\n2 つの音色と、つまみの使い方の方針を書いてください。`;
-  return { system: SYSTEM_BAND_SOUNDS, userText, schema: BAND_SOUNDS_SCHEMA, label: "synth" };
+  const userText = `曲: ${song.title ?? ""} / ${song.tempo} BPM / ${song.key ?? ""}\nコンセプト: ${song.concept ?? ""}\n\n## 右手の音色 (keys)\n${keysStyle ?? "ジャンルに合う主役の音"}\n\n## 足鍵盤の音色 (pedal)\n${bassStyle ?? "太くて丸いシンセベース"}\n\n2 つの音色と、つまみの使い方の方針を、指定の JSON で返してください。`;
+  return { system: SYSTEM_BAND_SOUNDS, userText, label: "track" };
 }

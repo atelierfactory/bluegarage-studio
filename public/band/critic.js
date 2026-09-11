@@ -1,6 +1,6 @@
 // ═══════════ VESPER BAND — 検査 (体で弾けるか)。機械的に直せる所は直し、残りは issues に書く ═══════════
 // 入力: BAND_SCHEMA の形 (s は範囲先頭からの拍)。出力: 正規化済みの synth/pedal/drums/kick/knobs と issues/stats/severity。
-// 秒への換算は song.tempo (テンポマップは使わない: 検査は保守的でよい)。
+// テンポが変わる曲は最速部分の速さで保守的に検査する。
 
 import { LIMITS, NEAR_PAIRS, SYNTH_LOW, SYNTH_HIGH, PEDAL_LOW, PEDAL_HIGH, DRUM_KEYS } from "./prompts.js";
 import { KNOBS } from "../js/synth2.js";
@@ -12,7 +12,7 @@ const HAND_SPAN_MAX = 16;
 export function analyzeBand(raw, { song, range }) {
   const ts = song.timeSig || 4;
   const total = range.bars * ts;
-  const spb = 60 / (song.tempo || 120);
+  const spb = 60 / Math.max(song.tempo || 120, ...(song.tempoMap ?? []).map((p) => p.tempo || 0));
   const toBeat = (sec) => sec / spb;
   const issues = [], fixes = [];
   const inRange = (s) => s >= -1e-6 && s < total - 1e-6;
@@ -23,6 +23,7 @@ export function analyzeBand(raw, { song, range }) {
     .map((n) => ({ p: Math.round(clamp(+n.p, SYNTH_LOW, SYNTH_HIGH)), s: +Math.max(0, +n.s).toFixed(4), d: +clamp(num(n.d, 0.5), 0.05, total).toFixed(4), v: Math.round(clamp(num(n.v, 90), 1, 127)), h: "R", f: Number.isFinite(+n.f) ? Math.round(clamp(+n.f, 1, 5)) : null }));
   let clipped = 0;
   for (const n of synth) { if (n.s + n.d > total) { n.d = +(total - n.s).toFixed(4); clipped++; } }
+  if (clipped) fixes.push(`範囲外に伸びる右手の音 ${clipped} 個を切った`);
   const rawSynthPitches = (raw?.synth ?? []).filter((n) => +n.p < SYNTH_LOW || +n.p > SYNTH_HIGH).length;
   if (rawSynthPitches) fixes.push(`鍵盤の外の音 ${rawSynthPitches} 個を鍵盤内へ`);
   synth.sort((a, b) => a.s - b.s || a.p - b.p);
@@ -58,7 +59,7 @@ export function analyzeBand(raw, { song, range }) {
   // オクターブは寄せる (クランプでなく折り返し)
   for (const n of pedal) { /* clamp 済み: 端に張り付いた音を折り返す */ }
   {
-    let mono = 0, tooFast = 0, jump = 0;
+    let mono = 0, tooFast = 0, jump = 0, overlap = 0, clipped = 0;
     const out = [];
     for (const n of pedal) {
       const prev = out[out.length - 1];
@@ -66,12 +67,14 @@ export function analyzeBand(raw, { song, range }) {
         if (Math.abs(n.s - prev.s) < 1e-3) { if (n.p < prev.p) { out[out.length - 1] = n; } mono++; continue; }   // 同時 → 低い方を残す
         const gap = toBeat(Math.abs(n.p - prev.p) > 5 ? LIMITS.pedalJumpGap : LIMITS.pedalGap);
         if (n.s - prev.s < gap - 1e-6) { if (Math.abs(n.p - prev.p) > 5) jump++; else tooFast++; continue; }   // 速すぎる → 落とす
-        if (prev.s + prev.d > n.s) prev.d = +(n.s - prev.s).toFixed(4);
+        if (prev.s + prev.d > n.s + 1e-6) { prev.d = +(n.s - prev.s).toFixed(4); overlap++; }
       }
-      if (n.s + n.d > total) n.d = +(total - n.s).toFixed(4);
+      if (n.s + n.d > total) { n.d = +(total - n.s).toFixed(4); clipped++; }
       out.push(n);
     }
     pedal = out;
+    if (overlap) fixes.push(`足鍵盤の重なり ${overlap} 箇所を切った`);
+    if (clipped) fixes.push(`範囲外に伸びる足鍵盤 ${clipped} 個を切った`);
     if (mono) fixes.push(`足鍵盤の同時音 ${mono} 個を 1 音に`);
     if (tooFast) fixes.push(`足鍵盤で速すぎる音 ${tooFast} 個を落とした`);
     if (jump) fixes.push(`足鍵盤で大きく飛ぶのに時間が無い音 ${jump} 個を落とした`);
@@ -123,11 +126,11 @@ export function analyzeBand(raw, { song, range }) {
       let s = k.s;
       const last = out[out.length - 1];
       if (last && s < last.s + last.d) { s = +(last.s + last.d).toFixed(4); overlap++; }
-      if (s + k.d > total) k.d = +Math.max(toBeat(LIMITS.knobMin), total - s).toFixed(4);
+      if (s + k.d > total + 1e-6) { dropped++; continue; }
       if (!busy(s - before, s + k.d + after)) { out.push({ ...k, s }); continue; }
       // 近くの空きを探す (前後 2 拍、0.25 刻み)
       let found = null;
-      for (let off = 0.25; off <= 2 && !found; off += 0.25) {
+      for (let off = 0.25; off <= 2 && found == null; off += 0.25) {
         for (const cand of [s - off, s + off]) { if (cand < 0 || cand + k.d > total) continue; if (last && cand < last.s + last.d) continue; if (!busy(cand - before, cand + k.d + after)) { found = cand; break; } }
       }
       if (found != null) { out.push({ ...k, s: +found.toFixed(4) }); moved++; } else dropped++;
@@ -138,6 +141,16 @@ export function analyzeBand(raw, { song, range }) {
     if (dropped) { fixes.push(`右手が空かないつまみ操作 ${dropped} 箇所を落とした`); if (dropped >= 2) issues.push(`つまみを回す前後に右手を空けていない箇所が ${dropped} 箇所 (回す前 ${LIMITS.knobBefore} 秒・後 ${LIMITS.knobAfter} 秒は右手の音を置かない)`); }
   }
 
+  // Sustained notes also occupy fingers and hand span, even with different onsets.
+  let held = [], collisions = 0;
+  for (const n of synth) {
+    held = held.filter((p) => p.s + p.d > n.s + 1e-6);
+    if (held.some((p) => p.f === n.f && p.p !== n.p)) collisions++;
+    held.push(n);
+    if (held.length > 5 || Math.max(...held.map((p) => p.p)) - Math.min(...held.map((p) => p.p)) > HAND_SPAN_MAX) collisions++;
+  }
+  if (collisions) issues.push(`伸ばしている音と次の音で右手が届かない・指を取り合う箇所が ${collisions} 箇所`);
+  if (!synth.length && !pedal.length && !drums.length && !kick.length) issues.push("演奏が空です");
   Object.assign(stats, { synth: synth.length, pedal: pedal.length, drums: drums.length, kick: kick.length, knobs: knobs.length, fixes, over5, spanBig, dupF, count: synth.length + pedal.length + drums.length + kick.length });
   let severity = issues.length ? 1 : 0;
   if (stats.count === 0) severity = 3;

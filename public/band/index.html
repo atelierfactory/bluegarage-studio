@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VESPER BAND — ロボットのワンマンバンド (シンセ + ドラム)</title>
+<!-- 外の CDN は使わない: フォント・Tone.js・three.js は ../vendor に同梱 -->
+<link rel="stylesheet" href="../vendor/fonts/fonts.css" />
+<link rel="stylesheet" href="../style.css" />
+<link rel="stylesheet" href="../piano/style.css" />
+<link rel="stylesheet" href="style.css" />
+<script src="../vendor/Tone.js"></script>
+<script type="importmap">{ "imports": { "three": "../vendor/three/three.module.js" } }</script>
+</head>
+<body class="piano-app band-app">
+<div id="grain"></div>
+
+<header id="topbar">
+  <div class="logo-block">
+    <div class="logo">VESPER<span>BAND</span></div>
+    <div class="logo-sub">ONE-ROBOT BAND · SYNTH + DRUMS</div>
+  </div>
+  <div class="transport">
+    <button id="btn-rew" class="tbtn" title="先頭へ (Home)">⏮</button>
+    <button id="btn-play" class="tbtn play" title="再生/停止 (Space)">▶</button>
+    <button id="btn-stop" class="tbtn" title="停止">■</button>
+    <button id="btn-loop" class="tbtn" title="ループ">⟲</button>
+    <button id="btn-met" class="tbtn met" title="メトロノーム (M)">♩</button>
+    <div class="lcd"><span id="pos-display">001.1</span><span class="lcd-time" id="time-display">0:00.0 / 0:00</span></div>
+    <label class="tfield"><span>BPM</span><input id="inp-tempo" aria-label="曲の速さ" type="number" min="30" max="300" step="1" value="120" /></label>
+    <span class="hidden"><select id="inp-timesig"><option value="4">4/4</option><option value="3">3/4</option></select><input id="inp-key" type="text" value="A minor" /><select id="inp-snap"><option value="0.25" selected>1/16</option></select><select id="inp-hand"><option value="R">R</option></select></span>
+  </div>
+  <div class="topbar-right">
+    <label class="tfield master"><span>VOL</span><input id="inp-master" aria-label="音量" type="range" min="-40" max="6" step="0.5" value="-4" /></label>
+    <div class="btn-group">
+      <button id="btn-export" class="gbtn tiny" title="音符を MIDI で保存（音色・つまみも残すには JSON 書き出し）">MIDI</button>
+      <button id="btn-thanks" class="gbtn tiny" title="この楽器について">♥</button>
+      <a class="gbtn tiny" href="../piano/" title="VESPER PIANO へ">PIANO</a>
+    </div>
+  </div>
+</header>
+
+<div id="workspace">
+  <main id="center">
+    <div id="proll-head">
+      <span id="proll-title" class="song-title">—</span>
+      <span id="proll-sub" class="dim"></span>
+    </div>
+    <div id="proll-wrap" class="view view-active"><canvas id="proll"></canvas></div>
+    <div id="lanes-wrap"><canvas id="lanes"></canvas></div>
+
+    <div id="prompt-bar">
+      <div class="mode-tabs">
+        <button class="mtab on" data-mode="play">できた曲を弾く</button>
+        <button class="mtab" data-mode="compose">作曲</button>
+      </div>
+      <button id="btn-songs" class="gbtn accent" title="曲を選ぶ">♪ 曲を選ぶ</button>
+      <span id="play-hint" class="dim">同梱の曲・作った曲から選びます</span>
+      <input id="inp-theme" aria-label="作曲のお題" type="text" class="hidden" placeholder="お題 (例: 夜のハイウェイを走る 80 年代シンセウェーブ)" />
+      <span class="hidden"><select id="sel-model"></select></span>
+      <button id="btn-go" class="gbtn accent hidden">♪ 作曲する (数分)</button>
+      <button id="btn-cancel" class="gbtn small hidden">止める</button>
+    </div>
+    <div id="status-bar"><span id="status-text" role="status" aria-live="polite"></span></div>
+  </main>
+
+  <aside id="aipanel">
+    <div id="stage">
+      <canvas id="stage-canvas" aria-label="VESPER-01 の演奏する舞台"></canvas>
+      <div id="stage-hud"><span id="stage-title"></span><span id="stage-info"></span></div>
+      <div id="stage-tools">
+        <button class="vbtn on" data-view="wide" title="全体 (ドラッグで回転・ホイールで寄り引き)">全体</button>
+        <button class="vbtn" data-view="drums" title="ドラム側から">ドラム</button>
+        <button class="vbtn" data-view="synth" title="シンセ側から">シンセ</button>
+        <button class="vbtn" data-view="top" title="上から">上</button>
+        <button class="vbtn" data-view="eye" title="VESPER の目線">目線</button>
+        <button id="btn-fullscreen" class="vbtn" title="全画面 (左: 全体 / 右: 手元)。Esc で戻る">全画面</button>
+      </div>
+      <div id="stage-close-tools">
+        <button class="cbtn on" data-close="auto" title="右手とドラムを自動で切り替え">自動</button>
+        <button class="cbtn" data-close="keys" title="右手 (鍵盤)">鍵盤</button>
+        <button class="cbtn" data-close="knobs" title="つまみ">つまみ</button>
+        <button class="cbtn" data-close="drums" title="ドラム">ドラム</button>
+      </div>
+      <div id="stage-label-hands">手元</div>
+    </div>
+  </aside>
+</div>
+
+<dialog id="dlg-songs" class="wide">
+  <h3>曲を選ぶ</h3>
+  <div class="lib-top">
+    <button id="btn-export-json" class="gbtn small">JSON 書き出し</button>
+    <label class="gbtn small file-label"><span>JSON 読み込み</span><input id="inp-import-json" type="file" accept=".json" hidden /></label>
+  </div>
+  <div id="lib-list" class="lib-list"></div>
+  <div class="dlg-foot"><button id="btn-songs-close" class="gbtn small">閉じる</button></div>
+</dialog>
+
+<dialog id="dlg-thanks" class="wide">
+  <h3>この楽器について</h3>
+  <div class="thanks">
+    <p><b>ドラム</b>の音は <b>Naked Drums</b> (Wilkinson Audio / kinwie、CC-BY 4.0) です。ヤマハ Recording Custom のセットを、強さ 5 段階 × 叩くたびに違う 6 テイクで録った無料の音源で、誰でも使えるように公開してくれました。</p>
+    <p><b>シンセ</b>の音は、このアプリの中で波形から計算している自作のシンセです (3 つのオシレーター、サブ、ノイズ、ラダー型のフィルター、2 つの LFO、ドライブ、コーラス、ディレイ、リバーブ)。VESPER が回す 8 つのつまみは、この音の芯につながっています。</p>
+    <p>VESPER は左手のスティック 1 本と左足でドラムを、右手でシンセとつまみを、右足で足鍵盤のベースを弾きます。片手ではハイハットとスネアを同時に鳴らせないので、ハイハットの刻みの中でスネアの瞬間だけ持ち替えます。この「片手ドラマーの叩き方」がこの楽器の味です。</p>
+    <p class="dim">Naked Drums — Wilkinson Audio (recording) / kinwie (SFZ) — CC-BY 4.0. Synth — VESPER SYNTH (original, AudioWorklet).</p>
+  </div>
+  <div class="dlg-foot"><button id="btn-thanks-close" class="gbtn small">閉じる</button></div>
+</dialog>
+
+<button id="btn-settings" class="hidden"></button>
+<dialog id="dlg-settings">
+  <h3 data-i18n="dlg.settings">設定</h3>
+  <div class="dlg-body form">
+    <p id="set-server-note" class="dim"></p>
+    <label><span data-i18n="set.key">Anthropic API キー</span><input id="set-key" type="password" placeholder="sk-ant-…" autocomplete="off" /></label>
+    <p class="dim" data-i18n="set.key.help"></p>
+    <p class="dim"><a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" data-i18n="set.key.get"></a></p>
+    <label><span data-i18n="set.model">モデル</span><select id="set-model"></select></label>
+    <label><span data-i18n="set.lang">表示言語</span><select id="set-lang"><option value="ja">日本語</option><option value="en">English</option></select></label>
+    <div class="row"><button id="btn-set-test" class="gbtn small" data-i18n="set.test">接続テスト</button><span id="set-status"></span></div>
+  </div>
+  <div class="dlg-foot"><button id="btn-set-close" class="gbtn small" data-i18n="dlg.close">閉じる</button> <button id="btn-set-save" class="gbtn small accent" data-i18n="set.save">保存</button></div>
+</dialog>
+
+<div id="toast"></div>
+<div id="loader" class="hidden"><div class="loader-inner"><div class="spinner"></div><span id="loader-text">…</span><button id="btn-load-cancel" class="gbtn small">止める</button></div></div>
+<span class="ai-badge hidden"></span>
+
+<script type="module" src="band.js"></script>
+</body>
+</html>

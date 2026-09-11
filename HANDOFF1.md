@@ -197,3 +197,177 @@ window.vesperInterpret({ model: 'claude-fable-5-1', bars: 8, extraDirection: '�
 - 6 曲すべて（新 5 曲 + 既存）リハーサル ずれ 0: トルコ 2992 / 幻想 5996 / 子犬 2727 / ジムノペディ 564 / 悲愴 3247 判定。
 - 音量: ジムノペディは v25〜56、悲愴は v24〜90 と静かな解釈（指示どおり）。他の曲より小さく聞こえる。気になれば VOL で。
 - 今の「曲を選ぶ」: 11 曲（The Entertainer / Für Elise / Clair de Lune / 新練習曲 1 / 革命 / 祭囃子 / トルコ / 幻想即興曲 / 子犬 / ジムノペディ / 悲愴）。Für Elise・Clair de Lune・新練習曲は解釈なし（MIDI + 自動運指）のまま。
+
+## 15. VESPER BAND（2026-09-11・第6回への対応、6曲を保持、未公開）
+
+右手37鍵＋8つまみ、右足13鍵、左手1本のスティック、左足キック。第6回は連続したつまみ操作の接触、作曲者と候補の検査、手の甲を修正した。**同梱6曲の音・音色・つまみ時刻・曲目・candidateは一切変更していない。LIMITS、critic、Claudeの作曲処理、ピアノの共有コードも変更なし**。開始時の14範囲の照合値は `astra/r6-protected.json`。
+
+**Claudeの第5回実ブラウザ確認**：見えるブラウザでは撮影readyまで4〜6秒。ARは手・つまみ・表示窓を覆わず、停止写真にも比較図、表示窓に音色名と値。Astra3曲とピアノ2621音のrehearseはmisses 0、ピアノ再生・停止は正常。page-check 35、共有音声のregression 40も合格。Fable候補3曲ではつまみのmissが5 / 10 / 6あり、これが今回の修正対象。
+
+**撮影の現状**：Chromiumの単純な `--screenshot` は準備前に写して黒くなる。Claudeが作った `astra/shot.mjs` はDevToolsでreadyを待って保存する。SwiftShaderでは1枚約105秒、ページ内のms約45秒という実測。前版15章の「既存の--screenshotでそのまま撮れる」という説明は訂正する。今回は撮影処理を変更しておらず、**保存まで30秒以内は未達のまま**。ブラウザは使っていないため、第6回の実画面と時間はClaudeの確認が必要。
+
+### 15.1 保持したAstra3曲とFable候補3曲
+
+全曲 `{ song }` の `.band.json`。Astraの3曲は曲目と各曲内に `composer: "GPT-6 Astra"`、このアプリのためのオリジナルであることを示す `license` を記録。既存曲の音符や外部素材を取り込んでいない。第4回に旧3ファイル名を継続して演奏内容を置換し、旧 `basalt-relay.band.json` は曲目から外してファイルも削除した。第6回では曲ファイルを変更していない。
+
+`tools/make-band-repertoire.mjs` は検査と書き出しのみ。作曲は `tools/scores/glass-current.mjs`、`copper-hinge.mjs`、`porcelain-tide.mjs` にそれぞれ独立して記述。共有する `score.mjs` は音符・和音の記譜、曲とトラックの作成だけで、共通の曲構成・リズム・旋律・和音表・つまみ時刻は持たない。
+
+| 曲 / ファイル | BPM / 拍子 / 小節 / 秒 | 右手 / 足鍵盤 / 左手 / キック | 右手平均/小節 | 音域 | 最短の音 | クラッシュ | つまみ | 足鍵盤とキックの同時率 |
+|---|---|---|---|---|---|---|---|---|
+| 硝子の環流 — 零時の加速 / glass-current.band.json | 132 / 4拍子 / 64 / 116.364 | 839 / 237 / 482 / 231 | 13.11 | 48–83 | .075拍 | 48 | 16 | 0.4% |
+| 銅の蝶番 — 影の返答 / copper-hinge.band.json | 100 / 4拍子 / 52 / 124.800 | 705 / 248 / 391 / 157 | 13.56 | 48–83 | .14拍 | 47 | 14 | 16.5% |
+| 白磁の螺旋 / porcelain-tide.band.json | 108 / 3拍子 / 72 / 120.000 | 1047 / 214 / 400 / 135 | 14.54 | 48–84 | .08拍 | 48 | 15 | 7.5% |
+
+合計 **5,086音、クラッシュ143打、つまみ45操作**。3曲とも形式エラー・analyzeBandの修正・issues・検査前後の音符/つまみ変更は0。全曲に16分の駆け上がり・駆け下りがある。最短の音はつまみへ移る直前の短い和音であり、最短の発音間隔と区別して検査に出す。短く鍵を押した後の音の余韻は音色側で作り、鍵から離れて0.45秒以上たってからつまみを回す。片手のハイハットとスネアは同時に叩かない。
+
+**聴き所（拍は0始まり）**：
+
+- **硝子の環流 — 零時の加速**：四つ打ちのキックに、ほぼ重ならない裏拍のベース。「レ・ファ・ミ・ラ」の短い問いが主旋律。16拍から提示、64拍で4音の和音へ拡大。112拍から6小節だけ谷へ入り、136拍では右手が空けた所を右足が同じ動機で返す。192〜196拍は全員の新しい発音を止める。**196拍で全体をD minorからE minorへ上げ、クラッシュと主旋律が戻る**。太いsupersawの `GLASS / ZERO HOUR`。
+- **銅の蝶番 — 影の返答**：三連の長短で跳ね、最初は1小節に1回の重いスネア。「ド・ソ・シ♭・ミ♭」という下がる問い。56拍からは右足が答え、104拍で3小節だけ影へ引く。116拍からの独白は9小節あり、148拍で解決を1小節引き延ばす。**168拍からスネアを倍の頻度にし、主旋律も16分の刻みへ変える**。速さの数値を変えずに走り出す。短い矩形波の輪郭を残す `COPPER / AFTERIMAGE`。
+- **白磁の螺旋**：3拍子。「ミ・ファ♯・シ」を長い歌へ育て、16分の分散和音と交代させる。60拍からは5小節の階段を登り、75拍で最初の山。111拍からは右足が歌を引き継ぎ、響きを大きくする。**165拍からは旋律の大きな和音が2拍おきに進み、3拍子の小節線をまたぐ**。その隙間を細かな音が流れ、最後はG majorに落ち着く。鐘の輪郭を加えた `PORCELAIN / HELIX`。
+
+「銅の蝶番」「白磁の螺旋」は、LFO DEPTHの操作に対して揺れの接続先が空だった初期設定を修正し、実際にフィルターの明るさへ結びつけた。`band-check` も、揺れの操作があるのに接続先がない同梱曲をエラーにする。
+
+3曲の `moments` にも拍と説明を記録した。山の位置・谷の長さ・最後の仕掛け・足鍵盤・太鼓・つまみの台本はそれぞれ異なる。音の良さや高揚感は数の検査だけでは保証できず、試聴で判断する。
+
+**Claudeが画面で作曲して追加した試聴候補（第6回では無変更）**：
+
+| 曲 / ファイル | BPM / 小節 / 秒 | 右手 / 足 / 左手 / キック | クラッシュ / つまみ |
+|---|---|---|---|
+| 疾風・電脳桜 / hayate-cyber-sakura.band.json | 150 / 38 / 60.800 | 427 / 174 / 244 / 143 | 25 / 15 |
+| Neon Circuit / neon-circuit.band.json | 118 / 36 / 73.220 | 336 / 185 / 302 / 156 | 20 / 20 |
+| 3+3+2 オーバードライブ / overdrive-332.band.json | 150 / 36 / 57.600 | 344 / 174 / 199 / 141 | 43 / 14 |
+
+3候補のcomposerは `Claude Fable 5.1`、licenseはオリジナルの記載、`candidate: true`。残す曲はさとるんが耳で決める。**合計6曲・7,911音・94つまみ操作**。短さや音数を揃えるための作り替えは行わない。
+
+`tools/band-check.mjs` は両作曲者を認め、candidateがあればbooleanを検査する。6曲とも形式・analyzeBandのfixes/issues・検査前後のデータ変更は0。候補については90〜180秒・クラッシュ30以上・右手平均12以上・足とキックの同時率40%以下などの作風の目安を**advisories（参考情報）**として出す。身体・形式の検査を緩めたわけではない。候補を最終採用するときの音楽上の判断を検査で代行しない。
+
+`tools/make-band-repertoire.mjs` は自分が作る3曲の曲目だけを更新し、それ以外の項目・候補ファイルは保持する。自分が担当する名前でもcandidateに指定されていたら、上書き前に拒否する。今回は実ファイルの生成を実行せず、仮のファイル保存先で候補保護を検査した。
+
+### 15.2 第6回のつまみと手の修正
+
+- **別のつまみに手が残る**：以前は先に見つかった操作の「手を戻す時間」を優先し、次の操作が始まっても前のつまみに接触していた。指と内部の目標点のdistが小さくても、譜面に指定されたつまみのsurfaceGapは最大約0.40 mになる。新しい `knob-motion.js` は音の時刻から現在の操作を最優先で選ぶ。
+- **連続操作**：近い操作の間は鍵盤へ戻らず、前の操作の終了から次の開始までを使って直接移動。掌を滑らかに補間して少し持ち上げ、回転も補間する。両指先を別々に直線補間すると途中で寄りすぎるため、同じ手の形を回して運ぶ。
+- **表面への接触**：つまみの実際の円すい状の半径と指腹の半径から目標を求める。掌の基本位置を指の付け根に合わせて下げ・寄せた。2本分の誤差の和が小さいだけで止めず、各指の最大誤差で解く。符号の違う誤差が打ち消し合う早期終了を防ぐ。
+- **指の計算**：実際の2節の長さと、指腹が節の軸から下へずれた分まで含めて角度を直接求める。関節の範囲外や届かない初期位置だけ従来の数値計算へ戻す。指先を偽の接触点へ付け替えていない。
+- **曲に依存しない追加検査**：全8つまみ・値0〜1の両方向と、全64順序の組み合わせを0 / .02 / .15 / .60秒の間隔で検査。criticが修正もissuesも出さない272例に対して4,960点の接触・移動時の指先間隔を確認した。特定の曲名・作曲者を動作の条件にしていない。
+- **検査時刻のずれ**：以前のrehearseは操作の98%地点を次のフレームまで繰り上げて測っていた。短い操作間隔では、その時すでに次のつまみへ移動している。つまみだけは指定した時刻で姿勢を求めて検査し、通常の固定刻みの更新はその後に行う。鍵・足の沈みやスティックの戻りは従来の刻みのまま。表面の許容差2 mmなどは緩めていない。
+- **使わない指**：Fableの極端なつまみ値では人差し指と中指の途中が近づく場面もあった。中指以降を掌側へ揃えて曲げ、指の棒・関節・指腹・斜めの指先部品まで検査する。
+- **手の甲**：大きな白い4枚の板を廃し、細い骨格・銀の橋・小さな2分割の外板・軸受け・留め具に変更。親指の大きい白い覆いも小さい銀の支持部にした。BANDの実体だけを変更し、共有のピアノの指と骨格は保持。
+
+Fable3曲にも、Astra3曲にも、音符・音色・つまみ時刻の機械修正は加えていない。LIMITS/criticへの新制限の追加もしていない。
+
+### 15.3 Claudeが直した作曲機能（今回の編集対象外）
+
+1. **APIが数値などの制約を拒否**：`400: output_config.format.schema: For 'number' type, properties maximum, minimum are not supported` が発生。Claudeが追加した `public/js/api-schema.js` の `apiSchema()` を、`public/js/claude.js` の `streamMessage` が送信直前に使う。`minimum` / `maximum` / `multipleOf` / 文字列長などの未対応制約を送信用の複製から外す。元のSchemaは残るため手元の検査では範囲を使える。
+2. **音色2つの文法が大きすぎる**：`400: The compiled grammar is too large, which would cause performance issues.` が発生。各89項目のSYNTH2パッチを2つ含む `BAND_SOUNDS_SCHEMA` はstructured outputsに渡さず、`SYSTEM_BAND_SOUNDS` の文章中で形を指定しJSONを受け取る。compose側でkeys/pedalを確かめ、`normalizePatch2` で値と既定値を整える。
+
+3. **最後の全体検査でfixesだけでも曲を捨てていた**：Claudeがcomposeを変更。issuesがあれば停止する。fixesだけなら、検査が整えたsynth / pedal / drums / kick / knobsを曲に書き戻し、全体を再検査してfixes・issuesの両方が0のときだけ完成・保存する。完成の文につなぎ目の直しを添える。Neon Circuitはこの問題で一度捨てられ、作りかけから同じ手順で回収され、足鍵盤は187→185音になった。これはClaudeの回収時の変更で、第6回Astraによる変更ではない。
+
+上記3点はClaudeによる修正。第6回のAstraは作曲部分・prompts.js・claude.js・api-schema.jsを変更していない。実際のAPI通信も行っていない。`band-page-check` に、本物のcriticとcomposeを使う境界の試験を追加した。2区切りの境界で足鍵盤の3音を2音へ直して完成し、説明文が付くこと、5区切りの4境界でissuesが残った場合には再生せず元の完成曲へ戻すことを確認。
+
+### 15.4 維持している機能・過去の修正
+
+- 曲の検査後に入れ替え、古い音源を停止・解放。不正JSONで元の曲を壊さず、読込競合は最後を採用。保存はBAND専用で、ピアノ/STUDIOと分離。インポートは8 MBまで、書き出しURLを解放する。
+- 途中再生・停止・再開・繰り返し・テンポ変更のつまみ初期値と途中値、残響の復元。準備中の停止・曲変更で古い要求を無効化。曲替えで前の音色や音を残さない。
+- `critic.js` / `model.js` は鍵の重なり、同じ指の重複、手の幅、足の移動、つまみへの移動時間、曲外データを検査。`LIMITS` は元のまま。
+- 作曲の重複開始防止、中止、失敗時の元の曲への復帰、完成済み区切りのdraft保存、曲のつなぎ目検査。ClaudeのAPI修正をそのまま維持。
+- 大きなブロンズのクラッシュ、削り目・カップ・支柱・減衰する揺れ、スティックの握り、キックの踏み板・ビーター・ばね、黒銀のシンセと足鍵盤、暗い床。黒鍵の材質・表示窓の面・つながった筐体・光るつまみ・KNOBSレーンも維持。
+- ドラムのBAND専用補正 `{42:18,49:5}` を維持。前回は同梱OGGを29個復号し、クラッシュの最初400 msの平均がスネア比−1.9〜−0.9 dBであること、必要素材150個の存在を確認した。今回は変更・再測定なし。
+- 再生中のARは右手シンセのFX後の `AnalyserNode` の実音。金線が現在、点線が回す前。測定は20回/秒。曲替え・巻き戻し・再開で古い比較を消す。表示窓にも実際の音の波形を描く。
+- 停止写真の図は、直前の右手の和音を同じ音・強さ・リズムで変更前と現在の設定に通した試奏の実測。その拍の曲全体の録音ではない。「同じ音で実測 · 点線は変更前」と表示する。
+- 第6回も `public/piano/scene.js`、共有 `audio.js` / `state.js` / `synth2.js` / `synthcore.js` / workletを変更していない。workletの再生成が必要な変更はしていない。
+
+### 15.5 第6回のファイル・検査
+
+| ファイル | 変更 |
+|---|---|
+| `public/band/knob-motion.js`（新規） | 音の時計に基づく操作の選択、前後の移動区間 |
+| `public/band/scene.js` | 現在のつまみ優先、直接移動、実表面への接触、指の直接解法と誤差判定、掌と未使用指の姿勢、つまみの正確な検査時刻 |
+| `public/band/hardware.js` | 手の甲を小さい外板と骨格・支持部へ |
+| `tools/band-check.mjs` | 2作曲者・候補・6曲以上へ対応、候補の作風の目安は参考表示 |
+| `tools/make-band-repertoire.mjs` | 担当外の曲目と候補ファイルを保護 |
+| `tools/band-page-check.mjs` | 修正可能なつなぎ目の完成とissuesによる停止を本物の処理で検査 |
+| `tools/band-hand-check.mjs` | 特定ファイルを選べる引数を追加（省略時は全6曲） |
+| `tools/band-visual-check.mjs` | 接触を別途全数検査済みの場合の `--layout-only` を追加 |
+| `tools/band-knob-check.mjs`（新規） | 全8つまみ・全順序・両端の値・短い間隔の検査 |
+| `tools/band-repertoire-check.mjs`（新規） | 本物の生成道具を仮の保存先で動かし、候補を消さないことを検査 |
+| `astra/r6-*.json` / `r6-*.txt` | 照合値・検査記録。途中失敗を含む記録とfinalを区別 |
+| `astra/shots/geometry-knob.png` | 実形状の参考画像を更新。WebGLの材質・文字・ARの再現ではない |
+| `HANDOFF1.md` | 当15章。1〜14章は保持 |
+
+```bash
+/Users/satorun/.local/node/bin/node tools/band-check.mjs
+/Users/satorun/.local/node/bin/node --experimental-loader ./tools/band-node-loader.mjs tools/band-rehearse.mjs
+/Users/satorun/.local/node/bin/node --experimental-loader ./tools/band-node-loader.mjs tools/band-knob-check.mjs
+/Users/satorun/.local/node/bin/node --experimental-loader ./tools/band-node-loader.mjs tools/band-hand-check.mjs
+/Users/satorun/.local/node/bin/node --experimental-loader ./tools/band-node-loader.mjs tools/band-visual-check.mjs --layout-only
+/Users/satorun/.local/node/bin/node --experimental-vm-modules --experimental-loader ./tools/band-node-loader.mjs tools/band-page-check.mjs
+/Users/satorun/.local/node/bin/node --experimental-vm-modules tools/band-repertoire-check.mjs
+```
+
+- **band-check**：6曲 / 7,911音 / 94操作。形式・fixes・issues・データ変更はすべて0。候補の参考情報は疾風4、Neon4、3+3+2は3項目。結果は `astra/r6-band-check.json`。
+- **band-rehearse**：6曲すべてmisses 0。つまみは硝子48 / 銅42 / 白磁45 / 疾風45 / Neon60 / 3+3+2は42回、合計282時点で接触を検査。ほかに7,911音とスティックの握り10,090点を検査。最終結果 `astra/r6-rehearse-final.txt`。
+- **band-knob-check**：272例 / 4,960点、失敗0。最大表面隙間1.73 mm、最大の目標位置との差1.96 mm。`astra/r6-knob-check-final.txt`。
+- **band-hand-check**：6曲の94操作を各41時点、合計3,854時点・1,040,580組で失敗0。指同士の最小すき間1.65 mm、最大の目標位置との差0.343 mm。最終結果 `astra/r6-hand-check-final.txt`。
+- **band-page-check**：45項目合格（6曲になった分と、つなぎ目の7項目を追加）。本物のband.js / critic / THREE、DOM・音源・APIは代用。`astra/r6-page-check.txt`。
+- **band-repertoire-check**：候補3項目が完全一致し、候補ファイルに書き込まないこと、担当名がcandidateなら書込前に拒否することを確認。実際の曲ファイルは生成していない。
+- **band-visual-check --layout-only**：223項目。接触は上記の別の全数検査で確認し、ここではARの遮蔽・大小画面・2枚・表示窓・黒鍵・クラッシュ等を確認。最終結果 `astra/r6-visual-check-final.txt`。
+- 編集したJS全10ファイルは指定Nodeで `--check`。曲6ファイル・index・LIMITS/prompts・critic・作曲部分・Claude APIの2ファイル・ピアノ・文書前半の14範囲を開始時と照合。最終結果 `astra/r6-verification.json`。共有音声を変更していないためworklet再生成なし。
+
+前回までの確認も維持：Claudeの実ブラウザでピアノ2621音misses 0と再生・停止、共有音声 `band-regression` 40項目。実ブラウザとNodeの検査を混同しない。
+
+### 15.6 Claudeのブラウザ確認と撮影
+
+基点 `http://localhost:5173/band/`。曲を読み、全6曲を確認できる：
+
+```js
+await window.bandReady;
+for (const item of await (await fetch('repertoire/index.json')).json()) {
+  await bandLoad(item.file);
+  const r=bandRehearse();
+  console.log(item.file,r.counts,r.misses.length,r.misses.slice(0,10));
+}
+```
+
+撮影はreadyを待つ。**単純なChrome --screenshotでは黒くなるため、Claudeの `astra/shot.mjs` またはPlaywrightの待機を使う**。Astraはこのブラウザ用道具を実行していない。
+
+```bash
+/Users/satorun/.local/node/bin/node astra/shot.mjs astra/shots/r6-hayate.png 'http://localhost:5173/band/?song=hayate-cyber-sakura.band.json&shot=knob&beat=109.2'
+```
+
+```js
+await bandLoad('neon-circuit.band.json');
+await bandShot({view:'knob',beat:97.55});
+window.bandShotStatus; // state === 'ready'
+// Playwright: await page.waitForFunction(() => window.bandShotStatus?.state === 'ready')
+```
+
+見る所：
+
+1. 疾風の **108.4→109.2→110.6拍**、最後の **149.9→150.85拍**。古いつまみに残らず、次へ直接移動して表面をつまむか。98拍と109.15拍付近では人差し指と中指が突き抜けないか。
+2. Neonの **96.9→97.55→98.2拍**、3+3+2の **76.4→77.3拍** と **85.6拍**。普通の再生と、拍を指定した停止撮影の両方で接触を確認。
+3. 手の甲は `glass-current.band.json&shot=knob&beat=185.94`。大きな4枚板がなく、小さい外板・骨格・支持部が一体に見えるか。新しい折り畳み姿勢、ARと手の重なり、表示窓の読みやすさも確認。
+4. 1600×900と幅390の通常2画面。`bandShotEnd()` / Escapeで戻し、再生・停止・途中移動・曲替え。ピアノの指先と再生・停止も確認する。
+5. 曲とcandidateは無変更。作曲の実通信はClaude修正版のまま。つなぎ目の修正がある完成では、その旨が画面の文に付くことを実通信でも確認できる。
+
+`bandShotStatus.ms` はページ内の測定から描画呼び出しまでであり、ページ読込・GPU完了・画像保存までは含まない。速度の判断には保存までの実時間を使う。
+
+### 15.7 残り
+
+- 第6回の実WebGL画面、手の甲の質感、素早い連続つまみの見え方は未確認。接触の数値検査と芸術性の判断は別。
+- SwiftShader撮影約105秒、単純な--screenshotでは黒い問題は前回の実測として残る。ready待機で写真は撮れるが、30秒以内は達成したとしない。
+- 候補3曲を含む6曲の最終採否はさとるんの試聴待ち。今回は曲を変更していない。
+- 以前からの未実装：ピッチ/モジュレーションホイールの操作、作曲途中draftからの自動再開、BAND専用WAV書き出し。MIDIは音符、音色・つまみ・ドラム補正は `.band.json` で保存。
+- 公開・commit・Git変更・外部通信・素材取得・依存追加は行っていない。JS変更時は必ず指定の `node --check`、synthcore/worklet変更時はbundleを再生成する。
+
+### 15.8 公開と会社サイトの CSP（2026-09-11・Claude）
+
+さとるん「公開したいです！！」（6 曲の採否の指定は無し → 6 曲とも入れて公開、外したい曲は後で言ってもらう）。
+
+- **公開前に見つけた問題**：会社サイト（`https://atelierfactory.jp/device/jukebox/`）の CSP は `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com`（blob: 無し）。自作シンセの AudioWorklet は Tone.js → standardized-audio-context が中身を必ず blob: に包んで `addModule` するので、会社サイトでは "Loading the script 'blob:…' violates … script-src" → "Unable to load a worklet's module" で**シンセが鳴らず再生が始まらない**。GitHub Pages（`atelierfactory.github.io/bluegarage-studio/`）には CSP が無いので鳴る。ピアノはこの部品を使わないので影響なし。
+- **確かめ方**：`astra/csp-proxy.mjs`（手元の 5173 の前に立ち、会社サイトと同じ CSP を付けて返す。`.claude/launch.json` の `csp-test` = 5190）で再現。`csp-test-blob`（5191、script-src に blob: を足した案）では再生が進み、エラー 0。
+- **直し方**：infra `apps/site/hosting.tf` に、`/rf/**` と同じ形で `/device/jukebox/**` だけ `'wasm-unsafe-eval'` → `'wasm-unsafe-eval' blob:` に置き換えた CSP のパターンを足す。script-src には元から 'unsafe-inline' があるので守りはほぼ変わらない。反映は `./headers_push.sh` → `./deploy.sh`（見出しは次の deploy で配信に反映）。
+- **会社サイトの CSP を変えるのはさとるんの操作**（Claude の hosting.tf 編集は安全装置で止まった。会社サイトのセキュリティ設定なので、すり抜けずにさとるんに依頼）。`deploy.sh` は会社サイト本体と 3D 作品（`works.sh`）をまとめて配り直す。`works.sh` には未コミットの変更がある（中身は Claude からは見られなかった）。
+- 中継（relay）は Origin が atelierfactory.jp だけなので、「BAND だけ github.io で開く」逃げ道は作曲が 403 になり使えない。
+- 公開に入れないもの：`astra/`（Astra とのやりとり・写真・確認用の道具）、`public/presets/band-fable-*.json`（同梱曲と同じ中身の重複）、`.claude/launch.json` の確認用の追加。

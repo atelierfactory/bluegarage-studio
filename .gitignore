@@ -11,3 +11,6 @@ neon-overdrive.bluegarage.json
 public/config.json
 proxy/.wrangler/
 !public/piano/repertoire/*.mid
+
+# GPT-6 Astra とのやりとりの記録（大きい）
+astra/logs/

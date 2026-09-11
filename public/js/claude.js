@@ -3,6 +3,7 @@
 // ローカル開発では server.js の /api/proxy がサーバー側の .env のキーで代わりに呼ぶ。
 // どちらも同じ SSE 形式なので、ここで一度だけ解析する。
 
+import { apiSchema } from "./api-schema.js";
 const LS_KEY = "bluegarage:settings:v1";
 export const MODELS = [
   { id: "claude-opus-5", label: "Claude Opus 5 (高品質)" },
@@ -132,7 +133,7 @@ export async function streamMessage(o) {
   };
   if (o.system) body.system = typeof o.system === "string" ? [{ type: "text", text: o.system, cache_control: { type: "ephemeral" } }] : o.system;
   if (o.tools) body.tools = o.tools;
-  if (o.schema) body.output_config = { format: { type: "json_schema", schema: o.schema } };
+  if (o.schema) body.output_config = { format: { type: "json_schema", schema: apiSchema(o.schema) } };
 
   const MAX_ATTEMPTS = 4;
   let lastErr = null;
