@@ -198,7 +198,7 @@ window.vesperInterpret({ model: 'claude-fable-5-1', bars: 8, extraDirection: '�
 - 音量: ジムノペディは v25〜56、悲愴は v24〜90 と静かな解釈（指示どおり）。他の曲より小さく聞こえる。気になれば VOL で。
 - 今の「曲を選ぶ」: 11 曲（The Entertainer / Für Elise / Clair de Lune / 新練習曲 1 / 革命 / 祭囃子 / トルコ / 幻想即興曲 / 子犬 / ジムノペディ / 悲愴）。Für Elise・Clair de Lune・新練習曲は解釈なし（MIDI + 自動運指）のまま。
 
-## 15. VESPER BAND（2026-09-11・第6回への対応、6曲を保持、未公開）
+## 15. VESPER BAND（2026-09-11・第6回への対応、6曲を保持、公開済み fccf717 → https://atelierfactory.jp/device/jukebox/band/ ）
 
 右手37鍵＋8つまみ、右足13鍵、左手1本のスティック、左足キック。第6回は連続したつまみ操作の接触、作曲者と候補の検査、手の甲を修正した。**同梱6曲の音・音色・つまみ時刻・曲目・candidateは一切変更していない。LIMITS、critic、Claudeの作曲処理、ピアノの共有コードも変更なし**。開始時の14範囲の照合値は `astra/r6-protected.json`。
 
@@ -371,3 +371,5 @@ window.bandShotStatus; // state === 'ready'
 - **会社サイトの CSP を変えるのはさとるんの操作**（Claude の hosting.tf 編集は安全装置で止まった。会社サイトのセキュリティ設定なので、すり抜けずにさとるんに依頼）。`deploy.sh` は会社サイト本体と 3D 作品（`works.sh`）をまとめて配り直す。`works.sh` には未コミットの変更がある（中身は Claude からは見られなかった）。
 - 中継（relay）は Origin が atelierfactory.jp だけなので、「BAND だけ github.io で開く」逃げ道は作曲が 403 になり使えない。
 - 公開に入れないもの：`astra/`（Astra とのやりとり・写真・確認用の道具）、`public/presets/band-fable-*.json`（同梱曲と同じ中身の重複）、`.claude/launch.json` の確認用の追加。
+- **公開した（2026-09-11）**：さとるんが `astra/csp-fix.py`（hosting.tf の 3 か所だけを書き換える。写しで試験済み）→ `./headers_push.sh` → `./deploy.sh` を実行。Claude が見出しを確認：`/device/jukebox/piano/` と `/device/jukebox/band/` の script-src に `blob:` あり、トップ `/` と `/rf/robot_fighter/` は元のまま。その後 Claude がコミット `fccf717` を push（fetch して origin に先行コミットが無いことを確認してから）。公開 URL **https://atelierfactory.jp/device/jukebox/band/** 。band/・曲目・worklet bundle・piano が 200、曲目は 6 曲、ピアノに BAND ボタン、主要 8 ファイル（band.js / scene.js / ar.js / bundle / claude.js / api-schema.js / prompts.js / index.json）が fccf717 と同じ中身。
+- 未確認：会社サイトの本物のページでシンセが鳴ること（Claude の内蔵ブラウザは atelierfactory.jp へ移動できず、`gh run watch` も安全装置で止まったので、公開ページの取得で確認した）。同じ CSP を付けた手元の再現では鳴る。さとるんの耳での確認待ち。
