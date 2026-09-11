@@ -302,7 +302,8 @@ async function renderSongs() {
   const el = $("#lib-list"); el.innerHTML = "";
   const head = (txt) => { const h = document.createElement("div"); h.className = "lib-head"; h.textContent = txt; el.appendChild(h); };
   head("同梱の曲 (著作権切れの名曲 = Mutopia Project の Public Domain 版、と このアプリで作ったオリジナル曲)");
-  for (const it of await listRepertoire()) el.appendChild(row(it.title, `${it.composer} · ${it.year} · ${it.license}`, "選択", async () => { try { const message=await playRepertoire(it);if(message===null)return;status(message + "。▶ で再生", "lit"); dlg.close(); audio.seek(0); } catch (err) { toast(err.message, true); } }));
+  // hidden の曲は一覧に出さない (Fable 5.1 の演奏解釈がまだの曲。さとるん指示 2026-09-12)。?song= での直接指定では今までどおり開ける
+  for (const it of (await listRepertoire()).filter((x) => !x.hidden)) el.appendChild(row(it.title, `${it.composer} · ${it.year} · ${it.license}`, "選択", async () => { try { const message=await playRepertoire(it);if(message===null)return;status(message + "。▶ で再生", "lit"); dlg.close(); audio.seek(0); } catch (err) { toast(err.message, true); } }));
   const all = await lib.listSongs();
   const groups = [["作った曲 (作曲したもの)", all.filter((m) => m.kind === "composed")], ["読み込んだ曲 (自分の MIDI / JSON)", all.filter((m) => m.kind === "imported")]];
   for (const [title, list] of groups) {

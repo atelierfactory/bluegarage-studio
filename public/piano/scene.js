@@ -191,8 +191,7 @@ export function buildRobot(B, hands) {
   box(hd, V(0, hl * 0.15, 0.55), V(0.9, 0.5, 0.7), M.gun);
   [-1, 1].forEach((sgn) => { const pod = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.22, 20), M.chrome); pod.rotation.z = Math.PI / 2; pod.position.set(sgn * 1.15, hl * 0.6, 0); hd.add(pod);
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.05, 8, 24), M.glow); ring.rotation.y = Math.PI / 2; ring.position.set(sgn * 1.28, hl * 0.6, 0); hd.add(ring); });
-  const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 1.4, 8), M.chrome); ant.position.set(-0.75, hl * 1.3, -0.2); ant.rotation.z = 0.35; hd.add(ant);
-  const antTip = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 10), M.glowO); antTip.position.set(-1.0, hl * 1.72, -0.2); hd.add(antTip);
+  // 頭の上のアンテナ (棒) と、その先の橙色の光は外した (さとるん指示 2026-09-12: カメラに写ってしまうため)
   // 目 (カメラの位置)
   const eye = new THREE.Object3D(); eye.position.set(0, hl * 0.62, 1.15); hd.add(eye);
   return { visor, core, eye };
@@ -425,8 +424,7 @@ function buildPiano(scene) {
   const nameboardFelt = new THREE.Mesh(new THREE.BoxGeometry(HALF_W * 2 - 0.23, 0.01, 0.012), P.feltRed); nameboardFelt.position.set(0, KEY_TOP_Y + 0.006, -WHITE_L - 0.03); g.add(nameboardFelt);
   const fallboard = shadowed(new THREE.Mesh(new THREE.BoxGeometry(HALF_W * 2 - 0.23, 0.026, 0.19), P.lacquer)); fallboard.position.set(0, KEY_TOP_Y + 0.135, -0.28); fallboard.rotation.x = 0.06; g.add(fallboard);
   const nameboard = shadowed(new THREE.Mesh(new THREE.BoxGeometry(HALF_W * 2 - 0.23, 0.15, 0.03), P.lacquer)); nameboard.position.set(0, KEY_TOP_Y + 0.075, -WHITE_L - 0.05); g.add(nameboard);
-  const plaque = textPlate("SALAMANDER GRAND PIANO V3\nsampled by Alexander Holm · 16 velocity layers · 48 kHz / 24 bit\nSFZ by kinwie · given to the world for free — thank you", 0.44, 0.078, { size: 30 });
-  plaque.position.set(0, KEY_TOP_Y + 0.078, -WHITE_L - 0.034); g.add(plaque);
+  // 金色の銘板 (Salamander への感謝の札) は外した (さとるん指示 2026-09-12: カメラに写ってしまうため)。感謝は画面の ♥ に全文がある
   const desk = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.30, 0.018), P.lacquer)); desk.position.set(0, TOP_Y + 0.17, -0.52); desk.rotation.x = -0.28; g.add(desk);
   const deskLip = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.02, 0.05), P.lacquer)); deskLip.position.set(0, TOP_Y + 0.035, -0.49); g.add(deskLip);
   // ── 屋根 (低音側の蝶番で開く)

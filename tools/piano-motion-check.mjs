@@ -52,7 +52,8 @@ for(const item of repertoire.filter(it=>!filter||(it.file+' '+it.title).includes
   }
   let pathMaxSpeed=0;
   for(const h of ['L','R'])for(let sec=1/240;sec<end;sec+=1/240){const a=motionAt(plan,h,sec-1/240),b=motionAt(plan,h,sec);if(a&&b)pathMaxSpeed=Math.max(pathMaxSpeed,Math.hypot(b.palm.x-a.palm.x,b.palm.y+b.lift-a.palm.y-a.lift,b.palm.z-a.palm.z)*240);}
-  const before=baseline.rows.find(r=>r.file===item.file).fingerChanges,after=fingerChanges(notes);
+  // 新しく足した曲は前回の記録が無い (before は今の値と同じ扱い)
+  const before=baseline.rows.find(r=>r.file===item.file)?.fingerChanges??fingerChanges(notes),after=fingerChanges(notes);
   const failed=preparation.misses>0||attacks.misses.length>0||plan.issues.length>0||plan.releases.length>1||releaseChecks.some(r=>!r.clear)||plan.releases.some(r=>r.required<=MOTION_LIMITS.speed)||preparation.checked+plan.releases.length!==notes.length||fpsResults.some(r=>r.misses||r.assignmentChanges||r.positionDrift>1e-5||r.maxSpeed>MOTION_LIMITS.speed+.01)||pathMaxSpeed>MOTION_LIMITS.speed+.01||(!item.perf&&(after>before/4||fingerChanges(plan.notes,'_f')>before/4));
   const report={file:item.file,title:item.title,notes:notes.length,before,after,displayChanges:fingerChanges(plan.notes.filter(n=>!n._visualRelease),'_f'),preparation,onsets:{checked:attacks.checked,misses:attacks.misses.length,maxDx:attacks.maxDx,maxDy:attacks.maxDy,maxDz:attacks.maxDz,examples:attacks.misses.slice(0,12)},fps:fpsResults,pathMaxSpeed,issues:plan.issues,releases:plan.releases,releaseChecks,failed,ms:Math.round(performance.now()-started)};
   reports.push(report);

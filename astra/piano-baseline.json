@@ -1,80 +1,86 @@
 {
-  "hashes": {
-    "KV331_3_RondoAllaTurca.mid": "c14299cbdd34c8b2081da84dc06519ef8a52a0d589ee53c758d28b8e3d727d1c",
-    "TroisNouvellesEtudes_Chopin_n1.mid": "3a307179dc100e220066f775dc72958cdf9a3e86d201982e81d02062752d00c6",
-    "chopin_fantaisie-impromptu.mid": "b29f6add7473b6e931c2e66349e860bf0e884cf68e19e90420a4870aae689f96",
-    "chopin_valse_op64_no1.mid": "62333ad9f9b22603d009734ab500330a12ac09aeca13d185ac0ba64a7fb9d206",
-    "debussy_Ste_Bergamesq_Clair.mid": "4eee9a1546ffde1ff74cb9824ba0e57cbc821185a15185bfea9faed97820bf8c",
-    "entertainer.mid": "33e4e81ee64ffb2edf90d1c6a1ddee7276507296bfb915c2bb775231a467f066",
-    "entertainer.vesper.json": "34789ed7011b8d72ce99517498074060d15c7a973739aa6f9dacfec86a36c400",
-    "fantaisie-impromptu.vesper.json": "979aa7d6b7ece8f495e1b06260e1366af73fb0e5a6e087ecbae7c904832207ae",
-    "fur_Elise_WoO59.mid": "1c12c21c7bbf4cf163896732672648a69d497636059837abd153c71abe50215a",
-    "gymnopedie-1.vesper.json": "0247168550871b69f8a37149d2acfbf28dfc0281ad6e12a9b73ca2325df1bcfa",
-    "gymnopedie_1.mid": "09ce7337b4bf42ba12e1aa64b4c7dc7fcfa6455f1070cb12f8880a755df97384",
-    "index.json": "5be8d1ae2817b0f1de33408372968e6ced5016ec3a00431c093b9e6255a173b2",
-    "matsuri-overdrive.vesper.json": "83f52686d613b64dae22857dcf6b02107e941f6929d8bf04e3b2f8e0dfa976e4",
-    "minute-waltz.vesper.json": "3b109efe37dbe3b7422749381348f213438edc1e3e5720cc62783ae8fea96e82",
-    "op-10-12-wfi.mid": "1902287905aa68175f9d13207e6cfc397894d4210617ec1a5c1ae38334c3c7d6",
-    "pathetique-2.mid": "92c685ca98001473bcc21fa98110cc125ab489c1bf49be185e062d204a268492",
-    "pathetique-2.vesper.json": "ac3f6738cb78ed303ba25d20935edef7fbdc054fd00c747c6a8f1fd646a1ecf2",
-    "revolutionary.vesper.json": "b7384736e01ccbbe8dea9ada747ce6a5fadcb826d9edda049af7dcd405e70704",
-    "turkish-march.vesper.json": "dd7cd7feca79120f5804c29bf51a3d13905a3e2ae32c8f609df36709899a69ba"
+ "hashes": {
+  "KV331_3_RondoAllaTurca.mid": "c14299cbdd34c8b2081da84dc06519ef8a52a0d589ee53c758d28b8e3d727d1c",
+  "TroisNouvellesEtudes_Chopin_n1.mid": "3a307179dc100e220066f775dc72958cdf9a3e86d201982e81d02062752d00c6",
+  "chopin_fantaisie-impromptu.mid": "b29f6add7473b6e931c2e66349e860bf0e884cf68e19e90420a4870aae689f96",
+  "chopin_valse_op64_no1.mid": "62333ad9f9b22603d009734ab500330a12ac09aeca13d185ac0ba64a7fb9d206",
+  "debussy_Ste_Bergamesq_Clair.mid": "4eee9a1546ffde1ff74cb9824ba0e57cbc821185a15185bfea9faed97820bf8c",
+  "entertainer.mid": "33e4e81ee64ffb2edf90d1c6a1ddee7276507296bfb915c2bb775231a467f066",
+  "entertainer.vesper.json": "34789ed7011b8d72ce99517498074060d15c7a973739aa6f9dacfec86a36c400",
+  "fantaisie-impromptu.vesper.json": "979aa7d6b7ece8f495e1b06260e1366af73fb0e5a6e087ecbae7c904832207ae",
+  "fur_Elise_WoO59.mid": "1c12c21c7bbf4cf163896732672648a69d497636059837abd153c71abe50215a",
+  "gymnopedie-1.vesper.json": "0247168550871b69f8a37149d2acfbf28dfc0281ad6e12a9b73ca2325df1bcfa",
+  "gymnopedie_1.mid": "09ce7337b4bf42ba12e1aa64b4c7dc7fcfa6455f1070cb12f8880a755df97384",
+  "index.json": "ef3a08698ecc132826ce3ca5888ecda47f2e007751fad6df7a562cb2dbbea4b9",
+  "matsuri-overdrive.vesper.json": "83f52686d613b64dae22857dcf6b02107e941f6929d8bf04e3b2f8e0dfa976e4",
+  "minute-waltz.vesper.json": "3b109efe37dbe3b7422749381348f213438edc1e3e5720cc62783ae8fea96e82",
+  "op-10-12-wfi.mid": "1902287905aa68175f9d13207e6cfc397894d4210617ec1a5c1ae38334c3c7d6",
+  "pathetique-2.mid": "92c685ca98001473bcc21fa98110cc125ab489c1bf49be185e062d204a268492",
+  "pathetique-2.vesper.json": "ac3f6738cb78ed303ba25d20935edef7fbdc054fd00c747c6a8f1fd646a1ecf2",
+  "revolutionary.vesper.json": "b7384736e01ccbbe8dea9ada747ce6a5fadcb826d9edda049af7dcd405e70704",
+  "turkish-march.vesper.json": "dd7cd7feca79120f5804c29bf51a3d13905a3e2ae32c8f609df36709899a69ba",
+  "beethoven_fifth_op67.mid": "c7d7c0b8c9facf54cedd77a98dc90fd59899f4c61f8cd9ad92c9e2ad8b56ead9",
+  "fifth-opus.vesper.json": "f1680bd650077e04e8a5f971ecd23d6b57940085ccd60569b382cdf9f746d654",
+  "fur-elise.vesper.json": "86635e5c6ef090c395b071d79ecd9064cfc5c95cc777b5a7715eb4f4ca32cb12",
+  "clair-de-lune.vesper.json": "606deb29f97defd19cb3b530793d8eea89f68fb762bc0b46cc02f0a9d85d504b",
+  "trois-nouvelles-1.vesper.json": "c2cb95ab4410c1ad915865e0eb00b294b3db0607eecc4f529e0aa50ad51dff94"
+ },
+ "rows": [
+  {
+   "file": "entertainer.mid",
+   "notes": 2621,
+   "fingerChanges": 816
   },
-  "rows": [
-    {
-      "file": "entertainer.mid",
-      "notes": 2621,
-      "fingerChanges": 816
-    },
-    {
-      "file": "fur_Elise_WoO59.mid",
-      "notes": 905,
-      "fingerChanges": 356
-    },
-    {
-      "file": "debussy_Ste_Bergamesq_Clair.mid",
-      "notes": 1468,
-      "fingerChanges": 628
-    },
-    {
-      "file": "TroisNouvellesEtudes_Chopin_n1.mid",
-      "notes": 829,
-      "fingerChanges": 495
-    },
-    {
-      "file": "op-10-12-wfi.mid",
-      "notes": 2082,
-      "fingerChanges": 777
-    },
-    {
-      "file": "matsuri-overdrive.vesper.json",
-      "notes": 1513,
-      "fingerChanges": 423
-    },
-    {
-      "file": "KV331_3_RondoAllaTurca.mid",
-      "notes": 1614,
-      "fingerChanges": 396
-    },
-    {
-      "file": "chopin_fantaisie-impromptu.mid",
-      "notes": 3014,
-      "fingerChanges": 952
-    },
-    {
-      "file": "chopin_valse_op64_no1.mid",
-      "notes": 1370,
-      "fingerChanges": 414
-    },
-    {
-      "file": "gymnopedie_1.mid",
-      "notes": 282,
-      "fingerChanges": 87
-    },
-    {
-      "file": "pathetique-2.mid",
-      "notes": 1629,
-      "fingerChanges": 361
-    }
-  ]
+  {
+   "file": "fur_Elise_WoO59.mid",
+   "notes": 905,
+   "fingerChanges": 356
+  },
+  {
+   "file": "debussy_Ste_Bergamesq_Clair.mid",
+   "notes": 1468,
+   "fingerChanges": 628
+  },
+  {
+   "file": "TroisNouvellesEtudes_Chopin_n1.mid",
+   "notes": 829,
+   "fingerChanges": 495
+  },
+  {
+   "file": "op-10-12-wfi.mid",
+   "notes": 2082,
+   "fingerChanges": 777
+  },
+  {
+   "file": "matsuri-overdrive.vesper.json",
+   "notes": 1513,
+   "fingerChanges": 423
+  },
+  {
+   "file": "KV331_3_RondoAllaTurca.mid",
+   "notes": 1614,
+   "fingerChanges": 396
+  },
+  {
+   "file": "chopin_fantaisie-impromptu.mid",
+   "notes": 3014,
+   "fingerChanges": 952
+  },
+  {
+   "file": "chopin_valse_op64_no1.mid",
+   "notes": 1370,
+   "fingerChanges": 414
+  },
+  {
+   "file": "gymnopedie_1.mid",
+   "notes": 282,
+   "fingerChanges": 87
+  },
+  {
+   "file": "pathetique-2.mid",
+   "notes": 1629,
+   "fingerChanges": 361
+  }
+ ],
+ "note": "index.json は 2026-09-12 に hidden 欄を足したため hash を更新 (曲データ本体は未変更)"
 }

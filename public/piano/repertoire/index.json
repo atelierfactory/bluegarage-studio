@@ -18,7 +18,10 @@
   "year": "1810",
   "source": "https://www.mutopiaproject.org/ftp/BeethovenLv/WoO59/fur_Elise_WoO59/",
   "typesetter": "Stelios Samelis",
-  "license": "Public Domain (typeset placed in the public domain, Mutopia Project)"
+  "license": "Public Domain (typeset placed in the public domain, Mutopia Project)",
+  "perf": "fur-elise.vesper.json",
+  "perfBy": "Claude Fable 5.1",
+  "perfNote": "楽譜はそのまま、強弱・間・音の切り方・手と指・ペダルを Claude Fable 5.1 が演奏家として決めた版 (2026-09-11)"
  },
  {
   "file": "debussy_Ste_Bergamesq_Clair.mid",
@@ -27,7 +30,10 @@
   "year": "1905",
   "source": "https://www.mutopiaproject.org/ftp/DebussyC/L75/debussy_Ste_Bergamesq_Clair/",
   "typesetter": "Keith OHara",
-  "license": "Public Domain (typeset placed in the public domain, Mutopia Project)"
+  "license": "Public Domain (typeset placed in the public domain, Mutopia Project)",
+  "perf": "clair-de-lune.vesper.json",
+  "perfBy": "Claude Fable 5.1",
+  "perfNote": "楽譜はそのまま、強弱・間・音の切り方・手と指・ペダルを Claude Fable 5.1 が演奏家として決めた版 (2026-09-11)"
  },
  {
   "file": "TroisNouvellesEtudes_Chopin_n1.mid",
@@ -36,7 +42,10 @@
   "year": "1839",
   "source": "https://www.mutopiaproject.org/ftp/ChopinFF/B130/TroisNouvellesEtudes_Chopin_n1/",
   "typesetter": "Romain Behar",
-  "license": "Public Domain (typeset placed in the public domain, Mutopia Project)"
+  "license": "Public Domain (typeset placed in the public domain, Mutopia Project)",
+  "perf": "trois-nouvelles-1.vesper.json",
+  "perfBy": "Claude Fable 5.1",
+  "perfNote": "楽譜はそのまま、強弱・間・音の切り方・手と指・ペダルを Claude Fable 5.1 が演奏家として決めた版 (2026-09-11)"
  },
  {
   "file": "op-10-12-wfi.mid",
@@ -127,5 +136,18 @@
   "perf": "pathetique-2.vesper.json",
   "perfBy": "Claude Fable 5.1",
   "perfNote": "楽譜はそのまま、強弱・間・音の切り方・手と指・ペダルを Claude Fable 5.1 が演奏家として決めた版 (2026-09-10)"
+ },
+ {
+  "file": "beethoven_fifth_op67.mid",
+  "title": "交響曲第 5 番「運命」第 1 楽章 (ピアノ編曲)",
+  "composer": "Ludwig van Beethoven",
+  "year": "1808",
+  "source": "https://www.mutopiaproject.org/ftp/BeethovenLv/O67/beethoven_fifth_op67/",
+  "typesetter": "Magnus Lewis-Smith",
+  "license": "Public Domain (typeset placed in the public domain, Mutopia Project; Augener's Edition)",
+  "perf": "fifth-opus.vesper.json",
+  "perfBy": "Claude Opus 5",
+  "perfNote": "楽譜はそのまま、強弱・間・音の切り方・手と指・ペダル・テンポの揺れを Claude Opus 5 が演奏家として決めた版 (2026-09-12)。曲全体を一度に設計している",
+  "note": "Allegro con brio。3 つの短い音と 1 つの長い音の動機が、全曲を組み立てる"
  }
 ]
