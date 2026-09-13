@@ -18,6 +18,21 @@ app.use(express.static(path.join(__dirname, "public")));
 const API_KEY = process.env.ANTHROPIC_API_KEY ?? "";
 const DEFAULT_MODEL = process.env.BLUEGARAGE_MODEL || "claude-opus-5";
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+// fetch は本文の受け取りが 5 分で時間切れになり、長い生成が "terminated" で切れる。
+// 標準の https で呼び、時間制限を外す (考えている間は何も来ないことがある)。
+import https from "node:https";
+function postAnthropic(body, ac) {
+  return new Promise((ok, ng) => {
+    const r = https.request(ANTHROPIC_URL, { method: "POST", headers: {
+      "content-type": "application/json", "content-length": Buffer.byteLength(body),
+      "x-api-key": API_KEY, "anthropic-version": "2023-06-01",
+    } }, (res) => { res.setTimeout(0); ok(res); });
+    r.setTimeout(0);
+    r.on("error", ng);
+    ac?.signal?.addEventListener?.("abort", () => r.destroy(), { once: true });
+    r.end(body);
+  });
+}
 
 /* ---------------------------------- config / proxy ---------------------------------- */
 
@@ -36,25 +51,20 @@ app.post("/api/proxy", async (req, res) => {
   res.on("close", () => { if (!res.writableFinished) ac.abort(); });
   let upstream;
   try {
-    upstream = await fetch(ANTHROPIC_URL, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-api-key": API_KEY, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify(body),
-      signal: ac.signal,
-    });
+    upstream = await postAnthropic(JSON.stringify(body), ac);
   } catch (err) {
     if (ac.signal.aborted) return;
     console.error("[proxy] connect:", err?.message);
     return res.status(502).json({ error: { type: "api_error", message: `接続できません: ${err?.message}` } });
   }
-  if (!upstream.ok) {
-    const text = await upstream.text();
-    res.status(upstream.status).type("application/json").send(text);
+  if (upstream.statusCode < 200 || upstream.statusCode >= 300) {
+    let text = ""; for await (const c of upstream) text += c;
+    res.status(upstream.statusCode).type("application/json").send(text);
     return;
   }
   res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-Accel-Buffering": "no" });
   try {
-    for await (const chunk of upstream.body) { if (ac.signal.aborted) break; res.write(chunk); }
+    for await (const chunk of upstream) { if (ac.signal.aborted) break; res.write(chunk); }
   } catch (err) { if (!ac.signal.aborted) console.error("[proxy] stream:", err?.message); }
   res.end();
 });
@@ -80,16 +90,17 @@ async function streamStructured({ res, system, userText, schema, label, model })
   };
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const up = await fetch(ANTHROPIC_URL, { method: "POST", headers: { "content-type": "application/json", "x-api-key": API_KEY, "anthropic-version": "2023-06-01" }, body: JSON.stringify(body) });
-      if (!up.ok) {
-        const j = await up.json().catch(() => ({}));
-        const msg = j?.error?.message ?? `HTTP ${up.status}`;
-        if ((up.status === 529 || up.status >= 500 || up.status === 429) && attempt < 3) { await new Promise((r) => setTimeout(r, 2500 * attempt)); continue; }
-        sseSend(res, { type: "error", message: `API エラー (${up.status}): ${msg}` }); return res.end();
+      const up = await postAnthropic(JSON.stringify(body));
+      if (up.statusCode < 200 || up.statusCode >= 300) {
+        let text = ""; for await (const c of up) text += c;
+        let j = {}; try { j = JSON.parse(text); } catch {}
+        const msg = j?.error?.message ?? `HTTP ${up.statusCode}`;
+        if ((up.statusCode === 529 || up.statusCode >= 500 || up.statusCode === 429) && attempt < 3) { await new Promise((r) => setTimeout(r, 2500 * attempt)); continue; }
+        sseSend(res, { type: "error", message: `API エラー (${up.statusCode}): ${msg}` }); return res.end();
       }
       const dec = new TextDecoder();
       let buf = "", text = "", chars = 0, notes = 0, lastTick = 0, stop = null, usage = {};
-      for await (const chunk of up.body) {
+      for await (const chunk of up) {
         buf += dec.decode(chunk, { stream: true });
         let idx;
         while ((idx = buf.indexOf("\n\n")) >= 0) {

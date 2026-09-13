@@ -5,6 +5,7 @@
 // 守り: Origin の許可一覧 / (任意) アクセスコード / IP ごとに 1 分 N 回 / 1 日の上限 (曲・トラック・その他、日本時間 0 時切替)
 // 依存なし (node:http だけ)。数は JSON ファイルに残す (再起動しても今日の分を忘れない)。
 import http from "node:http";
+import https from "node:https";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -123,17 +124,27 @@ const server = http.createServer(async (req, res) => {
         : `今日の${where}の利用上限に達しました。日付が変わるとまた使えます`;
       return err(res, 429, "daily_limit_error", msg);
     }
-    const ac = new AbortController();
-    res.on("close", () => { if (!res.writableFinished) ac.abort(); });
+    let aborted = false, upReq = null;
+    res.on("close", () => { if (!res.writableFinished) { aborted = true; upReq?.destroy(); } });
     let up;
     try {
-      up = await fetch(ANTHROPIC, { method: "POST", headers: { "content-type": "application/json", "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" }, body, signal: ac.signal });
-    } catch (e) { if (ac.signal.aborted) return; console.error("[relay] connect:", e?.message); return err(res, 502, "api_error", `接続できません: ${e?.message}`); }
-    const ct = up.headers.get("content-type") ?? "application/json";
-    res.writeHead(up.status, { "content-type": ct, "cache-control": "no-cache", ...(ct.includes("event-stream") ? { "x-accel-buffering": "no" } : {}) });
-    try { for await (const chunk of up.body) { if (ac.signal.aborted) break; res.write(chunk); } } catch (e) { if (!ac.signal.aborted) console.error("[relay] stream:", e?.message); }
+      up = await new Promise((ok, ng) => {
+        const r = https.request(ANTHROPIC, { method: "POST", headers: {
+          "content-type": "application/json", "content-length": Buffer.byteLength(body),
+          "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01",
+        } }, ok);
+        upReq = r;
+        r.setTimeout(0);                        // 応答待ちに時間制限を付けない (長い生成でも切らない)
+        r.on("error", ng);
+        r.end(body);
+      });
+    } catch (e) { if (aborted) return; console.error("[relay] connect:", e?.message); return err(res, 502, "api_error", `接続できません: ${e?.message}`); }
+    up.setTimeout(0);                           // 受け取りの途中で無音が続いても切らない (考えている時間が長いことがある)
+    const ct = up.headers["content-type"] ?? "application/json";
+    res.writeHead(up.statusCode, { "content-type": ct, "cache-control": "no-cache", ...(String(ct).includes("event-stream") ? { "x-accel-buffering": "no" } : {}) });
+    try { for await (const chunk of up) { if (aborted) break; res.write(chunk); } } catch (e) { if (!aborted) console.error("[relay] stream:", e?.message); }
     res.end();
-    console.log(`[relay] ${state.day} ${app} ${bucket} ${kind} ${up.status} ${clientIp(req)} songs=${state.buckets[app]?.blueprint ?? 0}/${LIM.blueprint}`);
+    console.log(`[relay] ${state.day} ${app} ${bucket} ${kind} ${up.statusCode} ${clientIp(req)} songs=${state.buckets[app]?.blueprint ?? 0}/${LIM.blueprint}`);
   }
 });
 server.listen(PORT, "127.0.0.1", () => console.log(`[relay] http://127.0.0.1:${PORT}  origins=${ORIGINS.join(",")}  limits=${JSON.stringify(LIM)} (アプリごと・同時作曲 OK)  key=${env.ANTHROPIC_API_KEY ? "あり" : "なし"}  passcode=${PASSCODE ? "あり" : "なし"}`));

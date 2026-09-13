@@ -177,7 +177,10 @@ async function attemptOnce(body, transport, apiKey, o, attempt) {
     headers["anthropic-version"] = "2023-06-01";
     headers["x-bluegarage-kind"] = o.kind ?? "chat"; // 中継サーバーが 1 日の曲数を数えるための種類
     headers["x-bluegarage-session"] = sessionId(); // このタブの番号 (記録用)
-    headers["x-bluegarage-app"] = appName();       // piano / band。1 日の上限はアプリごとに数える
+    // piano / band。1 日の上限はアプリごとに数える。
+    // 古い中継はこの見出しを受け付けない (CORS の preflight で止まる) ので、
+    // 新しい中継 (health に concurrent: true) のときだけ送る。公開の順番がどちらでも壊れないように。
+    if (info.concurrent) headers["x-bluegarage-app"] = appName();
     const pass = settings.get().passcode ?? "";
     if (pass) headers["x-bluegarage-pass"] = pass;
   }
