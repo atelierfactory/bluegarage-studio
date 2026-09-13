@@ -51,7 +51,7 @@ const deps={
  '../js/state.js':S,'../js/audio.js':audio,'../js/drum-balance.js':drumBalance,
  '../js/pianoroll.js':{THEME:{},PianoRoll:class{resetFollow(){}followPlayhead(){}}},
  '../js/midi.js':{downloadMidi(){}},
- '../js/claude.js':{generateStructured,settings:{get:()=>({lang:'ja'})},resolveTransport:async()=>'proxy',relaySeat:async()=>null,MODELS:[]},
+ '../js/claude.js':{generateStructured,settings:{get:()=>({lang:'ja'})},resolveTransport:async()=>'proxy',songsLeft:async()=>null,MODELS:[]},
  '../js/i18n.js':{t:s=>s,setLang(){},detectLang:()=> 'ja',applyDom(){}},
  '../js/settings.js':{initSettings:()=>({openIfNoKey:async()=>{}})},
  '../js/library.js':library,'./scene.js':{BandStage:Stage},'./lanes.js':{Lanes:class{draw(){}}},
