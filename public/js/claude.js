@@ -78,6 +78,19 @@ export async function relaySeat() {
   } catch { return null; }
 }
 
+// 今日あと何曲作れるか。中継を使っていないとき (手元のサーバー・自分のキー) は null
+export async function songsLeft() {
+  const info = await probeServer();
+  if (!info.proxyUrl) return null;
+  try {
+    const h = await fetch(`${info.proxyUrl}/health`, { cache: "no-cache" });
+    if (!h.ok) return null;
+    const hj = await h.json();
+    const mine = hj.apps?.[appName()] ?? hj;
+    return mine.songs ?? null;                    // {used, limit, left}
+  } catch { return null; }
+}
+
 // どの画面から呼んでいるか (中継サーバーが 1 日の曲数をアプリごとに数えるため)
 let _app = null;
 export function setAppName(name) { _app = name; }

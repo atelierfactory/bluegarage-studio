@@ -9,7 +9,7 @@ import {
 import * as audio from "../js/audio.js";
 import { PianoRoll, THEME } from "../js/pianoroll.js";
 import { downloadMidi } from "../js/midi.js";
-import { generateStructured, settings, resolveTransport, MODELS } from "../js/claude.js";
+import { generateStructured, settings, resolveTransport, songsLeft, MODELS } from "../js/claude.js";
 import { t, setLang, detectLang, applyDom } from "../js/i18n.js";
 import { initSettings } from "../js/settings.js";
 import * as lib from "../js/library.js";
@@ -344,10 +344,20 @@ function applyMode() {
   const play = mode === "play";
   $("#btn-songs").classList.toggle("hidden", !play); $("#play-hint").classList.toggle("hidden", !play);
   $("#inp-theme").classList.toggle("hidden", play); $("#btn-go").classList.toggle("hidden", play);
+  $("#quota").classList.toggle("hidden", play || !quotaText);
+}
+// 今日あと何曲作れるか (中継を使っているときだけ出す)
+let quotaText = "";
+async function refreshQuota() {
+  const q = await songsLeft();
+  quotaText = q ? (q.left > 0 ? `今日はあと ${q.left} 曲 (1 日 ${q.limit} 曲まで)` : `今日の分 (${q.limit} 曲) を使い切りました。日本時間の 0 時に戻ります`) : "";
+  $("#quota").textContent = quotaText;
+  $("#quota").classList.toggle("hidden", mode === "play" || !quotaText);
 }
 document.querySelectorAll(".mtab").forEach((b) => b.addEventListener("click", () => { mode = b.dataset.mode; applyMode(); }));
 $("#sel-model").innerHTML = MODELS.map((m) => `<option value="${m.id}">${m.label}</option>`).join("");
 applyMode();
+refreshQuota();
 let running = false;
 function setGoUi(busy) {
   running=busy;state.generating=busy;if(busy)++openRevision;
@@ -363,7 +373,7 @@ $("#btn-go").addEventListener("click", async () => {
   try {
     const transport=await resolveTransport();checkCancelled();
     if(transport==="none"){await settingsUi.openIfNoKey();if(await resolveTransport()==="none")throw new Error("作曲の接続が設定されていません");}
-    await compose(theme,{model:COMPOSE_MODEL});made=true;
+    try { await compose(theme,{model:COMPOSE_MODEL});made=true; } finally { refreshQuota(); }
   } catch(error) {
     let saved=false;
     if(state.song!==backup && state.song.kind==="draft-working" && state.song.tracks.some(t=>t.notes.length)) {

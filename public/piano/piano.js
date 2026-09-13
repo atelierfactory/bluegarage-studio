@@ -10,7 +10,7 @@ import {
 import * as audio from "../js/audio.js";
 import { PianoRoll, THEME } from "../js/pianoroll.js";
 import { downloadMidi } from "../js/midi.js";
-import { generateStructured, settings, resolveTransport, MODELS } from "../js/claude.js";
+import { generateStructured, settings, resolveTransport, songsLeft, MODELS } from "../js/claude.js";
 import { buildBlueprintRequest, buildPianoRequest, buildInterpretRequest } from "../js/prompts.js";
 import { analyzePiano, describeAnalysis } from "../js/critic.js";
 import { t, setLang, detectLang, applyDom } from "../js/i18n.js";
@@ -538,11 +538,21 @@ function applyMode() {
   $("#inp-theme").classList.toggle("hidden", play); $("#btn-go").classList.toggle("hidden", play);
   $("#btn-go").textContent = mode === "compose" ? "♪ 作曲する (数分)" : "▶ 即興を始める";
   $("#inp-theme").placeholder = mode === "compose" ? "お題 (例: 雨の日の午後、静かで少し切ない曲)" : "お題 (空でもすぐ始まります。例: ジャズバラード)";
+  $("#quota").classList.toggle("hidden", mode !== "compose" || !quotaText);
+}
+// 今日あと何曲作れるか (中継を使っているときだけ出す)
+let quotaText = "";
+async function refreshQuota() {
+  const q = await songsLeft();
+  quotaText = q ? (q.left > 0 ? `今日はあと ${q.left} 曲 (1 日 ${q.limit} 曲まで)` : `今日の分 (${q.limit} 曲) を使い切りました。日本時間の 0 時に戻ります`) : "";
+  $("#quota").textContent = quotaText;
+  $("#quota").classList.toggle("hidden", mode !== "compose" || !quotaText);
 }
 document.querySelectorAll(".mtab").forEach((b) => b.addEventListener("click", () => { mode = b.dataset.mode; applyMode(); }));
 $("#sel-model").innerHTML = MODELS.map((m) => `<option value="${m.id}">${m.label}</option>`).join("");
 $("#sel-model").value = settings.get().model ?? MODELS[0].id;
 applyMode();
+refreshQuota();
 let running = false;
 function setGoUi(busy) { running = busy; $("#btn-go").disabled = busy; $("#btn-cancel").classList.toggle("hidden", !busy); }
 $("#btn-go").addEventListener("click", async () => {
@@ -556,7 +566,7 @@ $("#btn-go").addEventListener("click", async () => {
     else {
       if (!theme) { toast("お題を入れてください", true); return; }
       // 作曲は一度に 1 人 (公開版の中継)。席が埋まっていたら、曲を作り始めずに知らせる
-      setGoUi(true); await compose(theme, { model: COMPOSE_MODEL, deep: true }); setGoUi(false);
+      setGoUi(true); try { await compose(theme, { model: COMPOSE_MODEL, deep: true }); } finally { setGoUi(false); refreshQuota(); }
     }
   } catch (e) { status(`失敗: ${e.message}`); setGoUi(false); }
 });
