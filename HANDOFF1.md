@@ -518,3 +518,9 @@ window.bandShotStatus; // state === 'ready'
 ### 公開の手順（中継を変えたので、さとるんの実行が要る）
 1. `cd ~/Documents/agent/product/toys/music_app && ./relay/deploy.sh`（サーバーの中継を入れ替える）
 2. `git push origin main`（画面側。GitHub Pages → atelierfactory.jp に 1〜2 分で反映）
+
+### 18.1 通信が 5 分で切れる不具合（2026-09-13・同時作曲を試して発覚）
+ピアノとシンセで同時に作曲したら**両方とも途中で落ちた**（「JSON の解析に失敗」/「Expected ',' or ']'」、サーバー側のログは `[proxy] stream: terminated`）。原因は席の撤去ではなく、**Node の fetch が応答本文を 5 分で時間切れにする**こと。Claude が長く考えている間は 1 バイトも来ないので、その沈黙が 5 分を超えると接続が切られ、途中までの JSON が届いていた。曲が長いほど起きやすく、**公開中の中継にも同じ危険があった**（同時でなくても起きうる）。
+- 直し: 上流への呼び出しを `fetch` から **`node:https`** に変え、`setTimeout(0)` で時間制限を外した（`relay/server.mjs` と `server.js` の 2 か所 + `server.js` のコマンドライン用）。中継は「追加の部品なし」で動いているので undici は使えない。
+- 直したあと、同じ条件（ピアノ 32 小節 + シンセ 32 小節を同時）で**両方とも最後まで完成**。ピアノは「指はすべて鍵に合いました」（`verifyFingering` が動いた）。
+- 公開の順番の事故を防ぐため、`x-bluegarage-app` は**新しい中継（health に `concurrent: true`）のときだけ送る**ようにした。古い中継は CORS の preflight でこの見出しを弾くので、ページだけ先に公開しても壊れない。
