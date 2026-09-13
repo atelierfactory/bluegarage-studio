@@ -1,5 +1,7 @@
 # HANDOFF1 — VESPER PIANO 引き継ぎ（2026-09-09 午後）
 
+> **これは 2026-09-09 時点の記録です。最新の状態は `HANDOFF2.md` を先に読んでください。**
+
 宛先：このプロジェクトの作業を続けるエージェント（ふぇぶるん本人の次セッションを含む）と、さとるん。
 会話ログ無しで再開できるように書いてある。さとるんへの文体・作法は `agent/CLAUDE.md` が正。
 古い経緯（BLUE GARAGE STUDIO、jukebox 中継、v3 まで）は `HANDOFF.md`。この HANDOFF1 は VESPER PIANO の「今」だけを書く。
