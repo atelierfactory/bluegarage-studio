@@ -12,45 +12,22 @@ const env = process.env;
 const PORT = Number(env.VESPER_PORT ?? 8768);
 const ANTHROPIC = "https://api.anthropic.com/v1/messages";
 const ORIGINS = String(env.VESPER_ORIGINS ?? "https://atelierfactory.jp,https://www.atelierfactory.jp").split(",").map((s) => s.trim()).filter(Boolean);
+// 上限は「アプリごと・1 日ごと」(さとるん決定 2026-09-13: ピアノ 5 曲 / シンセ 5 曲、そのかわり同時に作曲してよい)
 const LIM = {
-  blueprint: Math.max(0, Number(env.VESPER_SONG_LIMIT ?? 20)),
-  track: Math.max(0, Number(env.VESPER_TRACK_LIMIT ?? 300)),
-  other: Math.max(0, Number(env.VESPER_OTHER_LIMIT ?? 300)),
-  ip: Math.max(1, Number(env.VESPER_IP_PER_MINUTE ?? 20)),
-  ipDay: Math.max(1, Number(env.VESPER_IP_PER_DAY ?? 60)),
+  blueprint: Math.max(0, Number(env.VESPER_SONG_LIMIT ?? 5)),      // 曲 (設計図) の数 … アプリごと
+  track: Math.max(0, Number(env.VESPER_TRACK_LIMIT ?? 90)),        // 音を作る呼び出し … アプリごと
+  other: Math.max(0, Number(env.VESPER_OTHER_LIMIT ?? 60)),        // その他 … アプリごと
+  ip: Math.max(1, Number(env.VESPER_IP_PER_MINUTE ?? 30)),
+  ipDay: Math.max(1, Number(env.VESPER_IP_PER_DAY ?? 260)),        // 1 人で 5 曲作ると 100 回近く呼ぶので広めに
 };
+const APPS = ["piano", "band"];
+const appOf = (req) => { const a = String(req.headers["x-bluegarage-app"] ?? "").toLowerCase(); return APPS.includes(a) ? a : "other"; };
 // Origin ヘッダは curl などでは偽れるので、それだけに頼らない: 使えるモデルを絞り、出力の長さに上限を付け、1 日の回数 (全体・IP ごと) で金額を抑える
 const MODELS = String(env.VESPER_MODELS ?? "claude-fable-5-1,claude-sonnet-5,claude-opus-5").split(",").map((s) => s.trim()).filter(Boolean);
 const MAX_TOKENS_CAP = Math.max(1000, Number(env.MAX_TOKENS_CAP ?? 110000));
 
-/* ── 作曲は一度に 1 人 (さとるん要望 2026-09-10) ──
-   作曲 = 設計図 (blueprint) → 8 小節ごとの生成 (piano/polish/revise) が 10 回ほど続く。
-   最初の作曲の依頼で「席」を取り、同じ人 (ブラウザごとの番号 x-bluegarage-session、無ければ IP) が続けて使う。
-   通信の途中か、最後の通信から BUSY_IDLE 秒以内なら席は埋まったまま。念のため BUSY_MAX 分で必ず空ける。 */
-const COMPOSE_KINDS = new Set(["blueprint", "piano", "polish", "revise", "track", "interpret"]);
-const BUSY_IDLE = Math.max(10, Number(env.VESPER_BUSY_IDLE_SEC ?? 180)) * 1000;
-const BUSY_MAX = Math.max(1, Number(env.VESPER_BUSY_MAX_MIN ?? 90)) * 60 * 1000;
-let seat = null;   // { id, since, lastSeen, inflight }
-function seatTaken(now = Date.now()) {
-  if (!seat) return false;
-  if (now - seat.since > BUSY_MAX) { seat = null; return false; }
-  if (seat.inflight > 0) return true;
-  if (now - seat.lastSeen < BUSY_IDLE) return true;
-  seat = null; return false;
-}
-function seatInfo(now = Date.now()) {
-  if (!seatTaken(now)) return { busy: false };
-  return { busy: true, minutes: Math.round((now - seat.since) / 60000), idleLeftSec: seat.inflight > 0 ? null : Math.max(0, Math.round((BUSY_IDLE - (now - seat.lastSeen)) / 1000)) };
-}
-// 席を取る (自分の席ならそのまま)。取れなければ false
-function takeSeat(id) {
-  const now = Date.now();
-  if (seatTaken(now) && seat.id !== id) return false;
-  if (!seat || seat.id !== id) seat = { id, since: now, lastSeen: now, inflight: 0 };
-  seat.lastSeen = now; seat.inflight++;
-  return true;
-}
-function leaveCall(id) { if (seat && seat.id === id) { seat.inflight = Math.max(0, seat.inflight - 1); seat.lastSeen = Date.now(); } }
+// 2026-09-13: 「作曲は一度に 1 人」の席は外した (さとるん決定: 同時に作曲できる方がよい)。
+// そのかわり 1 日の曲数をアプリごと 5 曲に絞って、金額を抑える。
 const STATE = env.VESPER_STATE ?? "/var/lib/vesper/counters.json";
 const PASSCODE = env.VESPER_PASSCODE ?? "";
 const TZ_OFF = Number(env.VESPER_TZ_OFFSET ?? 9);
@@ -60,12 +37,13 @@ const dayKey = () => new Date(Date.now() + TZ_OFF * 3600 * 1000).toISOString().s
 const bucketOf = (kind) => (kind === "blueprint" ? "blueprint" : ["track", "revise", "piano", "polish", "interpret"].includes(kind) ? "track" : "other");
 
 /* ── 数え役 (ファイルに残す) ── */
-let state = { day: dayKey(), buckets: { blueprint: 0, track: 0, other: 0 }, ip: {} };
-try { const s = JSON.parse(fs.readFileSync(STATE, "utf8")); if (s && s.day) state = { ...state, ...s, buckets: { ...state.buckets, ...(s.buckets ?? {}) }, ip: s.ip ?? {} }; } catch {}
+const emptyBuckets = () => ({ piano: { blueprint: 0, track: 0, other: 0 }, band: { blueprint: 0, track: 0, other: 0 }, other: { blueprint: 0, track: 0, other: 0 } });
+let state = { day: dayKey(), buckets: emptyBuckets(), ip: {}, ipDay: {} };
+try { const s = JSON.parse(fs.readFileSync(STATE, "utf8")); if (s && s.day) { const b = emptyBuckets(); for (const app of Object.keys(b)) Object.assign(b[app], s.buckets?.[app] ?? {}); state = { ...state, ...s, buckets: b, ip: s.ip ?? {}, ipDay: s.ipDay ?? {} }; } } catch {}
 let saveT = null;
 function save() { clearTimeout(saveT); saveT = setTimeout(() => { try { fs.mkdirSync(path.dirname(STATE), { recursive: true }); fs.writeFileSync(STATE, JSON.stringify(state)); } catch (e) { console.error("[relay] save:", e.message); } }, 200); }
-function rollDay() { const d = dayKey(); if (state.day !== d) { state = { day: d, buckets: { blueprint: 0, track: 0, other: 0 }, ip: {}, ipDay: {} }; save(); } }
-function bumpBucket(b) { rollDay(); if (state.buckets[b] >= LIM[b]) return false; state.buckets[b]++; save(); return true; }
+function rollDay() { const d = dayKey(); if (state.day !== d) { state = { day: d, buckets: emptyBuckets(), ip: {}, ipDay: {} }; save(); } }
+function bumpBucket(app, b) { rollDay(); const c = state.buckets[app] ?? (state.buckets[app] = { blueprint: 0, track: 0, other: 0 }); if (c[b] >= LIM[b]) return false; c[b]++; save(); return true; }
 function bumpIp(ip) {
   rollDay();
   const minute = Math.floor(Date.now() / 60000); const k = `${ip}|${minute}`;
@@ -92,7 +70,7 @@ function cors(req, res) {
   if (ORIGINS.includes(origin)) { res.setHeader("Access-Control-Allow-Origin", origin); res.setHeader("Vary", "Origin"); }
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   // ブラウザが「この見出しを送ってよいか」と聞いてくる (preflight)。使う見出しは全部ここに書く (書き忘れると "Failed to fetch" で止まる)
-  res.setHeader("Access-Control-Allow-Headers", "content-type, anthropic-version, x-bluegarage-kind, x-bluegarage-pass, x-bluegarage-session");
+  res.setHeader("Access-Control-Allow-Headers", "content-type, anthropic-version, x-bluegarage-kind, x-bluegarage-pass, x-bluegarage-session, x-bluegarage-app");
   res.setHeader("Access-Control-Max-Age", "3600");
 }
 const json = (res, status, obj) => { res.writeHead(status, { "content-type": "application/json", "cache-control": "no-store" }); res.end(JSON.stringify(obj)); };
@@ -114,9 +92,13 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "OPTIONS") { res.writeHead(204); return res.end(); }
   if (req.method === "GET" && url.pathname === "/health") {
     rollDay();
-    return json(res, 200, { ok: true, hasKey: !!env.ANTHROPIC_API_KEY, passcode: !!PASSCODE, counter: true, day: state.day, seat: seatInfo(),
-      songs: { used: state.buckets.blueprint, limit: LIM.blueprint, left: Math.max(0, LIM.blueprint - state.buckets.blueprint) },
-      tracks: { used: state.buckets.track, limit: LIM.track } });
+    const appStat = (app) => { const c = state.buckets[app] ?? { blueprint: 0, track: 0, other: 0 };
+      return { songs: { used: c.blueprint, limit: LIM.blueprint, left: Math.max(0, LIM.blueprint - c.blueprint) }, tracks: { used: c.track, limit: LIM.track } }; };
+    const mine = appStat(appOf(req));
+    return json(res, 200, { ok: true, hasKey: !!env.ANTHROPIC_API_KEY, passcode: !!PASSCODE, counter: true, day: state.day,
+      concurrent: true,                       // 同時に作曲してよい (席の仕組みは無い)
+      apps: { piano: appStat("piano"), band: appStat("band") },
+      songs: mine.songs, tracks: mine.tracks });
   }
   if (req.method !== "POST" || url.pathname !== "/v1/messages") return err(res, 404, "not_found_error", "not found");
   const origin = req.headers.origin ?? "";
@@ -131,20 +113,14 @@ const server = http.createServer(async (req, res) => {
   body = checked.body;
   const kind = String(req.headers["x-bluegarage-kind"] ?? "chat").toLowerCase();
   const bucket = bucketOf(kind);
-  // 作曲の席 (一度に 1 人)。席が埋まっていたら数に入れずに断る
-  const seatId = String(req.headers["x-bluegarage-session"] ?? "") || `ip:${clientIp(req)}`;
-  const isCompose = COMPOSE_KINDS.has(kind);
-  if (isCompose && !takeSeat(seatId)) {
-    const info = seatInfo();
-    const idle = BUSY_IDLE >= 60000 ? `${Math.round(BUSY_IDLE / 60000)} 分` : `${Math.round(BUSY_IDLE / 1000)} 秒`;
-    return err(res, 409, "busy_error", `今、別の人が作曲中です (始めてから約 ${info.minutes} 分)。その人の作曲が終わって ${idle} たつと作れます。少し待ってからもう一度どうぞ`);
-  }
-  try {
+  const app = appOf(req);
+  {
     if (!bumpIp(clientIp(req))) return err(res, 429, "rate_limit_error", "リクエストが多すぎます。少し待ってください");
-    if (!bumpBucket(bucket)) {
-      const msg = bucket === "blueprint" ? `今日の曲数の上限 (${LIM.blueprint}曲/日) に達しました。日付が変わると (日本時間 0 時) また作れます`
-        : bucket === "track" ? `今日の生成回数の上限 (${LIM.track}回/日) に達しました。日付が変わるとまた作れます`
-        : "今日の利用上限に達しました。日付が変わるとまた使えます";
+    if (!bumpBucket(app, bucket)) {
+      const where = app === "piano" ? "ピアノ" : app === "band" ? "シンセ" : "この画面";
+      const msg = bucket === "blueprint" ? `今日の${where}の曲数の上限 (${LIM.blueprint}曲/日) に達しました。日付が変わると (日本時間 0 時) また作れます`
+        : bucket === "track" ? `今日の${where}の生成回数の上限 (${LIM.track}回/日) に達しました。日付が変わるとまた作れます`
+        : `今日の${where}の利用上限に達しました。日付が変わるとまた使えます`;
       return err(res, 429, "daily_limit_error", msg);
     }
     const ac = new AbortController();
@@ -157,7 +133,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(up.status, { "content-type": ct, "cache-control": "no-cache", ...(ct.includes("event-stream") ? { "x-accel-buffering": "no" } : {}) });
     try { for await (const chunk of up.body) { if (ac.signal.aborted) break; res.write(chunk); } } catch (e) { if (!ac.signal.aborted) console.error("[relay] stream:", e?.message); }
     res.end();
-    console.log(`[relay] ${state.day} ${bucket} ${kind} ${up.status} ${clientIp(req)} songs=${state.buckets.blueprint}/${LIM.blueprint}${isCompose ? " seat=" + seatId.slice(0, 8) : ""}`);
-  } finally { if (isCompose) leaveCall(seatId); }
+    console.log(`[relay] ${state.day} ${app} ${bucket} ${kind} ${up.status} ${clientIp(req)} songs=${state.buckets[app]?.blueprint ?? 0}/${LIM.blueprint}`);
+  }
 });
-server.listen(PORT, "127.0.0.1", () => console.log(`[relay] http://127.0.0.1:${PORT}  origins=${ORIGINS.join(",")}  limits=${JSON.stringify(LIM)}  key=${env.ANTHROPIC_API_KEY ? "あり" : "なし"}  passcode=${PASSCODE ? "あり" : "なし"}`));
+server.listen(PORT, "127.0.0.1", () => console.log(`[relay] http://127.0.0.1:${PORT}  origins=${ORIGINS.join(",")}  limits=${JSON.stringify(LIM)} (アプリごと・同時作曲 OK)  key=${env.ANTHROPIC_API_KEY ? "あり" : "なし"}  passcode=${PASSCODE ? "あり" : "なし"}`));

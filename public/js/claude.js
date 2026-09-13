@@ -52,7 +52,9 @@ export async function probeServer() {
             const hj = h.ok ? await h.json() : {};
             info.remoteOk = !!hj.ok && hj.hasKey !== false;
             info.needPasscode = !!hj.passcode;
-            if (hj.songs) info.songs = hj.songs; // {used, limit, left} 今日の曲数
+            const mine = hj.apps?.[appName()] ?? hj;   // アプリごとの残り (古い中継は全体の値)
+            if (mine.songs) info.songs = mine.songs;    // {used, limit, left} 今日の曲数
+            info.concurrent = !!hj.concurrent;
           } catch { info.remoteOk = false; }
         }
       }
@@ -63,14 +65,29 @@ export async function probeServer() {
 }
 export function resetServerProbe() { serverInfo = null; }
 
-// 中継サーバーの「作曲の席」が今埋まっているか (中継を使っていない時は null)。{busy, minutes}
+// 2026-09-13: 同時に作曲できるようにしたので「席」は無い。常に「空いている」を返す
+// (古い中継につないだ時だけ、その中継の seat を見る)
 export async function relaySeat() {
   const info = await probeServer();
   if (!info.proxyUrl) return null;
-  try { const h = await fetch(`${info.proxyUrl}/health`, { cache: "no-cache" }); const hj = h.ok ? await h.json() : {}; return hj.seat ?? null; } catch { return null; }
+  try {
+    const h = await fetch(`${info.proxyUrl}/health`, { cache: "no-cache" });
+    const hj = h.ok ? await h.json() : {};
+    if (hj.concurrent) return { busy: false };
+    return hj.seat ?? null;
+  } catch { return null; }
 }
 
-// このタブの番号 (中継サーバーが「作曲は一度に 1 人」を守るために使う。個人情報ではない乱数)
+// どの画面から呼んでいるか (中継サーバーが 1 日の曲数をアプリごとに数えるため)
+let _app = null;
+export function setAppName(name) { _app = name; }
+function appName() {
+  if (_app) return _app;
+  try { const p = location.pathname; if (p.includes("/band")) return "band"; if (p.includes("/piano")) return "piano"; } catch {}
+  return "piano";
+}
+
+// このタブの番号 (記録用。個人情報ではない乱数)
 let _sid = "";
 function sessionId() {
   if (_sid) return _sid;
@@ -159,7 +176,8 @@ async function attemptOnce(body, transport, apiKey, o, attempt) {
   if (transport === "remote") {
     headers["anthropic-version"] = "2023-06-01";
     headers["x-bluegarage-kind"] = o.kind ?? "chat"; // 中継サーバーが 1 日の曲数を数えるための種類
-    headers["x-bluegarage-session"] = sessionId(); // 「作曲は一度に 1 人」の席の番号 (このタブごと)
+    headers["x-bluegarage-session"] = sessionId(); // このタブの番号 (記録用)
+    headers["x-bluegarage-app"] = appName();       // piano / band。1 日の上限はアプリごとに数える
     const pass = settings.get().passcode ?? "";
     if (pass) headers["x-bluegarage-pass"] = pass;
   }

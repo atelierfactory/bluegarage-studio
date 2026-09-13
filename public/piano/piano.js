@@ -10,7 +10,7 @@ import {
 import * as audio from "../js/audio.js";
 import { PianoRoll, THEME } from "../js/pianoroll.js";
 import { downloadMidi } from "../js/midi.js";
-import { generateStructured, settings, resolveTransport, relaySeat, MODELS } from "../js/claude.js";
+import { generateStructured, settings, resolveTransport, MODELS } from "../js/claude.js";
 import { buildBlueprintRequest, buildPianoRequest, buildInterpretRequest } from "../js/prompts.js";
 import { analyzePiano, describeAnalysis } from "../js/critic.js";
 import { t, setLang, detectLang, applyDom } from "../js/i18n.js";
@@ -402,6 +402,33 @@ function applyBlueprint(bp) {
   song.tracks = [tr];
   pushUndo(); emit("song"); emit("tracks"); emit("selection");
 }
+// 作った曲を VESPER が本当に弾けるか (指先が鍵の上に来るか) を確かめ、外れた音は指を付け直す。
+// 舞台の rehearse は描画せずに曲を通して測る。何度か直して、それでも外れる音は正直に数える。
+async function verifyFingering() {
+  const tr = pianoTrack();
+  const toSec = (b) => beatToSec(b);
+  let miss = 0;
+  for (let pass = 0; pass < 3; pass++) {
+    progress(`弾けるか確かめ中… (${pass + 1} 回目)`);
+    stage.setSong(tr.notes, state.song.pedal);
+    const res = stage.rehearse(tr.notes, state.song.pedal, toSec);
+    miss = res.misses.length;
+    if (!miss) break;
+    // 外れた音のまわりだけ、手と指を機械のルールで付け直す
+    const bad = new Set(res.misses.map((m) => m.i));
+    const sorted = tr.notes.slice().sort((a, b) => a.s - b.s || a.p - b.p);
+    const windows = [...bad].map((i) => sorted[i]).filter(Boolean).map((n) => [n.s - 2, n.s + 2]);
+    const inWindow = (n) => windows.some(([a, b]) => n.s >= a && n.s <= b);
+    const redo = autoFinger(tr.notes.map((n) => ({ p: n.p, s: n.s, d: n.d, v: n.v, track: n.h === "L" ? 2 : 1 })), { tracks: [] });
+    redo.sort((a, b) => a.s - b.s || a.p - b.p);
+    sorted.forEach((n, i) => { if (inWindow(n) && redo[i]) { n.h = redo[i].h; n.f = redo[i].f; } });
+    tr.notes = sorted;
+  }
+  stage.setSong(tr.notes, state.song.pedal);
+  emit("notes"); emit("tracks");
+  return { misses: miss, note: miss ? `・指が届かない音 ${miss}` : "・指はすべて鍵に合いました" };
+}
+
 async function compose(theme, { model, deep }) {
   if (state.playing) audio.stop();
   if (jam) jamStop();
@@ -417,8 +444,9 @@ async function compose(theme, { model, deep }) {
   status(`「${data.title}」を作っています (${totalBars()} 小節)`);
   const r = await generatePiano({ startBar: 0, numBars: totalBars(), mode: "new", model, deep, onProgress: progress });
   const issues = r.reports.flatMap((x) => x.analysis.issues);
+  const fix = await verifyFingering();          // 指と鍵が合うかを確かめ、合わない所は指を振り直す
   saveLocal();
-  status(`「${data.title}」ができました (${r.count}音)。「曲を選ぶ」の「作った曲」にも残ります`, "lit");
+  status(`「${data.title}」ができました (${r.count}音${fix.note})。「曲を選ぶ」の「作った曲」にも残ります`, "lit");
   await play(0);
 }
 
@@ -528,8 +556,6 @@ $("#btn-go").addEventListener("click", async () => {
     else {
       if (!theme) { toast("お題を入れてください", true); return; }
       // 作曲は一度に 1 人 (公開版の中継)。席が埋まっていたら、曲を作り始めずに知らせる
-      const seat = await relaySeat();
-      if (seat?.busy) { status(`今、別の人が作曲中です (始めてから約 ${seat.minutes} 分)。終わって少したつと作れます。少し待ってからもう一度どうぞ`); return; }
       setGoUi(true); await compose(theme, { model: COMPOSE_MODEL, deep: true }); setGoUi(false);
     }
   } catch (e) { status(`失敗: ${e.message}`); setGoUi(false); }

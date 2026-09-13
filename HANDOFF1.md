@@ -498,3 +498,23 @@ window.bandShotStatus; // state === 'ready'
 - **バンドから外した曲**: GPT-6 Astra 作の 3 曲（硝子の環流・銅の蝶番・白磁の螺旋）。`public/band/repertoire/_hidden/index-removed.json` に元の記録を保存し、`.band.json` 本体も残してある。一覧は Fable 5.1 作の 3 曲（疾風・電脳桜 / Neon Circuit / 3+3+2 オーバードライブ）。
 - そのとき直した物: バンドの `index.json` の残り 3 曲に `shots`（撮影の拍）が無く `band-page-check` が落ちた → cutoff のつまみ操作の真ん中を `knob`/`ar`、その次の操作の直後を `full`/`crash`/`synth` にして埋めた。`band-page-check` が読む曲も glass-current → hayate-cyber-sakura に変えた。
 - `piano-motion-check` は新しい曲に前回の記録が無いと落ちるので、無い場合は今の値を使うように直した。
+
+## 18. 1 日 5 曲・同時に作曲できる（2026-09-13・さとるん決定）
+
+さとるんの指示: 「ピアノ・シンセ、どちらも 1 日 5 曲までの Fable の超本気版（指もバッチリ合うやつ）にして、そのかわり誰かが作曲中でも作曲できる仕様に」。
+
+### 変えた所
+- **`relay/server.mjs`**: 「作曲は一度に 1 人」の席をまるごと撤去（`COMPOSE_KINDS` / `takeSeat` / `seatInfo` / `BUSY_*` を削除）。上限を**アプリごと**に数えるようにし、`x-bluegarage-app`（piano / band）で振り分ける。`/health` は `concurrent: true` と `apps: {piano, band}` を返す。
+- **上限（アプリごと・1 日・日本時間 0 時切替）**: 曲（設計図）5 / 音を作る呼び出し 90 / その他 60。IP ごとは 1 分 30 回・1 日 260 回（1 人で 5 曲作ると 100 回近く呼ぶため広げた）。`relay/vesper-relay.service` に反映。
+- **`public/js/claude.js`**: `x-bluegarage-app` を送る（`location.pathname` から piano / band を判定、`setAppName()` で上書き可）。`relaySeat()` は新しい中継（`concurrent: true`）に対しては常に「空いている」を返す（古い中継につないだ時だけ席を見る）。今日の残り曲数は `apps[アプリ]` から拾う。
+- **`public/piano/piano.js` / `public/band/band.js`**: 作曲前の「席が空いているか」の待ち合わせを削除。
+- **`public/piano/piano.js` に `verifyFingering()` を追加**: 作曲のあと、`stage.rehearse` で指先が鍵に合うかを測り、外れた音のまわりだけ `autoFinger` で手と指を付け直す（最大 3 回）。結果を完成の文に出す（「指はすべて鍵に合いました」／「指が届かない音 N」）。
+
+### 確かめたこと
+- 中継を手元で起動して curl で検査: 同じアプリで続けて blueprint を 2 回通し、3 回目で `429 daily_limit_error`（文面は「今日のピアノの曲数の上限…」）。ピアノとシンセは別々に数えている。`/health` に `concurrent: true`。
+- ブラウザでピアノとシンセの作曲を**同時に開始**し、両方が並んで進むことを確認（以前はどちらかが断られた）。
+- 検査は piano-headless / piano-camera-check / key-visual-check / band-check / band-page-check / band-regression すべて合格。
+
+### 公開の手順（中継を変えたので、さとるんの実行が要る）
+1. `cd ~/Documents/agent/product/toys/music_app && ./relay/deploy.sh`（サーバーの中継を入れ替える）
+2. `git push origin main`（画面側。GitHub Pages → atelierfactory.jp に 1〜2 分で反映）

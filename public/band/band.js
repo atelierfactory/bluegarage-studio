@@ -9,7 +9,7 @@ import {
 import * as audio from "../js/audio.js";
 import { PianoRoll, THEME } from "../js/pianoroll.js";
 import { downloadMidi } from "../js/midi.js";
-import { generateStructured, settings, resolveTransport, relaySeat, MODELS } from "../js/claude.js";
+import { generateStructured, settings, resolveTransport, MODELS } from "../js/claude.js";
 import { t, setLang, detectLang, applyDom } from "../js/i18n.js";
 import { initSettings } from "../js/settings.js";
 import * as lib from "../js/library.js";
@@ -363,7 +363,6 @@ $("#btn-go").addEventListener("click", async () => {
   try {
     const transport=await resolveTransport();checkCancelled();
     if(transport==="none"){await settingsUi.openIfNoKey();if(await resolveTransport()==="none")throw new Error("作曲の接続が設定されていません");}
-    const seat=await relaySeat();checkCancelled();if(seat?.busy)throw new Error("今、別の人が作曲中です。しばらくしてからもう一度どうぞ");
     await compose(theme,{model:COMPOSE_MODEL});made=true;
   } catch(error) {
     let saved=false;
