@@ -339,7 +339,10 @@ async function compose(theme, { model }) {
 
 /* ─────────── お題バー ─────────── */
 let mode = "play";
+// 凍結中 (2026-09-14): 「作曲」のタブを画面から消す (さとるん指示)。残るのは「できた曲を弾く」だけ
+if (FROZEN) document.querySelectorAll('.mtab[data-mode="compose"]').forEach((b) => b.classList.add("hidden"));
 function applyMode() {
+  if (FROZEN) mode = "play";
   document.querySelectorAll(".mtab").forEach((x) => x.classList.toggle("on", x.dataset.mode === mode));
   const play = mode === "play";
   $("#btn-songs").classList.toggle("hidden", !play); $("#play-hint").classList.toggle("hidden", !play);
@@ -350,7 +353,7 @@ function applyMode() {
 // 今日あと何曲作れるか (中継を使っているときだけ出す)
 let quotaText = "";
 async function refreshQuota() {
-  if (FROZEN) { quotaText = FROZEN_MESSAGE; $("#quota").textContent = quotaText; applyMode(); return; }
+  if (FROZEN) { quotaText = ""; $("#quota").textContent = ""; $("#quota").classList.add("hidden"); return; }   // 凍結中はタブごと消しているので文も出さない
   const q = await songsLeft();
   quotaText = q ? (q.left > 0 ? `今日はあと ${q.left} 曲 (1 日 ${q.limit} 曲まで)` : `今日の分 (${q.limit} 曲) を使い切りました。日本時間の 0 時に戻ります`) : "";
   $("#quota").textContent = quotaText;
