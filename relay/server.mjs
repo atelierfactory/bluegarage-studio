@@ -31,6 +31,8 @@ const MAX_TOKENS_CAP = Math.max(1000, Number(env.MAX_TOKENS_CAP ?? 110000));
 // そのかわり 1 日の曲数をアプリごと 5 曲に絞って、金額を抑える。
 const STATE = env.VESPER_STATE ?? "/var/lib/vesper/counters.json";
 const PASSCODE = env.VESPER_PASSCODE ?? "";
+// 凍結 (2026-09-14 緊急: API キーが間違っていた)。VESPER_FROZEN=1 のあいだは Claude を一切呼ばない (health に frozen: true を出す)
+const FROZEN = /^(1|true|yes|on)$/i.test(String(env.VESPER_FROZEN ?? ""));
 const TZ_OFF = Number(env.VESPER_TZ_OFFSET ?? 9);
 
 const dayKey = () => new Date(Date.now() + TZ_OFF * 3600 * 1000).toISOString().slice(0, 10);
@@ -96,12 +98,13 @@ const server = http.createServer(async (req, res) => {
     const appStat = (app) => { const c = state.buckets[app] ?? { blueprint: 0, track: 0, other: 0 };
       return { songs: { used: c.blueprint, limit: LIM.blueprint, left: Math.max(0, LIM.blueprint - c.blueprint) }, tracks: { used: c.track, limit: LIM.track } }; };
     const mine = appStat(appOf(req));
-    return json(res, 200, { ok: true, hasKey: !!env.ANTHROPIC_API_KEY, passcode: !!PASSCODE, counter: true, day: state.day,
+    return json(res, 200, { ok: true, frozen: FROZEN, hasKey: !!env.ANTHROPIC_API_KEY, passcode: !!PASSCODE, counter: true, day: state.day,
       concurrent: true,                       // 同時に作曲してよい (席の仕組みは無い)
       apps: { piano: appStat("piano"), band: appStat("band") },
       songs: mine.songs, tracks: mine.tracks });
   }
   if (req.method !== "POST" || url.pathname !== "/v1/messages") return err(res, 404, "not_found_error", "not found");
+  if (FROZEN) return err(res, 503, "frozen_error", "作曲機能は今、止めています (メンテナンス中)");
   const origin = req.headers.origin ?? "";
   if (!ORIGINS.includes(origin)) return err(res, 403, "permission_error", "このサイトからは使えません (origin not allowed)");
   if (PASSCODE && req.headers["x-bluegarage-pass"] !== PASSCODE) return err(res, 401, "access_code_error", "アクセスコードが必要です (access code required)");
@@ -147,4 +150,4 @@ const server = http.createServer(async (req, res) => {
     console.log(`[relay] ${state.day} ${app} ${bucket} ${kind} ${up.statusCode} ${clientIp(req)} songs=${state.buckets[app]?.blueprint ?? 0}/${LIM.blueprint}`);
   }
 });
-server.listen(PORT, "127.0.0.1", () => console.log(`[relay] http://127.0.0.1:${PORT}  origins=${ORIGINS.join(",")}  limits=${JSON.stringify(LIM)} (アプリごと・同時作曲 OK)  key=${env.ANTHROPIC_API_KEY ? "あり" : "なし"}  passcode=${PASSCODE ? "あり" : "なし"}`));
+server.listen(PORT, "127.0.0.1", () => console.log(`[relay] http://127.0.0.1:${PORT}  origins=${ORIGINS.join(",")}  limits=${JSON.stringify(LIM)} (アプリごと・同時作曲 OK)  key=${env.ANTHROPIC_API_KEY ? "あり" : "なし"}  passcode=${PASSCODE ? "あり" : "なし"}  frozen=${FROZEN}`));

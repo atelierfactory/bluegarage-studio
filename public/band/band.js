@@ -9,7 +9,7 @@ import {
 import * as audio from "../js/audio.js";
 import { PianoRoll, THEME } from "../js/pianoroll.js";
 import { downloadMidi } from "../js/midi.js";
-import { generateStructured, settings, resolveTransport, songsLeft, MODELS } from "../js/claude.js";
+import { generateStructured, settings, resolveTransport, songsLeft, MODELS, FROZEN, FROZEN_MESSAGE } from "../js/claude.js";
 import { t, setLang, detectLang, applyDom } from "../js/i18n.js";
 import { initSettings } from "../js/settings.js";
 import * as lib from "../js/library.js";
@@ -345,10 +345,12 @@ function applyMode() {
   $("#btn-songs").classList.toggle("hidden", !play); $("#play-hint").classList.toggle("hidden", !play);
   $("#inp-theme").classList.toggle("hidden", play); $("#btn-go").classList.toggle("hidden", play);
   $("#quota").classList.toggle("hidden", play || !quotaText);
+  if (FROZEN) $("#btn-go").disabled = true;   // 凍結中: 作曲ボタンは押せない
 }
 // 今日あと何曲作れるか (中継を使っているときだけ出す)
 let quotaText = "";
 async function refreshQuota() {
+  if (FROZEN) { quotaText = FROZEN_MESSAGE; $("#quota").textContent = quotaText; applyMode(); return; }
   const q = await songsLeft();
   quotaText = q ? (q.left > 0 ? `今日はあと ${q.left} 曲 (1 日 ${q.limit} 曲まで)` : `今日の分 (${q.limit} 曲) を使い切りました。日本時間の 0 時に戻ります`) : "";
   $("#quota").textContent = quotaText;
@@ -363,9 +365,11 @@ function setGoUi(busy) {
   running=busy;state.generating=busy;if(busy)++openRevision;
   for(const el of document.querySelectorAll("#btn-go, #btn-songs, #inp-import-json, #inp-tempo, #btn-play, #btn-rew, #btn-loop, #btn-met, .mtab"))el.disabled=busy;
   $("#btn-cancel").classList.toggle("hidden",!busy);
+  if(FROZEN)$("#btn-go").disabled=true;
 }
 $("#btn-go").addEventListener("click", async () => {
   if(running)return;
+  if(FROZEN){status(FROZEN_MESSAGE);return;}
   const theme=$("#inp-theme").value.trim();if(!theme){toast("お題を入れてください",true);return;}
   const backup=structuredClone(state.song), backupId=state.songId;
   cancelFlag=false;composeController=new AbortController();setGoUi(true);

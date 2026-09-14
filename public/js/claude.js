@@ -12,6 +12,13 @@ export const MODELS = [
 ];
 export const DEFAULT_MODEL = "claude-opus-5";
 
+// ═══ 凍結 (2026-09-14 緊急) ═══
+// API キーが間違っていたため、ウェブ上の作曲機能を全部止めている。
+// true のあいだは Claude を一切呼ばない (作曲・即興の手札作り・演奏解釈・接続テスト・STUDIO の全部)。
+// 鍵を直したら false に戻す。中継サーバー (relay/) 側にも同じ栓 (VESPER_FROZEN) がある。
+export const FROZEN = true;
+export const FROZEN_MESSAGE = "作曲機能は今、止めています (メンテナンス中)。できた曲を聴くことはできます。";
+
 const defaults = { apiKey: "", passcode: "", model: DEFAULT_MODEL, transport: "auto", lang: "" };
 let cached = null;
 export const settings = {
@@ -50,7 +57,8 @@ export async function probeServer() {
           try {
             const h = await fetch(`${info.proxyUrl}/health`, { cache: "no-cache" });
             const hj = h.ok ? await h.json() : {};
-            info.remoteOk = !!hj.ok && hj.hasKey !== false;
+            info.frozen = !!hj.frozen;                  // 中継側の栓 (VESPER_FROZEN)
+            info.remoteOk = !!hj.ok && hj.hasKey !== false && !hj.frozen;
             info.needPasscode = !!hj.passcode;
             const mine = hj.apps?.[appName()] ?? hj;   // アプリごとの残り (古い中継は全体の値)
             if (mine.songs) info.songs = mine.songs;    // {used, limit, left} 今日の曲数
@@ -152,6 +160,7 @@ function friendlyError(status, body) {
  * @returns {Promise<{content:Array, stop_reason:string, usage:object, text:string}>}
  */
 export async function streamMessage(o) {
+  if (FROZEN) throw new ClaudeError(FROZEN_MESSAGE, { type: "frozen" });
   const s = settings.get();
   const transport = await resolveTransport();
   if (transport === "none") throw new ClaudeError("API キーが設定されていません。右上の ⚙ から Anthropic の API キーを入れてください。", { type: "no_key" });

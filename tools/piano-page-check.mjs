@@ -28,7 +28,7 @@ const deps={
   '../js/fingering.js':fingering,'../js/midiread.js':midi,
   '../js/pianoroll.js':{THEME:{},PianoRoll:class{selection=new Set();resetFollow(){}followPlayhead(){}draw(){}}},
   '../js/midi.js':{downloadMidi(){}},'../js/critic.js':{analyzePiano:()=>({stats:{fixes:[]}}),describeAnalysis:()=>''},
-  '../js/claude.js':{settings:{get:()=>({lang:'ja'})},MODELS:[{id:'test',label:'test'}],generateStructured(){},resolveTransport:async()=>'none',songsLeft:async()=>null},
+  '../js/claude.js':{settings:{get:()=>({lang:'ja'})},MODELS:[{id:'test',label:'test'}],generateStructured(){},resolveTransport:async()=>'none',songsLeft:async()=>null,FROZEN:false,FROZEN_MESSAGE:''},
   '../js/prompts.js':{buildBlueprintRequest(){},buildPianoRequest(){},buildInterpretRequest(){}},
   '../js/i18n.js':{t:s=>s,setLang(){},detectLang:()=> 'ja',applyDom(){}},
   '../js/settings.js':{initSettings:()=>({openIfNoKey:async()=>{}})},

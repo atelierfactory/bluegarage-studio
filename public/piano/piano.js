@@ -10,7 +10,7 @@ import {
 import * as audio from "../js/audio.js";
 import { PianoRoll, THEME } from "../js/pianoroll.js";
 import { downloadMidi } from "../js/midi.js";
-import { generateStructured, settings, resolveTransport, songsLeft, MODELS } from "../js/claude.js";
+import { generateStructured, settings, resolveTransport, songsLeft, MODELS, FROZEN, FROZEN_MESSAGE } from "../js/claude.js";
 import { buildBlueprintRequest, buildPianoRequest, buildInterpretRequest } from "../js/prompts.js";
 import { analyzePiano, describeAnalysis } from "../js/critic.js";
 import { t, setLang, detectLang, applyDom } from "../js/i18n.js";
@@ -539,10 +539,12 @@ function applyMode() {
   $("#btn-go").textContent = mode === "compose" ? "♪ 作曲する (数分)" : "▶ 即興を始める";
   $("#inp-theme").placeholder = mode === "compose" ? "お題 (例: 雨の日の午後、静かで少し切ない曲)" : "お題 (空でもすぐ始まります。例: ジャズバラード)";
   $("#quota").classList.toggle("hidden", mode !== "compose" || !quotaText);
+  if (FROZEN) $("#btn-go").disabled = mode === "compose";   // 凍結中: 作曲ボタンは押せない (即興は同梱の手札だけで動く。running はこの下で宣言されるのでここでは見ない)
 }
 // 今日あと何曲作れるか (中継を使っているときだけ出す)
 let quotaText = "";
 async function refreshQuota() {
+  if (FROZEN) { quotaText = FROZEN_MESSAGE; $("#quota").textContent = quotaText; applyMode(); return; }
   const q = await songsLeft();
   quotaText = q ? (q.left > 0 ? `今日はあと ${q.left} 曲 (1 日 ${q.limit} 曲まで)` : `今日の分 (${q.limit} 曲) を使い切りました。日本時間の 0 時に戻ります`) : "";
   $("#quota").textContent = quotaText;
@@ -554,8 +556,9 @@ $("#sel-model").value = settings.get().model ?? MODELS[0].id;
 applyMode();
 refreshQuota();
 let running = false;
-function setGoUi(busy) { running = busy; $("#btn-go").disabled = busy; $("#btn-cancel").classList.toggle("hidden", !busy); }
+function setGoUi(busy) { running = busy; $("#btn-go").disabled = busy || (FROZEN && mode === "compose"); $("#btn-cancel").classList.toggle("hidden", !busy); }
 $("#btn-go").addEventListener("click", async () => {
+  if (FROZEN && mode === "compose") { status(FROZEN_MESSAGE); return; }
   const theme = $("#inp-theme").value.trim();
   const model = $("#sel-model").value;
   const tr = await resolveTransport();
