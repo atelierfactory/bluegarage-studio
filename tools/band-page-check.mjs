@@ -59,7 +59,7 @@ const deps={
 };
 const win={addEventListener(){}};let nextFrame;
 const pump=(n=1800)=>{for(let i=0;i<n;i++){const cb=nextFrame;nextFrame=null;cb?.(performance.now()+i*1000/60);}};
-const context=vm.createContext({document:doc,window:win,location:{search:'?song=hayate-cyber-sakura.band.json&shot=full&beat=196'},innerWidth:1000,performance,requestAnimationFrame(cb){nextFrame=cb;},structuredClone,URLSearchParams,URL,Blob,console,localStorage:globalThis.localStorage,setTimeout,clearTimeout,AbortController,fetch:async url=>({ok:true,json:async()=>JSON.parse(fs.readFileSync(new URL(url.replace(/^repertoire\//,''),dir),'utf8'))})});
+const context=vm.createContext({document:doc,window:win,location:{search:`?song=${index[0].file}&shot=full&beat=${index[0].shots.full}`},innerWidth:1000,performance,requestAnimationFrame(cb){nextFrame=cb;},structuredClone,URLSearchParams,URL,Blob,console,localStorage:globalThis.localStorage,setTimeout,clearTimeout,AbortController,fetch:async url=>({ok:true,json:async()=>JSON.parse(fs.readFileSync(new URL(url.replace(/^repertoire\//,''),dir),'utf8'))})});
 const module=new vm.SourceTextModule(fs.readFileSync(new URL('../public/band/band.js',import.meta.url),'utf8'),{context});
 await module.link(async name=>{const obj=deps[name];assert.ok(obj,name);return new vm.SyntheticModule(Object.keys(obj),function(){for(const[k,v]of Object.entries(obj))this.setExport(k,v);},{context});});await module.evaluate();await win.bandReady;
 let count=0;const check=(x,msg)=>{assert.ok(x,msg);count++;};
@@ -68,7 +68,7 @@ check(typeof win.bandReady.then === "function",'Readiness promise');
 check(win.vesperStage.renders===1,'URL shot publishes only one completed frame');
 check(win.bandShotStatus.state==='ready'&&doc.body.dataset.bandShot==='ready','Capture has an explicit readiness marker');
 const hasTraces=()=>win.vesperStage.arChanges.length>0&&win.vesperStage.arChanges.every(e=>{const t=win.vesperStage.signalTraces[e.id];return t?.before?.spectrum.length===96&&t?.current?.spectrum.length===96;});
-check(hasTraces(),'Full@196 has both measured traces before ready');
+check(hasTraces(),'Boot full shot has both measured traces before ready');
 pump();check(win.vesperStage.renders===1,'30 seconds of virtual frames do not redraw a frozen shot');
 win.vesperStage._resize();pump(1);check(win.vesperStage.renders===1,'Unchanged ResizeObserver delivery preserves the frozen bitmap');
 for(const item of index){await win.bandLoad(item.file);check(S.state.song.title===item.title,'Song switch');}

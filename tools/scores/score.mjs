@@ -4,8 +4,8 @@ import {normalizePatch2} from '../../public/js/synth2.js';
 import {BAND_DRUM_SAMPLE_GAINS} from '../../public/js/drum-balance.js';
 import {DRUM_KEYS,KICK} from '../../public/band/prompts.js';
 export const license='オリジナル。このアプリ VESPER BAND のために GPT-6 Astra が作曲（2026-09-10、第3稿）。曲ごとに旋律・構成・伴奏・音色を新たに制作。既存曲の演奏データや外部素材は使用していません。';
-export function score({id,title,tempo,meter=4,key,sections,concept,lead,bass,volume=[-1,-2,-5]}){
- const song=defaultSong();Object.assign(song,{title,tempo,timeSig:meter,key,kind:'repertoire',composer:'GPT-6 Astra',license,concept});song.sections=sections.map(([name,bars])=>({name,bars,description:name}));song.master.hallDecay=1.6;song.master.roomDecay=.45;
+export function score({id,title,tempo,meter=4,key,sections,concept,lead,bass,volume=[-1,-2,-5],composer='GPT-6 Astra',licenseText=license}){
+ const song=defaultSong();Object.assign(song,{title,tempo,timeSig:meter,key,kind:'repertoire',composer,license:licenseText,concept});song.sections=sections.map(([name,bars])=>({name,bars,description:name}));song.master.hallDecay=1.6;song.master.roomDecay=.45;
  const keys=makeTrack({instrument:'synth',role:'keys',name:'Synth (右手)',volume:volume[0],pan:.08}),pedal=makeTrack({instrument:'synth-bass',role:'pedal',name:'Bass Pedal (右足)',volume:volume[1]}),drums=makeTrack({instrument:'drums',role:'drums',name:'Drums (左手 + 左足)',volume:volume[2]});
  keys.synth2=normalizePatch2(lead);pedal.synth2=normalizePatch2(bass);keys.knobs=[];drums.drumSampleGains={...BAND_DRUM_SAMPLE_GAINS};song.tracks=[keys,pedal,drums];for(const t of song.tracks){t.id=`${id}-${t.role}`;t.fx.hall=.012;t.fx.room=t===drums?.10:.02;}
  let seq=0;const n=(track,p,s,d,v=100,f)=>{const note={id:`${id}-v3-${++seq}`,p,s:+s.toFixed(4),d:+d.toFixed(4),v:Math.round(v),...(track===keys?{h:'R',f:f??3}:{})};track.notes.push(note);return note;};

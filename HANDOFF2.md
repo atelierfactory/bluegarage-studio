@@ -66,9 +66,15 @@
 | 表 | 悲愴ソナタ 第 2 楽章 | Fable 5.1 |
 | 隠 | 交響曲第 5 番「運命」第 1 楽章 | **Opus 5**（さとるん「微妙」で外した） |
 
-### シンセ（一覧に 3 曲／データは 6 曲）
-表：疾風・電脳桜 / Neon Circuit / 3+3+2 オーバードライブ（すべて Fable 5.1 作）
+### シンセ（一覧に 4 曲／データは 7 曲）
+表：**夜を追い越して**（2026-09-16 追加。`index.json` の先頭 = 起動したとき最初に開く曲）/ 疾風・電脳桜 / Neon Circuit / 3+3+2 オーバードライブ（すべて Fable 5.1 作）
 隠：硝子の環流 / 銅の蝶番 / 白磁の螺旋（GPT-6 Astra 作。`public/band/repertoire/_hidden/index-removed.json` に元の登録内容、`.band.json` 本体も残してある）
+
+「夜を追い越して」の作り方（2026-09-16、さとるん「YOASOBI みたいなかっこいい曲。つまみを無駄に捻らない。初期設定の曲に」）
+- ウェブの作曲機能は止まっている（鍵の問題）ので、Astra の 3 曲と同じ「楽譜をプログラムで書く」方式。楽譜は `tools/scores/overtake-the-night.mjs`（A マイナー 148 BPM、90 小節 2 分 26 秒、最後の 2 回のサビだけ半音上）
+- 書き出しは `node tools/make-band-score.mjs overtake-the-night --first`（検査 → `.band.json` を書く → `index.json` の先頭に入れる。`--first` を付けなければ末尾）
+- 通した検査：`band-check`（自動修正 0・指摘 0）/ `band-rehearse`（3D の手足の届き外れ 0）/ `band-regression` / `band-page-check` / `band-knob-check` / `band-audio-check`。ブラウザでも `window.bandRehearse()` 外れ 0、再生と `?shot=knob` の AR 表示を確認済み
+- つまみは 12 回だけ（A メロ前に暗く、サビ前に全開、C メロで残響、最後のサビで歪み、終わりで残響を開く）。検査は 10 回以上を求めるので、これ以下には減らせない
 
 ---
 
@@ -118,7 +124,7 @@ node astra/shot.mjs --size=390x844 --page out.png 'http://localhost:5173/piano/'
 2. **CloudFront が最大 10 分、古い写しを返す。** 公開直後の「出ない」はたいていこれ。
 3. **`piano-motion-check` は曲を足すと落ちる**（前回の記録が無い／`astra/piano-baseline.json` の hash が合わない）。曲を足したら baseline の hash を更新する。曲データ本体を変えていないことは、他の hash が一致することで確認する。
 4. **検査の偽の `claude.js`**（`band-page-check` / `piano-page-check` の中）に、画面が使う関数を書き足さないと `does not provide an export named ...` で落ちる。
-5. **`band-page-check` は `index.json` の `shots`（撮影の拍）に依存する。** 曲を差し替えたら埋め直す（cutoff のつまみ操作の真ん中を `knob`/`ar`、その次の操作の直後を `full`/`crash`/`synth`）。
+5. **`band-page-check` は `index.json` の先頭の曲の `shots`（撮影の拍）に依存する。** 曲を差し替えたら埋め直す（cutoff のつまみ操作の真ん中を `knob`/`ar`、その次の操作の直後を `full`/`crash`/`synth`）。2026-09-16 から起動 URL も先頭の曲を使う（以前は疾風・電脳桜が固定で書かれていた）。
 6. **JS を書いたら必ず `node --check`**（行末コメントで括弧を消して真っ白になる事故が何度もあった）。
 7. **`synthcore.js` か `worklet/synth2-processor.js` を変えたら `node tools/bundle-worklet.mjs`**（作り直さないと古い音のまま）。
 8. **`String.replace` の置き換え文字列は `$'` `$&` を特別扱いする。** コードを差し込むときは必ず関数で渡す（配布用 HTML が壊れた）。

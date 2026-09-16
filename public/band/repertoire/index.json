@@ -1,59 +1,107 @@
 [
- {
-  "title": "疾風・電脳桜",
-  "file": "hayate-cyber-sakura.band.json",
-  "composer": "Claude Fable 5.1",
-  "license": "オリジナル。このアプリの作曲機能で Claude Fable 5.1 が作曲（2026-09-10）。既存曲の旋律や外部素材は使用していません。",
-  "tempo": 150,
-  "bars": 38,
-  "note": "千本桜のような疾走感の和風シンセロック、というお題から。和の五音の主旋律、16 分の駆け上がり、サビ前にフィルターを溜めて全開で解放。",
-  "candidate": true,
-  "shots": {
-   "full": 106,
-   "crash": 108,
-   "synth": 106.8,
-   "stick": 76,
-   "pedal": 65.5,
-   "knob": 98.4,
-   "ar": 98.4
+  {
+    "title": "夜を追い越して",
+    "file": "overtake-the-night.band.json",
+    "composer": "Claude Fable 5.1",
+    "license": "オリジナル。このアプリ VESPER BAND のために Claude Fable 5.1 が作曲（2026-09-16）。旋律・構成・伴奏・音色を新たに制作。既存曲の演奏データや外部素材は使用していません。",
+    "tempo": 148,
+    "bars": 90,
+    "note": "夜の街を走り抜けるような、速くて明るいシンセのJ-POP。最初の16分のリフが曲の顔。Aメロは音を絞って語り、Bメロで和音を刻んで溜め、サビの直前に音を全部止めてから一気に開く。サビの主旋律は「ラ・ソ・ミ・ド・レ・ミ」の一度で覚える形。Cメロで一度静かに息をつき、最後は半音上がって二度目のサビへ。つまみは場面が変わる時だけ回す（全部で12回）。",
+    "shots": {
+      "full": 96,
+      "crash": 96.02,
+      "synth": 96.8,
+      "stick": 101,
+      "pedal": 98.5,
+      "knob": 94.75,
+      "ar": 94.75
+    },
+    "moments": [
+      {
+        "beat": 0,
+        "text": "16分のリフが走り出す。この曲の顔。"
+      },
+      {
+        "beat": 32,
+        "text": "音を絞って、夜の街を語る。"
+      },
+      {
+        "beat": 80,
+        "text": "和音を刻んで溜める。全部止めてから、開く。"
+      },
+      {
+        "beat": 96,
+        "text": "サビ。「ラ・ソ・ミ・ド・レ・ミ」。"
+      },
+      {
+        "beat": 240,
+        "text": "一度、息をつく。残響の中で。"
+      },
+      {
+        "beat": 272,
+        "text": "半音上がって、最後のサビ。"
+      },
+      {
+        "beat": 352,
+        "text": "夜を追い越した。"
+      }
+    ]
+  },
+  {
+    "title": "疾風・電脳桜",
+    "file": "hayate-cyber-sakura.band.json",
+    "composer": "Claude Fable 5.1",
+    "license": "オリジナル。このアプリの作曲機能で Claude Fable 5.1 が作曲（2026-09-10）。既存曲の旋律や外部素材は使用していません。",
+    "tempo": 150,
+    "bars": 38,
+    "note": "千本桜のような疾走感の和風シンセロック、というお題から。和の五音の主旋律、16 分の駆け上がり、サビ前にフィルターを溜めて全開で解放。",
+    "candidate": true,
+    "shots": {
+      "full": 106,
+      "crash": 108,
+      "synth": 106.8,
+      "stick": 76,
+      "pedal": 65.5,
+      "knob": 98.4,
+      "ar": 98.4
+    }
+  },
+  {
+    "title": "Neon Circuit",
+    "file": "neon-circuit.band.json",
+    "composer": "Claude Fable 5.1",
+    "license": "オリジナル。このアプリの作曲機能で Claude Fable 5.1 が作曲（2026-09-10）。既存曲の旋律や外部素材は使用していません。",
+    "tempo": 118,
+    "bars": 36,
+    "note": "近未来のエレクトロファンク×シンセウェーブ、というお題から。裏拍を跳ねるベース、ハイハットとスネアの持ち替え、落としからのドロップ。",
+    "candidate": true,
+    "shots": {
+      "full": 99.3,
+      "crash": 94,
+      "synth": 100.1,
+      "stick": 64.5,
+      "pedal": 69,
+      "knob": 97.2,
+      "ar": 97.2
+    }
+  },
+  {
+    "title": "3+3+2 オーバードライブ",
+    "file": "overdrive-332.band.json",
+    "composer": "Claude Fable 5.1",
+    "license": "オリジナル。このアプリの作曲機能で Claude Fable 5.1 が作曲（2026-09-10）。既存曲の旋律や外部素材は使用していません。",
+    "tempo": 150,
+    "bars": 36,
+    "note": "超絶技巧のプログレッシブ・フュージョン、というお題から。3+3+2 のキメ、速い分散和音、タム回し、最後は転調して大きな山。",
+    "candidate": true,
+    "shots": {
+      "full": 112.35,
+      "crash": 111.6,
+      "synth": 113.15,
+      "stick": 74.5,
+      "pedal": 73.5,
+      "knob": 85.97,
+      "ar": 85.97
+    }
   }
- },
- {
-  "title": "Neon Circuit",
-  "file": "neon-circuit.band.json",
-  "composer": "Claude Fable 5.1",
-  "license": "オリジナル。このアプリの作曲機能で Claude Fable 5.1 が作曲（2026-09-10）。既存曲の旋律や外部素材は使用していません。",
-  "tempo": 118,
-  "bars": 36,
-  "note": "近未来のエレクトロファンク×シンセウェーブ、というお題から。裏拍を跳ねるベース、ハイハットとスネアの持ち替え、落としからのドロップ。",
-  "candidate": true,
-  "shots": {
-   "full": 99.3,
-   "crash": 94,
-   "synth": 100.1,
-   "stick": 64.5,
-   "pedal": 69,
-   "knob": 97.2,
-   "ar": 97.2
-  }
- },
- {
-  "title": "3+3+2 オーバードライブ",
-  "file": "overdrive-332.band.json",
-  "composer": "Claude Fable 5.1",
-  "license": "オリジナル。このアプリの作曲機能で Claude Fable 5.1 が作曲（2026-09-10）。既存曲の旋律や外部素材は使用していません。",
-  "tempo": 150,
-  "bars": 36,
-  "note": "超絶技巧のプログレッシブ・フュージョン、というお題から。3+3+2 のキメ、速い分散和音、タム回し、最後は転調して大きな山。",
-  "candidate": true,
-  "shots": {
-   "full": 112.35,
-   "crash": 111.6,
-   "synth": 113.15,
-   "stick": 74.5,
-   "pedal": 73.5,
-   "knob": 85.97,
-   "ar": 85.97
-  }
- }
 ]
