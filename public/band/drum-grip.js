@@ -4,6 +4,7 @@ import * as THREE from 'three';
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 export const STICK_AXIS = V(.42, .12, .90).normalize();
 export const STICK_GRIP = V(2, -.66, .30);
+export const ELBOW_LIFT_MAX = .55;   // 2026-09-18: was .98
 
 export function drumGripFrame(shoulder, tip, upper, fore, scale, stickLength, snap = 0) {
   const wristToTip = STICK_GRIP.clone().multiplyScalar(scale).addScaledVector(STICK_AXIS, stickLength);
@@ -19,7 +20,9 @@ export function drumGripFrame(shoulder, tip, upper, fore, scale, stickLength, sn
   const side = direction.clone().cross(up); if(side.x>0)side.negate();
   // Keep the grip above the struck surface. A hanging elbow alone can make
   // a straight wrist point the stick up into the underside of a cymbal.
-  const height = THREE.MathUtils.clamp((tip.y + .105 - centre.y) / Math.max(.0001, radius * up.y), -.98, .98);
+  // The elbow never goes straight up (that reads as a bent-back joint on the crash,
+  // where the target sits above the shoulder): cap the lift so it swings outward instead.
+  const height = THREE.MathUtils.clamp((tip.y + .105 - centre.y) / Math.max(.0001, radius * up.y), -.98, ELBOW_LIFT_MAX);
   const elbow = centre.addScaledVector(up, radius * height)
     .addScaledVector(side, radius * Math.sqrt(1 - height * height));
   const localAxis = combined.normalize(), worldAxis = tip.clone().sub(elbow).normalize();
