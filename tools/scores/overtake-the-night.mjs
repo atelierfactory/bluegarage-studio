@@ -1,19 +1,21 @@
-// 夜を追い越して — a night-drive J-pop synth piece for VESPER BAND (Claude Fable 5.1, 2026-09-16).
-// A minor at 148 BPM, then a semitone up (B♭ minor) for the last two choruses.
+// 夜を追い越して — a night-drive J-pop synth piece for VESPER BAND (Claude Fable 5.1, 2026-09-16, second draft 2026-09-18).
+// A minor at 136 BPM, then a semitone up (B♭ minor) for the last two choruses.
 // Every limb is written for the robot's body: one stick, one bass foot, one right hand that also turns the knobs.
+// Second draft: the tune is voiced in 3–5 note chords, every free sixteenth carries an arpeggio,
+// and the tempo sits at 136 so the one stick can play sixteenth rolls (0.11 s per stroke).
 import {score} from './score.mjs';
 
 const NOTE={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
 const m=s=>{const r=/^([A-G])([#b]?)(-?\d)$/.exec(s);if(!r)throw Error(`bad note ${s}`);return 12*(+r[3]+1)+NOTE[r[1]]+(r[2]==='#'?1:r[2]==='b'?-1:0);};
-const T=148,BAR=4;
+const T=136,BAR=4;
 
 export default function overtake(){
  const s=score({
   id:'overtake-the-night',title:'夜を追い越して',tempo:T,key:'A minor → B♭ minor',
   composer:'Claude Fable 5.1',
-  licenseText:'オリジナル。このアプリ VESPER BAND のために Claude Fable 5.1 が作曲（2026-09-16）。旋律・構成・伴奏・音色を新たに制作。既存曲の演奏データや外部素材は使用していません。',
+  licenseText:'オリジナル。このアプリ VESPER BAND のために Claude Fable 5.1 が作曲（2026-09-16、第2稿 2026-09-18）。旋律・構成・伴奏・音色を新たに制作。既存曲の演奏データや外部素材は使用していません。',
   sections:[['イントロ',8],['Aメロ',8],['Bメロ',8],['サビ',8],['間奏',4],['Aメロ2',8],['Bメロ2',8],['サビ2',8],['Cメロ',8],['ラストサビ',8],['ラストサビ2',8],['アウトロ',4],['エンディング',2]],
-  concept:'夜の街を走り抜けるような、速くて明るいシンセのJ-POP。最初の16分のリフが曲の顔。Aメロは音を絞って語り、Bメロで和音を刻んで溜め、サビの直前に音を全部止めてから一気に開く。サビの主旋律は「ラ・ソ・ミ・ド・レ・ミ」の一度で覚える形。Cメロで一度静かに息をつき、最後は半音上がって二度目のサビへ。つまみは場面が変わる時だけ回す（全部で12回）。',
+  concept:'夜の街を走り抜けるような、速くて明るいシンセのJ-POP。最初の16分のリフが曲の顔。主旋律は3〜5音の和音で弾き、空いた16分は全部分散和音で埋める。Aメロは音を絞って語り、Bメロで和音を刻んで溜め、サビの直前にスネアの16分ロールで全部止めてから一気に開く。サビの主旋律は「ラ・ソ・ミ・ド・レ・ミ」の一度で覚える形。Cメロで一度静かに息をつき、最後は半音上がって二度目のサビへ。片手ドラムは16分のハイハット刻み・16分のスネアロール・タム回しで見せ場を作る。つまみは場面が変わる時だけ回す（全部で12回）。',
   volume:[-1,-2,-5],
   lead:{name:'NIGHT / HEADLIGHT',description:'スーパーソーのプラック寄りリード。アタックは硬く、和音でも旋律でも抜ける',
    osc:[{wave:'supersaw',level:.78,unison:7,spread:42,width:.8,phaseRand:true},{wave:'saw',level:.32,octave:-1,detune:-5,phaseRand:true}],
@@ -32,32 +34,38 @@ export default function overtake(){
    fx:{chorus:{mix:0,rate:.5,depth:0},delay:{mix:0,time:.5,feedback:0,tone:2000,pingpong:false},reverb:{mix:.03,decay:.8,damp:.8,preDelay:0}},level:0},
  });
 
- /* ───────── collectors ───────── */
- const rh=[],bs=[],dr=[],kk=[];
- // right hand: pitches = array (chord) or one name; t is transpose in semitones
- const R=(bar,t,list,v0=104)=>{for(const [b,p,d=.22,v=v0] of list){const ps=(Array.isArray(p)?p:[p]).map(x=>m(x)+t);rh.push({s:bar*BAR+b,ps,d,v});}};
- const B=(bar,b,p,d,v=106)=>bs.push({s:bar*BAR+b,p,d,v});
- const D=(bar,list)=>{for(const [b,k,v] of list)dr.push({s:bar*BAR+b,k,v});};
- const K=(bar,list,v=112)=>{for(const b of list)kk.push({s:bar*BAR+b,v:Array.isArray(b)?b[1]:v+(b===0?6:0)});};
- const knobs=[];const knob=(bar,b,param,d,to)=>knobs.push({param,s:+(bar*BAR+b).toFixed(4),d,to:+to.toFixed(3)});
-
  /* ───────── harmony ───────── */
- // chord: name, root in the pedal range (24..36), third size (3 minor / 4 major)
+ // chord: name, root in the pedal range (24..36), third size (3 minor / 4 major), pitch classes
  const CH={
-  Am:{n:'Am',r:33,th:3},F:{n:'F',r:29,th:4},C:{n:'C',r:24,th:4},G:{n:'G',r:31,th:4},
-  Dm:{n:'Dm',r:26,th:3},Em:{n:'Em',r:28,th:3},E7:{n:'E7',r:28,th:4},
+  Am:{n:'Am',r:33,th:3,pcs:[9,0,4]},F:{n:'F',r:29,th:4,pcs:[5,9,0]},C:{n:'C',r:24,th:4,pcs:[0,4,7]},G:{n:'G',r:31,th:4,pcs:[7,11,2]},
+  Dm:{n:'Dm',r:26,th:3,pcs:[2,5,9]},Em:{n:'Em',r:28,th:3,pcs:[4,7,11]},E7:{n:'E7',r:28,th:4,pcs:[4,8,11,2]},
  };
- const up=(c,t)=>{let r=c.r+t;if(r>36)r-=12;if(r<24)r+=12;return {...c,n:t?`${c.n}(+${t})`:c.n,r};};
+ const up=(c,t)=>{let r=c.r+t;if(r>36)r-=12;if(r<24)r+=12;return {...c,n:t?`${c.n}(+${t})`:c.n,r,pcs:c.pcs.map(p=>(p+t+12)%12)};};
  const RIFF=['Am','F','C','G'],VERSE=['Am','F','C','G'],PRE=['Dm','Em','F','G'],CHORUS=['F','G','Em','Am','F','G','E7','Am'],BRIDGE=['F','G','Am','Em','F','G','Am','E7'];
- // right-hand stab voicings (A minor); transposed by t when used
- const V={F:['F4','A4','C5'],G:['G4','B4','D5'],Em:['E4','G4','B4'],Am:['A4','C5','E5'],E7:['E4','G#4','B4','D5'],Dm:['D4','F4','A4'],C:['G4','C5','E5']};
+ // stab voicings (A minor, four notes, span ≤ 12)
+ const V={F:['F4','A4','C5','F5'],G:['G4','B4','D5','G5'],Em:['E4','G4','B4','E5'],Am:['A4','C5','E5','A5'],E7:['E4','G#4','B4','D5'],Dm:['D4','F4','A4','D5'],C:['G4','C5','E5','G5']};
+ // arpeggio tones under the tune (A minor), lowest first
+ const ARP={Am:['E4','A4','C5','E5'],F:['F4','A4','C5','F5'],C:['E4','G4','C5','E5'],G:['D4','G4','B4','D5'],Dm:['D4','F4','A4','D5'],Em:['E4','G4','B4','E5'],E7:['E4','G#4','B4','D5']};
+ // chord tones below a melody pitch (already transposed), nearest first, span ≤ 12
+ const under=(p,pcs,count)=>{const out=[p];for(let q=p-1;q>=p-12&&out.length<count;q--){if(pcs.includes(((q%12)+12)%12))out.push(q);}return out.sort((a,b)=>a-b);};
  // pedal alternate tone: the fifth below when it fits the 13 keys, else the third above (always within 5 semitones)
  const alt=c=>c.r-5>=24?c.r-5:c.r+c.th;
  // the anticipation played half a beat before the next bar: a chord tone within 5 semitones of both neighbours
  const ant=(c,prev,next)=>{const cands=[c.r,alt(c),c.r+c.th,c.r+7,c.r-12,c.r+12].filter(p=>p>=24&&p<=36&&Math.abs(p-prev)<=5&&Math.abs(p-next)<=5);if(!cands.length)throw Error(`no anticipation for ${c.n}->${next}`);return cands[0];};
 
+ /* ───────── collectors ───────── */
+ const rh=[],bs=[],dr=[],kk=[],knobs=[],marks=[],barChord=[];
+ // right hand: entries [beat, pitch | [pitches], d=.22, v]. With {chord,n}, single notes of an eighth or longer are voiced as n-note chords.
+ const R=(bar,t,list,v0=104,voice=null)=>{for(const [b,p,d=.22,v=v0] of list){let ps=(Array.isArray(p)?p:[p]).map(x=>m(x)+t);if(voice&&!Array.isArray(p)&&d>=.4)ps=under(ps[0],voice.chord.pcs,voice.n);rh.push({s:bar*BAR+b,ps,d,v});}};
+ const B=(bar,b,p,d,v=106)=>bs.push({s:bar*BAR+b,p,d,v});
+ const D=(bar,list)=>{for(const [b,k,v] of list)dr.push({s:bar*BAR+b,k,v});};
+ const K=(bar,list,v=112)=>{for(const b of list)kk.push({s:bar*BAR+b,v:v+(b===0?6:0)});};
+ const knob=(bar,b,param,d,to)=>knobs.push({param,s:+(bar*BAR+b).toFixed(4),d,to:+to.toFixed(3)});
+ const mark=(bar,c,t=0,arpName=null)=>{marks.push([bar,c.n]);barChord[bar]={c,t,arp:arpName};};
+ const noFill=new Set();   // bars the arpeggio filler leaves alone
+
  /* ───────── bass patterns (bar, chord, next chord) ───────── */
- const bassRiff=(bar,c,nx)=>{B(bar,0,c.r,.45,112);B(bar,1.5,c.r,.45,104);B(bar,2.5,alt(c),.45,104);B(bar,3.5,ant(c,alt(c),nx.r),.45,108);};
+ const bassRiff=(bar,c,nx)=>{B(bar,0,c.r,.45,112);B(bar,.5,c.r,.45,100);B(bar,1.5,c.r,.45,104);B(bar,2.5,alt(c),.45,104);B(bar,3.5,ant(c,alt(c),nx.r),.45,108);};
  const bassVerse=(bar,c,nx)=>{B(bar,0,c.r,.45,110);B(bar,1,c.r,.45,100);B(bar,1.5,alt(c),.45,104);B(bar,3,c.r,.45,102);B(bar,3.5,ant(c,c.r,nx.r),.45,106);};
  const bassPreA=(bar,c,nx)=>{B(bar,.5,c.r,.45,108);B(bar,1,c.r,.45,100);B(bar,2.5,c.r,.45,104);B(bar,3,alt(c),.45,102);B(bar,3.5,ant(c,alt(c),nx.r),.45,108);};
  const bassPreB=(bar,c,nx)=>{B(bar,.5,c.r,.45,110);B(bar,1,c.r,.45,104);B(bar,1.5,c.r,.45,104);B(bar,2.5,c.r,.45,106);B(bar,3,c.r,.45,104);B(bar,3.5,ant(c,c.r,nx.r),.45,110);};
@@ -65,29 +73,34 @@ export default function overtake(){
  const bassChorus=(bar,c,nx)=>{B(bar,0,c.r,.4,112);B(bar,.5,c.r,.45,104);B(bar,1.5,alt(c),.45,106);B(bar,2.5,c.r,.45,106);B(bar,3.5,ant(c,c.r,nx.r),.45,110);};
  const bassBridge=(bar,c)=>{B(bar,0,c.r,1.4,104);B(bar,2,alt(c),.9,98);};
 
- /* ───────── drum patterns ───────── */
- const HH=68,SN=112,CR=118;
- const beat8=(bar,{crash=false,last=true,accent=0}={})=>{D(bar,[...(crash?[[0,'cr',CR]]:[[0,'hh',HH+12],[.5,'hh',HH]]),[1,'sn',SN+accent],[1.5,'hh',HH],[2.5,'hh',HH+6],[3,'sn',SN+accent],...(last?[[3.5,'hh',HH]]:[])]);};
- const hats=(bar)=>D(bar,[0,.5,1,1.5,2,2.5,3,3.5].map(b=>[b,'hh',b%1?HH-8:HH+6]));
- const fillA=(bar)=>D(bar,[[0,'hh',HH+10],[.5,'hh',HH],[1,'sn',108],[1.5,'sn',112],[2,'t1',108],[2.5,'t2',112],[3.25,'t3',118]]);
- const fillB=(bar)=>D(bar,[[0,'hh',HH+10],[1,'sn',110],[1.5,'t1',104],[2,'t1',110],[2.5,'t2',112],[3.25,'t3',118]]);
- const fillC=(bar)=>D(bar,[[0,'sn',104],[.5,'sn',100],[1,'sn',108],[1.5,'sn',104],[2,'t1',110],[2.5,'t2',114],[3.25,'t3',120]]);
- const build4=(bar,{crash=false,last=true}={})=>D(bar,[[0,crash?'cr':'sn',crash?CR:SN],...(crash?[]:[[.5,'hh',HH]]),[1,'sn',SN],[1.5,'hh',HH],[2,'sn',SN+2],[2.5,'hh',HH],[3,'sn',SN+4],...(last?[[3.5,'hh',HH]]:[])]);
+ /* ───────── drum patterns (one stick, 136 BPM: a sixteenth is 0.110 s) ───────── */
+ const HH=66,HA=80,SN=114,CR=118;
+ const hh=(b,v=b%.5?HH:HA)=>[b,'hh',v];
+ // sixteenth hats, snare on 2 and 4 (no hat on the sixteenth before a snare: that is the stick's travel time)
+ const hats16=(bar,{crash=false,last=true}={})=>D(bar,[...(crash?[[0,'cr',CR]]:[hh(0),hh(.25)]),hh(.5),[1,'sn',SN],hh(1.5),hh(1.75),hh(2),hh(2.25),hh(2.5),[3,'sn',SN],hh(3.5),...(last?[hh(3.75)]:[])]);
+ const hatsOnly=(bar)=>D(bar,[0,.25,.5,.75,1,1.25,1.5,1.75,2,2.25,2.5,2.75,3,3.25,3.5,3.75].map(b=>hh(b)));
+ // chorus: crash on 1, ghost snare on the last eighth (the next bar's crash follows half a beat later)
+ const chorusA=(bar)=>D(bar,[[0,'cr',CR],hh(.5),[1,'sn',SN+4],hh(1.5),hh(1.75),hh(2),hh(2.25),hh(2.5),[3,'sn',SN+6],[3.5,'sn',86]]);
+ const chorusB=(bar)=>D(bar,[[0,'cr',CR],hh(.5),[1,'sn',SN+4],hh(1.5),hh(1.75),[2.25,'sn',104],[3,'sn',SN+6],hh(3.5)]);
+ // fills: sixteenth snares then toms at eighths (tom 2 → floor tom is a far move: half a beat), ending half a beat before the crash
+ const fillA=(bar)=>D(bar,[hh(0),hh(.25),hh(.5),[1,'sn',104],[1.25,'sn',108],[1.5,'sn',112],[1.75,'sn',116],[2.25,'t1',110],[2.5,'t1',114],[3,'t2',116],[3.5,'t3',122]]);
+ const fillB=(bar)=>D(bar,[[0,'sn',100],[.25,'sn',102],[.5,'sn',104],[.75,'sn',106],[1,'sn',108],[1.25,'sn',110],[1.5,'sn',112],[1.75,'sn',116],[2.25,'t1',112],[2.5,'t1',116],[3,'t2',118],[3.5,'t3',124]]);
+ const fillToms=(bar)=>D(bar,[hh(0),hh(.5),[1,'sn',110],[1.5,'t1',106],[1.75,'t1',110],[2.25,'t2',110],[2.5,'t2',114],[3,'t3',116],[3.25,'t3',120]]);
+ const roll16=(bar)=>D(bar,[0,.25,.5,.75,1,1.25,1.5,1.75,2,2.25,2.5,2.75].map((b,i)=>[b,'sn',96+i*2]));   // then nothing: the drop before the chorus
+ const build4=(bar,{crash=false,last=true}={})=>D(bar,[[0,crash?'cr':'sn',crash?CR:SN],...(crash?[]:[hh(.5)]),[1,'sn',SN],hh(1.5),[2,'sn',SN+2],hh(2.5),[3,'sn',SN+4],...(last?[hh(3.5)]:[])]);
  const build8=(bar,{crash=false}={})=>D(bar,[[0,crash?'cr':'sn',crash?CR:106],...[.5,1,1.5,2,2.5,3,3.5].filter(b=>!(crash&&b===.5)).map((b,i)=>[b,'sn',104+i*2])]);
- const buildStop=(bar)=>D(bar,[[0,'sn',108],[.5,'sn',110],[1,'sn',112],[1.5,'sn',114],[2,'sn',116],[2.5,'sn',118],[3,'t1',120]]);   // silence after beat 3: the drop before the chorus
- const chorusBar=(bar,{crash=true,last=false}={})=>D(bar,[[0,crash?'cr':'hh',crash?CR:HH+12],...(crash?[]:[[.5,'hh',HH]]),[1,'sn',SN+4],[1.5,'hh',HH],[2,'hh',HH+8],[2.5,'hh',HH],[3,'sn',SN+6],...(last?[[3.5,'hh',HH]]:[])]);
- const half=(bar,{crash=false}={})=>D(bar,[...(crash?[[0,'cr',CR-4]]:[[0,'hh',HH+8],[.5,'hh',HH-4]]),[1,'hh',HH],[1.5,'hh',HH-4],[2,'sn',SN],[2.5,'hh',HH],[3,'hh',HH-4],[3.5,'hh',HH]]);
+ const half16=(bar,{crash=false,last=true}={})=>D(bar,[...(crash?[[0,'cr',CR-4],hh(.5)]:[hh(0),hh(.25),hh(.5)]),hh(.75),hh(1),hh(1.25),hh(1.5),[2,'sn',SN],hh(2.5),hh(2.75),hh(3),hh(3.25),hh(3.5),...(last?[hh(3.75)]:[])]);
 
  /* ───────── right-hand material ───────── */
- // The hook riff: 16ths with a doubled octave on beat 2, one bar per chord
+ // The hook riff: a full sixteenth grid with a moving top line; the accents are chords
  const RIFF_RH={
-  Am:[[0,'A4',.4],[.5,'C5'],[.75,'E5'],[1,['A4','A5'],.4],[1.5,'G5'],[1.75,'E5'],[2,'C5',.4],[2.5,'E5'],[2.75,'G5'],[3,'A5'],[3.25,'G5'],[3.5,'E5'],[3.75,'D5']],
-  F:[[0,'F4',.4],[.5,'A4'],[.75,'C5'],[1,['F4','F5'],.4],[1.5,'E5'],[1.75,'C5'],[2,'A4',.4],[2.5,'C5'],[2.75,'F5'],[3,'A5'],[3.25,'G5'],[3.5,'F5'],[3.75,'E5']],
-  C:[[0,'G4',.4],[.5,'C5'],[.75,'E5'],[1,['G4','G5'],.4],[1.5,'E5'],[1.75,'C5'],[2,'G4',.4],[2.5,'C5'],[2.75,'E5'],[3,'G5'],[3.25,'F5'],[3.5,'E5'],[3.75,'D5']],
-  G:[[0,'G4',.4],[.5,'B4'],[.75,'D5'],[1,['G4','G5'],.4],[1.5,'F5'],[1.75,'D5'],[2,'B4',.4],[2.5,'D5'],[2.75,'G5'],[3,'B5'],[3.25,'A5'],[3.5,'G5'],[3.75,'F5']],
+  Am:[[0,['A4','C5','E5','A5'],.4],[.25,'E5'],[.5,'C5'],[.75,'E5'],[1,'G5',.4],[1.25,'E5'],[1.5,'A5'],[1.75,'E5'],[2,['E4','G4','B4','E5'],.4],[2.25,'G5'],[2.5,'E5'],[2.75,'G5'],[3,'A5',.4],[3.25,'E5'],[3.5,'C5'],[3.75,'D5']],
+  F:[[0,['A4','C5','F5','A5'],.4],[.25,'F5'],[.5,'C5'],[.75,'F5'],[1,'G5',.4],[1.25,'F5'],[1.5,'A5'],[1.75,'F5'],[2,['C4','F4','A4','C5'],.4],[2.25,'C5'],[2.5,'A4'],[2.75,'C5'],[3,'F5',.4],[3.25,'G5'],[3.5,'A5'],[3.75,'G5']],
+  C:[[0,['E4','G4','C5','G5'],.4],[.25,'E5'],[.5,'C5'],[.75,'E5'],[1,'G5',.4],[1.25,'E5'],[1.5,'C5'],[1.75,'E5'],[2,['G4','C5','E5','A5'],.4],[2.25,'G5'],[2.5,'E5'],[2.75,'G5'],[3,'E5',.4],[3.25,'D5'],[3.5,'C5'],[3.75,'D5']],
+  G:[[0,['G4','B4','D5','G5'],.4],[.25,'D5'],[.5,'B4'],[.75,'D5'],[1,'G5',.4],[1.25,'D5'],[1.5,'B5'],[1.75,'G5'],[2,['G4','B4','D5','A5'],.4],[2.25,'G5'],[2.5,'F5'],[2.75,'D5'],[3,'B4',.4],[3.25,'D5'],[3.5,'F5'],[3.75,'G5']],
  };
- const riffBar=(bar,name,t,v)=>R(bar,t,RIFF_RH[name].map(([b,p,d],i)=>[b,p,d,v+(i%3===0?6:0)]));
- // Verse: a talky melody, the long notes leave room for the bass
+ const riffBar=(bar,name,t,v)=>R(bar,t,RIFF_RH[name].map(([b,p,d],i)=>[b,p,d,v+(i%4===0?8:0)]));
+ // Verse: a talky tune (voiced in three-note chords on the longer notes)
  const VERSE_RH=[
   [[0,'E5'],[.25,'E5'],[.5,'E5'],[.75,'D5'],[1,'C5',.45],[1.5,'A4',.7],[2.5,'C5'],[2.75,'D5'],[3,'E5',.45],[3.5,'D5'],[3.75,'C5']],
   [[0,'A4',.7],[.75,'C5'],[1,'A4',.45],[1.5,'F4',.45],[2,'G4',.45],[2.5,'A4',1.2]],
@@ -98,76 +111,74 @@ export default function overtake(){
   [[.5,'G4'],[.75,'A4'],[1,'C5',.45],[1.5,'E5',.45],[2,'G5'],[2.25,'E5'],[2.5,'D5',.9],[3.5,'C5'],[3.75,'D5']],
   [[0,'D5'],[.25,'D5'],[.5,'D5'],[.75,'E5'],[1,'D5',.45],[1.5,'B4',.45],[2,'A4',.45],[2.5,'B4',.9],[3.5,'B4'],[3.75,'C5']],
  ];
- // Pre-chorus: four bars of a rising line, then chord stabs that get denser
+ // Pre-chorus: four bars of a rising line (four-note chords), then chord stabs that get denser
  const PRE_RH=[
-  [[0,'D5',.45],[.5,'F5',.45],[1,'E5'],[1.25,'D5'],[1.5,'A4',.45],[2,['D4','F4','A4'],.2,90],[2.5,'D5'],[2.75,'F5'],[3,'A5',.45],[3.5,'G5'],[3.75,'F5']],
-  [[0,'E5',.7],[.75,'G5'],[1,'E5',.45],[1.5,'B4',.45],[2,['E4','G4','B4'],.2,90],[2.5,'E5',.45],[3,'G5',.45],[3.5,'B4',.45]],
-  [[0,'F5',.45],[.5,'A5',.45],[1,'G5'],[1.25,'F5'],[1.5,'C5',.45],[2,['F4','A4','C5'],.2,90],[2.5,'F5'],[2.75,'A5'],[3,'C6',.45],[3.5,'A5'],[3.75,'G5']],
+  [[0,'D5',.45],[.5,'F5',.45],[1,'E5'],[1.25,'D5'],[1.5,'A4',.45],[2,['D4','F4','A4','D5'],.2,92],[2.5,'D5'],[2.75,'F5'],[3,'A5',.45],[3.5,'G5'],[3.75,'F5']],
+  [[0,'E5',.7],[.75,'G5'],[1,'E5',.45],[1.5,'B4',.45],[2,['E4','G4','B4','E5'],.2,92],[2.5,'E5',.45],[3,'G5',.45],[3.5,'B4',.45]],
+  [[0,'F5',.45],[.5,'A5',.45],[1,'G5'],[1.25,'F5'],[1.5,'C5',.45],[2,['F4','A4','C5','F5'],.2,92],[2.5,'F5'],[2.75,'A5'],[3,'C6',.45],[3.5,'A5'],[3.75,'G5']],
   [[0,'G5',.45],[.5,'G5'],[.75,'G5'],[1,'F5',.45],[1.5,'E5',.45],[2,'D5',.45],[2.5,'E5',.45],[3,'F5',.45],[3.5,'G5',.45]],
  ];
  const stabs=(bar,name,t,beats,v=96,d=.2)=>R(bar,t,beats.map((b,i)=>[b,V[name],d,v+(i%2?0:6)]));
- // Chorus: the hook "A G E C D E", the second half climbs to B, the E7 bar pulls back home
+ // Chorus: the hook "A G E C D E" in four-note chords; the second half climbs to B, the E7 bar pulls back home
  const CHORUS_RH=[
-  [[0,['A4','A5'],.7,112],[.75,'G5'],[1,'E5',.45],[1.5,'C5',.45],[2,'D5',.45],[2.5,'E5',.9],[3.5,['F4','A4','C5'],.2,92]],
-  [[0,['G4','B4','D5'],.2,94],[.5,'D5'],[.75,'E5'],[1,'G5',.7],[1.75,'F5'],[2,'E5',.45],[2.5,'D5',.9],[3.5,['G4','B4','D5'],.2,92]],
-  [[0,['E4','G4','B4'],.2,94],[.5,'C5'],[.75,'D5'],[1,'E5',.45],[1.5,'G5',.45],[2,'F5'],[2.25,'E5'],[2.5,'D5',.45],[3,'B4',.4],[3.5,['E4','G4','B4'],.2,92]],
-  [[0,'C5',.45],[.5,'D5',.45],[1,['A4','E5'],.9,110],[2,['A4','C5','E5'],.2,94],[2.5,['A4','C5','E5'],.2,94],[3,['A4','C5','E5'],.2,98],[3.5,'E5'],[3.75,'F5']],
-  [[0,['A4','A5'],.7,114],[.75,'G5'],[1,'E5',.45],[1.5,'C5',.45],[2,'D5',.45],[2.5,'E5',.9],[3.5,['F4','A4','C5'],.2,92]],
-  [[0,['G4','B4','D5'],.2,94],[.5,'D5'],[.75,'E5'],[1,'G5',.7],[1.75,'A5'],[2,'B5',.45,112],[2.5,'A5',.9,110],[3.5,['G4','B4','D5'],.2,92]],
-  [[0,'B5',.45,112],[.5,'A5',.45],[1,'G#5',.45],[1.5,'E5',.4],[2,['E4','G#4','B4','D5'],.2,96],[2.5,'D5',.45],[3,'E5',.45],[3.5,'G#5',.45]],
+  [[0,'A5',.7,114],[.75,'G5'],[1,'E5',.45],[1.5,'C5',.45],[2,'D5',.45],[2.5,'E5',.9],[3.5,['F4','A4','C5','F5'],.2,94]],
+  [[0,['G4','B4','D5','G5'],.2,96],[.5,'D5'],[.75,'E5'],[1,'G5',.7],[1.75,'F5'],[2,'E5',.45],[2.5,'D5',.9],[3.5,['G4','B4','D5','G5'],.2,94]],
+  [[0,['E4','G4','B4','E5'],.2,96],[.5,'C5'],[.75,'D5'],[1,'E5',.45],[1.5,'G5',.45],[2,'F5'],[2.25,'E5'],[2.5,'D5',.45],[3,'B4',.4],[3.5,['E4','G4','B4','E5'],.2,94]],
+  [[0,'C5',.45],[.5,'D5',.45],[1,'E5',.9,112],[2,['A4','C5','E5','A5'],.2,96],[2.5,['A4','C5','E5','A5'],.2,96],[3,['A4','C5','E5','A5'],.2,100],[3.5,'E5'],[3.75,'F5']],
+  [[0,'A5',.7,116],[.75,'G5'],[1,'E5',.45],[1.5,'C5',.45],[2,'D5',.45],[2.5,'E5',.9],[3.5,['F4','A4','C5','F5'],.2,94]],
+  [[0,['G4','B4','D5','G5'],.2,96],[.5,'D5'],[.75,'E5'],[1,'G5',.7],[1.75,'A5'],[2,'B5',.45,114],[2.5,'A5',.9,112],[3.5,['G4','B4','D5','G5'],.2,94]],
+  [[0,'B5',.45,114],[.5,'A5',.45],[1,'G#5',.45],[1.5,'E5',.4],[2,['E4','G#4','B4','D5'],.2,98],[2.5,'D5',.45],[3,'E5',.45],[3.5,'G#5',.45]],
  ];
  const CHORUS_END={
-  riff:[[0,['A4','A5'],1.4,114],[2,['A4','C5','E5'],.2,96],[2.5,['A4','C5','E5'],.2,96],[3,['A4','C5','E5'],.2,100],[3.5,['A4','C5','E5'],.2,104]],
-  stop:[[0,['A4','A5'],.8,114]],
-  drive:[[0,['A4','A5'],.8,114],[3.5,'E5'],[3.75,'F5']],
-  big:[[0,['A4','C5','E5','A5'],1.5,118],[2,['A4','C5','E5','A5'],.2,100],[2.5,['A4','C5','E5','A5'],.2,102],[3,['A4','C5','E5','A5'],.2,106],[3.5,['G4','B4','D5','G5'],.2,108]],
+  riff:[[0,'A5',1.4,116],[2,['A4','C5','E5','A5'],.2,98],[2.5,['A4','C5','E5','A5'],.2,98],[3,['A4','C5','E5','A5'],.2,102],[3.5,['A4','C5','E5','A5'],.2,106]],
+  stop:[[0,'A5',.8,116]],
+  drive:[[0,'A5',.8,116],[3.5,'E5'],[3.75,'F5']],
+  big:[[0,['A4','C5','E5','A5'],1.5,120],[2,['A4','C5','E5','A5'],.2,102],[2.5,['A4','C5','E5','A5'],.2,104],[3,['A4','C5','E5','A5'],.2,108],[3.5,['G4','B4','D5','G5'],.2,110]],
  };
- // Bridge: sustained chords with a quiet tune, then arpeggios climb toward the drop
+ // Bridge: sustained four-note chords with a quiet tune, then arpeggios climb toward the drop
  const BRIDGE_RH=[
-  [[1,['F4','A4','C5'],.9,84],[2,'C5',.45,90],[2.5,'D5',.45,92],[3,'E5',.9,94]],
-  [[0,['G4','B4','D5'],1.4,84],[1.5,'D5',.45,90],[2,'E5',.45,92],[2.5,'F5',1.2,94]],
-  [[0,['A4','C5','E5'],1.4,86],[1.5,'E5',.45,92],[2,'D5',.45,92],[2.5,'C5',1.2,94]],
-  [[0,['E4','G4','B4'],1.4,84],[1.5,'B4',.45,90],[2,'C5',.45,92],[2.5,'D5',1.2,94]],
-  [[0,['F4','A4','C5'],.9,92],[1,'C5'],[1.25,'F5'],[1.5,'A5'],[1.75,'F5'],[2,'C5'],[2.25,'F5'],[2.5,'A5'],[2.75,'C6'],[3,'A5'],[3.25,'F5'],[3.5,'C5'],[3.75,'A4']],
-  [[0,['G4','B4','D5'],.9,94],[1,'D5'],[1.25,'G5'],[1.5,'B5'],[1.75,'G5'],[2,'D5'],[2.25,'G5'],[2.5,'B5'],[2.75,'G5'],[3,'D5'],[3.25,'G5'],[3.5,'B5'],[3.75,'D5']],
-  [[0,['A4','C5','E5'],.9,98],[1,'E5'],[1.25,'F5'],[1.5,'G5'],[1.75,'A5'],[2,'B5',.45,108],[2.5,'C6',.5,112]],
+  [[1,['F4','A4','C5','F5'],.9,84],[2,'C5',.45,90],[2.5,'D5',.45,92],[3,'E5',.9,94]],
+  [[0,['G4','B4','D5','G5'],1.4,84],[1.5,'D5',.45,90],[2,'E5',.45,92],[2.5,'F5',1.2,94]],
+  [[0,['A4','C5','E5','A5'],1.4,86],[1.5,'E5',.45,92],[2,'D5',.45,92],[2.5,'C5',1.2,94]],
+  [[0,['E4','G4','B4','E5'],1.4,84],[1.5,'B4',.45,90],[2,'C5',.45,92],[2.5,'D5',1.2,94]],
+  [[0,['F4','A4','C5','F5'],.9,92],[1,'C5'],[1.25,'F5'],[1.5,'A5'],[1.75,'F5'],[2,'C5'],[2.25,'F5'],[2.5,'A5'],[2.75,'C6'],[3,'A5'],[3.25,'F5'],[3.5,'C5'],[3.75,'A4']],
+  [[0,['G4','B4','D5','G5'],.9,94],[1,'D5'],[1.25,'G5'],[1.5,'B5'],[1.75,'G5'],[2,'D5'],[2.25,'G5'],[2.5,'B5'],[2.75,'G5'],[3,'D5'],[3.25,'G5'],[3.5,'B5'],[3.75,'D5']],
+  [[0,['A4','C5','E5','A5'],.9,98],[1,'E5'],[1.25,'F5'],[1.5,'G5'],[1.75,'A5'],[2,'B5',.45,108],[2.5,'C6',.5,112]],
   [],
  ];
 
  /* ───────── the piece ───────── */
- const marks=[];const mark=(bar,c)=>marks.push([bar,c.n]);
  let bar=0;
  const chordAt=(names,i,t)=>up(CH[names[i%names.length]],t);
 
- // ── Intro (0..7): the riff alone with kick and bass, drums join at bar 2, full band from bar 4
- for(let i=0;i<8;i++){const c=chordAt(RIFF,i,0),nx=chordAt(RIFF,i+1,0);mark(bar+i,c);
+ // ── Intro (0..7): the riff with kick and bass, hats join at bar 2, full band from bar 4
+ for(let i=0;i<8;i++){const c=chordAt(RIFF,i,0),nx=chordAt(RIFF,i+1,0);mark(bar+i,c,0,RIFF[i%4]);
   if(i<7)riffBar(bar+i,RIFF[i%4],0,i<4?96:104);
-  else R(bar+i,0,[[0,['G4','B4','D5','G5'],.3,108]]);
+  else {R(bar+i,0,[[0,['G4','B4','D5','G5'],.3,110]]);noFill.add(bar+i);}
   bassRiff(bar+i,c,i===7?chordAt(VERSE,0,0):nx);
-  if(i<2)hats(bar+i);else if(i===3||i===7)fillA(bar+i);else beat8(bar+i,{crash:i===4,last:i!==2&&i!==6});
+  if(i<2)hatsOnly(bar+i);else if(i===3)fillA(bar+i);else if(i===7)fillB(bar+i);else hats16(bar+i,{crash:i===4,last:i!==2&&i!==6});
   K(bar+i,i===7?[0,1,2]:[0,1,2,3]);
  }
  knob(7,1.5,'cutoff',1.0,.58);
  bar=8;
- // ── Verse 1 (8..15)
- for(let i=0;i<8;i++){const c=chordAt(VERSE,i,0),nx=i===7?chordAt(PRE,0,0):chordAt(VERSE,i+1,0);mark(bar+i,c);
-  R(bar+i,0,VERSE_RH[i],100);bassVerse(bar+i,c,nx);
-  if(i%2===1&&i!==7)R(bar+i,0,[[3.25,V[VERSE[i%4]].slice(0,2),.2,86],[3.75,V[VERSE[i%4]].slice(0,2),.2,86]]);
-  if(i===3||i===7)fillA(bar+i);else beat8(bar+i,{last:i!==2&&i!==6});
+ // ── Verse 1 (8..15): three-note chords on the tune, arpeggios in the gaps
+ for(let i=0;i<8;i++){const c=chordAt(VERSE,i,0),nx=i===7?chordAt(PRE,0,0):chordAt(VERSE,i+1,0);mark(bar+i,c,0,VERSE[i%4]);
+  R(bar+i,0,VERSE_RH[i],100,{chord:c,n:3});bassVerse(bar+i,c,nx);
+  if(i===3)fillToms(bar+i);else if(i===7)fillA(bar+i);else hats16(bar+i,{last:i!==2&&i!==6});
   K(bar+i,[0,2,2.5]);
  }
  bar=16;
- // ── Pre-chorus 1 (16..23): the line climbs, then the stabs, then everything stops
+ // ── Pre-chorus (16..23 / 44..51): the line climbs in chords, then the stabs, then the sixteenth roll and silence
  const preChorus=(bar,t,second)=>{
-  for(let i=0;i<8;i++){const c=chordAt(PRE,i,t),nx=i===7?chordAt(CHORUS,0,t):chordAt(PRE,i+1,t);mark(bar+i,c);
-   if(i<3)R(bar+i,t,PRE_RH[i],104);
-   else if(i===3)R(bar+i,t,second?PRE_RH[3].slice(0,5):PRE_RH[3],106);
+  for(let i=0;i<8;i++){const c=chordAt(PRE,i,t),nx=i===7?chordAt(CHORUS,0,t):chordAt(PRE,i+1,t);mark(bar+i,c,t,PRE[i%4]);
+   if(i<3)R(bar+i,t,PRE_RH[i],104,{chord:c,n:4});
+   else if(i===3){R(bar+i,t,second?PRE_RH[3].slice(0,5):PRE_RH[3],106,{chord:c,n:4});if(second)noFill.add(bar+i);}
    else if(i===4)stabs(bar+i,PRE[0],t,second?[.75,1.5,2,2.5,3,3.5]:[0,.75,1.5,2,2.5,3,3.5],96);
    else if(i===5)stabs(bar+i,PRE[1],t,[0,.75,1.5,2,2.5,3,3.5],98);
    else if(i===6)stabs(bar+i,PRE[2],t,[0,.5,1,1.5,2,2.5,3,3.5],102);
-   else stabs(bar+i,PRE[3],t,[0,.25,.5,.75],108,.18);
+   else {stabs(bar+i,PRE[3],t,[0,.25,.5,.75],110,.18);noFill.add(bar+i);}
    if(i<4)bassPreA(bar+i,c,nx);else if(i<7)bassPreB(bar+i,c,nx);else bassPreEnd(bar+i,c);
-   if(i<3)beat8(bar+i,{last:i!==2});else if(i===3)fillB(bar+i);else if(i===4)build4(bar+i,{crash:true});else if(i===5)build4(bar+i,{last:false});else if(i===6)build8(bar+i,{crash:true});else buildStop(bar+i);
+   if(i<3)hats16(bar+i,{last:i!==2});else if(i===3)fillA(bar+i);else if(i===4)build4(bar+i,{crash:true});else if(i===5)build4(bar+i,{last:false});else if(i===6)build8(bar+i,{crash:true});else roll16(bar+i);
    K(bar+i,i<4?[0,1.5,2]:i<7?[0,2,3.5]:[0,2]);
   }
   if(second)knob(bar+3,3.15,'resonance',.75,.5);
@@ -175,73 +186,88 @@ export default function overtake(){
  };
  preChorus(16,0,false);
  bar=24;
- // ── Chorus (24..31)
- const chorus=(bar,t,ending,v=108,octaves=false)=>{
-  for(let i=0;i<8;i++){const c=chordAt(CHORUS,i,t),nx=i===7?null:chordAt(CHORUS,i+1,t);mark(bar+i,c);
-   const line=i<7?CHORUS_RH[i]:CHORUS_END[ending];
-   R(bar+i,t,octaves?line.map(([b,p,d,v2])=>[b,Array.isArray(p)?p:[p.replace(/\d$/,o=>o-1),p],d,v2]):line,v);
-   const after=ending==='riff'?chordAt(RIFF,0,t):ending==='stop'?chordAt(BRIDGE,0,t):ending==='drive'?chordAt(CHORUS,0,t):chordAt(RIFF,0,t);
+ // ── Chorus (24..31 / 52..59 / 68..75 / 76..83): the tune in four-note chords, five on the last round
+ const chorus=(bar,t,ending,v=108,n=4)=>{
+  for(let i=0;i<8;i++){const c=chordAt(CHORUS,i,t),nx=i===7?null:chordAt(CHORUS,i+1,t);mark(bar+i,c,t,CHORUS[i%8]);
+   R(bar+i,t,i<7?CHORUS_RH[i]:CHORUS_END[ending],v,{chord:c,n});
+   if(i===7&&ending!=='riff')noFill.add(bar+i);
+   const after=ending==='stop'?chordAt(BRIDGE,0,t):ending==='drive'?chordAt(CHORUS,0,t):chordAt(RIFF,0,t);
    bassChorus(bar+i,c,nx??after);
-   if(i===3)fillA(bar+i);else if(i===7)fillC(bar+i);else chorusBar(bar+i,{crash:true,last:false});
-   K(bar+i,[0,1,2,3]);
+   if(i===3)fillA(bar+i);else if(i===7)fillB(bar+i);else if(i%2)chorusB(bar+i);else chorusA(bar+i);
+   K(bar+i,i===3||i===7?[0,1,2,2.5,3,3.5]:[0,1,2,3]);
   }
  };
  chorus(24,0,'riff');
  bar=32;
  // ── Interlude riff (32..35): bright, then the hand leaves the keys to darken the tone for verse 2
- for(let i=0;i<4;i++){const c=chordAt(RIFF,i,0),nx=i===3?chordAt(VERSE,0,0):chordAt(RIFF,i+1,0);mark(bar+i,c);
-  if(i<3)riffBar(bar+i,RIFF[i],0,106);else R(bar+i,0,[[0,['G4','B4','D5','G5'],.3,110]]);
+ for(let i=0;i<4;i++){const c=chordAt(RIFF,i,0),nx=i===3?chordAt(VERSE,0,0):chordAt(RIFF,i+1,0);mark(bar+i,c,0,RIFF[i]);
+  if(i<3)riffBar(bar+i,RIFF[i],0,106);else {R(bar+i,0,[[0,['G4','B4','D5','G5'],.3,110]]);noFill.add(bar+i);}
   bassRiff(bar+i,c,nx);
-  if(i===3)fillA(bar+i);else beat8(bar+i,{crash:i===0,last:i!==2});
+  if(i===3)fillToms(bar+i);else hats16(bar+i,{crash:i===0,last:i!==2});
   K(bar+i,[0,1,2,3]);
  }
  knob(35,1.5,'cutoff',1.0,.64);
  bar=36;
- // ── Verse 2 (36..43): same tune, the long notes get chord stabs behind them
- for(let i=0;i<8;i++){const c=chordAt(VERSE,i,0),nx=i===7?chordAt(PRE,0,0):chordAt(VERSE,i+1,0);mark(bar+i,c);
+ // ── Verse 2 (36..43): same tune, four-note chords, stabs behind the long notes
+ for(let i=0;i<8;i++){const c=chordAt(VERSE,i,0),nx=i===7?chordAt(PRE,0,0):chordAt(VERSE,i+1,0);mark(bar+i,c,0,VERSE[i%4]);
   const line=VERSE_RH[i].map(([b,p,d,v])=>[b,p,d&&d>1?.7:d,v]);
-  R(bar+i,0,line,102);
-  if(i%2===1&&i!==7)stabs(bar+i,VERSE[i%4],0,[3.25,3.75],90);
+  R(bar+i,0,line,102,{chord:c,n:4});
+  if(i%2===1&&i!==7)stabs(bar+i,VERSE[i%4],0,[3.25,3.75],92);
   bassVerse(bar+i,c,nx);
-  if(i===3||i===7)fillA(bar+i);else beat8(bar+i,{crash:i===0,last:i!==2&&i!==6});
+  if(i===3)fillToms(bar+i);else if(i===7)fillA(bar+i);else hats16(bar+i,{crash:i===0,last:i!==2&&i!==6});
   K(bar+i,[0,2,2.5]);
  }
  bar=44;
  // ── Pre-chorus 2 (44..51) with the resonance lift
  preChorus(44,0,true);
  bar=52;
- // ── Chorus 2 (52..59): ends on a held note; the hand turns three knobs while the drums go half-time
+ // ── Chorus 2 (52..59): ends on a held note; the hand turns three knobs while the drums fill
  chorus(52,0,'stop',110);
  knob(59,2.0,'cutoff',.75,.6);knob(59,2.75,'resonance',.75,.2);knob(59,3.5,'reverb',.75,.55);
  bar=60;
- // ── Bridge (60..67)
- for(let i=0;i<8;i++){const c=chordAt(BRIDGE,i,0);mark(bar+i,c);
-  R(bar+i,0,BRIDGE_RH[i],96);
+ // ── Bridge (60..67): the first four bars stay airy (no filler), then the arpeggios climb
+ for(let i=0;i<8;i++){const c=chordAt(BRIDGE,i,0);mark(bar+i,c,0,BRIDGE[i]);
+  R(bar+i,0,BRIDGE_RH[i],96);if(i<4||i===7)noFill.add(bar+i);
   bassBridge(bar+i,c);
-  if(i===3)fillB(bar+i);else if(i===7)buildStop(bar+i);else half(bar+i,{crash:i===0||i===4});
+  if(i===3)fillToms(bar+i);else if(i===7)roll16(bar+i);else half16(bar+i,{crash:i===0||i===4,last:i!==6});
   K(bar+i,i===7?[0,2]:[0,2.5]);
  }
  knob(67,.25,'cutoff',1.5,1);knob(67,1.75,'reverb',.75,.25);
  bar=68;
- // ── Last chorus ×2 (68..83), a semitone up
+ // ── Last chorus ×2 (68..83), a semitone up; the second round in five-note chords
  chorus(68,1,'drive',112);
  knob(75,2,'drive',.75,.45);
- chorus(76,1,'big',116,true);
+ chorus(76,1,'big',116,5);
  bar=84;
  // ── Outro riff (84..87) in the new key
- for(let i=0;i<4;i++){const c=chordAt(RIFF,i,1),nx=i===3?up(CH.Am,1):chordAt(RIFF,i+1,1);mark(bar+i,c);
+ for(let i=0;i<4;i++){const c=chordAt(RIFF,i,1),nx=i===3?up(CH.Am,1):chordAt(RIFF,i+1,1);mark(bar+i,c,1,RIFF[i]);
   riffBar(bar+i,RIFF[i],1,108);
   bassRiff(bar+i,c,nx);
-  if(i===3)fillA(bar+i);else beat8(bar+i,{crash:i===0,last:i!==2});
+  if(i===3)fillB(bar+i);else hats16(bar+i,{crash:i===0,last:i!==2});
   K(bar+i,[0,1,2,3]);
  }
  bar=88;
  // ── Ending (88..89): one big chord, then the reverb opens while it rings
- mark(88,up(CH.Am,1));
+ mark(88,up(CH.Am,1),1,null);noFill.add(88);noFill.add(89);
  R(88,1,[[0,['A4','C5','E5','A5'],1.2,120]]);
  B(88,0,up(CH.Am,1).r,2.0,114);
  D(88,[[0,'cr',124]]);K(88,[0],118);
  knob(88,2.5,'reverb',1.0,.75);
+
+ /* ───────── arpeggio filler: every free sixteenth gets a chord tone (never inside a knob window) ───────── */
+ const totalBars=90;
+ const busy=knobs.map(k=>[k.s-1.05,k.s+k.d+.6]);   // right hand must be off the keys around a knob turn (0.45 s before, 0.25 s after, at 136 BPM)
+ for(let b=0;b<totalBars;b++){
+  const info=barChord[b];if(!info||!info.arp||noFill.has(b))continue;
+  const tones=ARP[info.arp].map(x=>m(x)+info.t);
+  const events=rh.filter(e=>e.s>=b*BAR-1&&e.s<(b+1)*BAR);
+  for(let q=0;q<16;q++){
+   const x=b*BAR+q*.25;
+   if(busy.some(([a,z])=>x>=a&&x<=z))continue;
+   if(events.some(e=>Math.abs(e.s-x)<.05||(e.s<x&&e.s+Math.min(e.d,.5)>x+1e-6)))continue;   // a long note keeps its first eighth, then the arpeggio takes over
+   rh.push({s:x,ps:[tones[[0,1,2,1,3,2,1,2][q%8]]],d:.2,v:q%4===0?86:78,fill:true});
+  }
+ }
 
  /* ───────── emit with body-aware clean-up ───────── */
  rh.sort((a,b)=>a.s-b.s||a.ps[0]-b.ps[0]);
@@ -262,6 +288,6 @@ export default function overtake(){
  for(const [b,c] of marks)s.mark(b,c);
  return s.finish(
   {full:96,crash:96.02,synth:96.8,stick:101,pedal:98.5,knob:94.75,ar:94.75},
-  [{beat:0,text:'16分のリフが走り出す。この曲の顔。'},{beat:32,text:'音を絞って、夜の街を語る。'},{beat:80,text:'和音を刻んで溜める。全部止めてから、開く。'},{beat:96,text:'サビ。「ラ・ソ・ミ・ド・レ・ミ」。'},{beat:240,text:'一度、息をつく。残響の中で。'},{beat:272,text:'半音上がって、最後のサビ。'},{beat:352,text:'夜を追い越した。'}]
+  [{beat:0,text:'16分のリフが走り出す。この曲の顔。'},{beat:32,text:'音を絞って、夜の街を語る。'},{beat:80,text:'和音を刻んで溜める。スネアの16分で止めてから、開く。'},{beat:96,text:'サビ。「ラ・ソ・ミ・ド・レ・ミ」を和音で。'},{beat:240,text:'一度、息をつく。残響の中で。'},{beat:272,text:'半音上がって、最後のサビ。'},{beat:352,text:'夜を追い越した。'}]
  );
 }
