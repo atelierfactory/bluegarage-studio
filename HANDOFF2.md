@@ -75,6 +75,7 @@
 - 書き出しは `node tools/make-band-score.mjs overtake-the-night --first`（検査 → `.band.json` を書く → `index.json` の先頭に入れる。`--first` を付けなければ末尾）
 - 通した検査：`band-check`（自動修正 0・指摘 0）/ `band-rehearse`（3D の手足の届き外れ 0）/ `band-regression` / `band-page-check` / `band-knob-check` / `band-audio-check`。ブラウザでも `window.bandRehearse()` 外れ 0、再生と `?shot=knob` の AR 表示を確認済み
 - つまみは 12 回だけ（A メロ前に暗く、サビ前に全開、C メロで残響、最後のサビで歪み、終わりで残響を開く）。検査は 10 回以上を求めるので、これ以下には減らせない
+- 2026-09-18 さとるん指摘で直した 2 点（曲ごとでなく画面と舞台の側なので全曲に効く）：①レーン表示の PEDAL を 13 段（C1〜C2、黒鍵の段は暗く）にして音の高さが見えるようにした（`band/lanes.js`、レーンの高さ 232/246px）。②ハイハットを叩く時に肘が肩の高さで横に浮いて「関節が逆」に見えた → ハイハットの位置を低く近く（`scene.js` の DRUMS.hh: (-0.64,0.86,-0.08) → (-0.63,0.79,0.00)）。肘は肩より 10cm 下に下がる。grip / hand / rehearse / visual / page の検査は全曲で合格
 
 ---
 
@@ -124,7 +125,7 @@ node astra/shot.mjs --size=390x844 --page out.png 'http://localhost:5173/piano/'
 2. **CloudFront が最大 10 分、古い写しを返す。** 公開直後の「出ない」はたいていこれ。
 3. **`piano-motion-check` は曲を足すと落ちる**（前回の記録が無い／`astra/piano-baseline.json` の hash が合わない）。曲を足したら baseline の hash を更新する。曲データ本体を変えていないことは、他の hash が一致することで確認する。
 4. **検査の偽の `claude.js`**（`band-page-check` / `piano-page-check` の中）に、画面が使う関数を書き足さないと `does not provide an export named ...` で落ちる。
-5. **`band-page-check` は `index.json` の先頭の曲の `shots`（撮影の拍）に依存する。** 曲を差し替えたら埋め直す（cutoff のつまみ操作の真ん中を `knob`/`ar`、その次の操作の直後を `full`/`crash`/`synth`）。2026-09-16 から起動 URL も先頭の曲を使う（以前は疾風・電脳桜が固定で書かれていた）。
+5. **`band-page-check` は `index.json` の先頭の曲の `shots`（撮影の拍）に依存する。** 曲を差し替えたら埋め直す（cutoff のつまみ操作の真ん中を `knob`/`ar`、その次の操作の直後を `full`/`crash`/`synth`）。2026-09-16 から起動 URL も先頭の曲を使う（以前は疾風・電脳桜が固定で書かれていた）。`band-visual-check` の AR の拍も先頭の曲の `shots`（knob / knob+4 / full）を使う（以前は硝子の環流の拍 185.94 などが固定だった）。
 6. **JS を書いたら必ず `node --check`**（行末コメントで括弧を消して真っ白になる事故が何度もあった）。
 7. **`synthcore.js` か `worklet/synth2-processor.js` を変えたら `node tools/bundle-worklet.mjs`**（作り直さないと古い音のまま）。
 8. **`String.replace` の置き換え文字列は `$'` `$&` を特別扱いする。** コードを差し込むときは必ず関数で渡す（配布用 HTML が壊れた）。

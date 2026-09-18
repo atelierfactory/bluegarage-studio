@@ -76,7 +76,7 @@ function checkPlacement(camera,w,h,label){
  if(w===1600){check(boxes.length===stage.arChanges.length&&boxes.every(b=>b.height>=144),`Both readable comparison plots in ${label}`);}
  placements.push({label,cards:boxes.length,heights:boxes.map(b=>b.height)});
 }
-for(const beat of[185.94,189.94,196]){
+for(const beat of[song.shots.knob,song.shots.knob+4,song.shots.full]){   // the first song's own shot beats (was fixed to one score's beats)
  stage.poseAt(beat,b=>beatToSec(b,song));
  for(const view of['full','knob','synth','ar']){stage.w=1600;stage.h=900;stage.setShot(view);checkPlacement(stage.shotCamera,1600,900,`${view}@${beat}`);}
  stage.shotCamera=null;stage.setView('wide');stage.update(beat,b=>beatToSec(b,song),0,false);

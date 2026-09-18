@@ -3,18 +3,19 @@
 
 import { state } from "../js/state.js";
 import { THEME } from "../js/pianoroll.js";
-import { DRUM_LABEL, KEY_OF_DRUM } from "./prompts.js";
+import { DRUM_LABEL, KEY_OF_DRUM, PEDAL_LOW, PEDAL_HIGH } from "./prompts.js";
 import { KNOBS, knobDefaults } from "../js/synth2.js";
 import { noteName } from "../js/prompts.js";
 import { KNOB_MEANINGS } from "./ar.js";
 
 const DRUM_ROWS = ["cr", "t1", "t2", "t3", "sn", "hh"];
 const ROW_LABEL = { cr: "CRASH", t1: "TOM 1", t2: "TOM 2", t3: "F.TOM", sn: "SNARE", hh: "HI-HAT" };
+const PEDAL_KEYS = PEDAL_HIGH - PEDAL_LOW + 1, BLACK = new Set([1, 3, 6, 8, 10]);
 
 export class Lanes {
   constructor(canvas, proll, getParts) {
     this.cv = canvas; this.ctx = canvas.getContext("2d"); this.proll = proll; this.getParts = getParts;
-    this.rowH = 14; this.gap = 6;
+    this.rowH = 14; this.gap = 6; this.pedalH = 6;
     const ro = new ResizeObserver(() => this.resize()); ro.observe(canvas.parentElement);
     this.resize();
     canvas.addEventListener("pointerdown", (e) => { const r = canvas.getBoundingClientRect(); const x = e.clientX - r.left; if (x < proll.keyW) return; const b = proll.xToBeat(x); if (this.onSeek) this.onSeek(Math.max(0, b)); });
@@ -42,7 +43,7 @@ export class Lanes {
     let y = 4;
     for (const k of DRUM_ROWS) { rows.push({ id: k, y, label: ROW_LABEL[k], kind: "drum" }); y += this.rowH; }
     rows.push({ id: "kick", y: y + 2, label: "KICK", kind: "kick" }); y += this.rowH + 2;
-    rows.push({ id: "pedal", y: y + this.gap, label: "PEDAL", kind: "pedal", h: this.rowH + 4 }); y += this.rowH + 4 + this.gap;
+    rows.push({ id: "pedal", y: y + this.gap, label: "PEDAL", kind: "pedal", h: PEDAL_KEYS * this.pedalH }); y += PEDAL_KEYS * this.pedalH + this.gap;
     rows.push({ id: "knob", y: y + this.gap, label: "KNOBS", kind: "knob", h: 34 }); y += this.rowH + 4 + this.gap;
     // 行の背景と線
     for (const r of rows) { const rh = r.h ?? this.rowH; ctx.fillStyle = r.kind === "drum" ? THEME.rowBlack : THEME.rowWhite; ctx.fillRect(keyW, r.y, w - keyW, rh); ctx.strokeStyle = THEME.rowLine; ctx.beginPath(); ctx.moveTo(keyW, r.y + rh + 0.5); ctx.lineTo(w, r.y + rh + 0.5); ctx.stroke(); }
@@ -55,9 +56,11 @@ export class Lanes {
     const drawHit = (row, n) => { const x = proll.beatToX(n.s); if (x < keyW - 4 || x > w) return; const on = lit(n.s, 0.1); const a = 0.4 + (n.v / 127) * 0.6; ctx.fillStyle = on ? THEME.lit : row.kind === "kick" ? "#cfcfcf" : "#f2f2f2"; ctx.globalAlpha = on ? 1 : a; ctx.beginPath(); ctx.roundRect(x - 1, row.y + 2, Math.max(4, proll.pxPerBeat * 0.12), this.rowH - 4, 2); ctx.fill(); ctx.globalAlpha = 1; };
     for (const n of parts.drums) { const k = n.k ?? KEY_OF_DRUM[n.p]; const row = rows.find((r) => r.id === k); if (row) drawHit(row, n); }
     { const row = rows.find((r) => r.id === "kick"); for (const n of parts.kick) drawHit(row, n); }
-    // 足鍵盤: 音の名前つきのブロック
-    { const row = rows.find((r) => r.id === "pedal"); const rh = row.h;
-      for (const n of parts.pedal) { const x = proll.beatToX(n.s), nw = Math.max(4, n.d * proll.pxPerBeat - 1); if (x + nw < keyW || x > w) continue; const on = lit(n.s, n.d); ctx.fillStyle = on ? THEME.lit : "#8c8c8c"; ctx.globalAlpha = on ? 1 : 0.5 + (n.v / 127) * 0.5; ctx.beginPath(); ctx.roundRect(x, row.y + 2, nw, rh - 4, 2.5); ctx.fill(); ctx.globalAlpha = 1; if (nw > 18) { ctx.fillStyle = "#000"; ctx.font = "bold 9px 'IBM Plex Mono'"; ctx.fillText(noteName(n.p), x + 3, row.y + rh - 5); } } }
+    // 足鍵盤: 13 本の鍵 (C1〜C2) を音の高さの段にして、音符をその段に置く (小さなピアノロール)
+    { const row = rows.find((r) => r.id === "pedal"); const ph = this.pedalH;
+      const keyY = (p) => row.y + (PEDAL_HIGH - p) * ph;   // 高い音ほど上
+      for (let p = PEDAL_LOW; p <= PEDAL_HIGH; p++) { const black = BLACK.has(p % 12); ctx.fillStyle = black ? THEME.rowBlack : THEME.rowWhite; ctx.fillRect(keyW, keyY(p), w - keyW, ph); if (p % 12 === 0) { ctx.strokeStyle = THEME.rowLine; ctx.beginPath(); ctx.moveTo(keyW, keyY(p) + ph + 0.5); ctx.lineTo(w, keyY(p) + ph + 0.5); ctx.stroke(); } }
+      for (const n of parts.pedal) { const x = proll.beatToX(n.s), nw = Math.max(4, n.d * proll.pxPerBeat - 1); if (x + nw < keyW || x > w) continue; const on = lit(n.s, n.d); ctx.fillStyle = on ? THEME.lit : "#a8a8a8"; ctx.globalAlpha = on ? 1 : 0.55 + (n.v / 127) * 0.45; ctx.beginPath(); ctx.roundRect(x, keyY(n.p) + 0.5, nw, ph - 1, 1.5); ctx.fill(); ctx.globalAlpha = 1; if (nw > 22 && ph >= 6) { ctx.fillStyle = "#000"; ctx.font = `bold ${Math.min(8, ph)}px 'IBM Plex Mono'`; ctx.fillText(noteName(n.p), x + 2, keyY(n.p) + ph - 0.5); } } }
     // Label and direction stay above the exact-duration strip; clip before the next label.
     { const row=rows.find(r=>r.id==="knob"), values=knobDefaults(state.song.tracks.find(t=>t.role==="keys")?.synth2);
       this.knobRows=parts.knobs.map(k=>{const from=values[k.param]??.5;values[k.param]=k.to;return {...k,from,label:KNOBS.find(q=>q.id===k.param)?.label??k.param};});
@@ -77,7 +80,7 @@ export class Lanes {
     // 左の名札
     ctx.fillStyle = THEME.rulerBg; ctx.fillRect(0, 0, keyW, h); ctx.strokeStyle = THEME.rulerLine; ctx.beginPath(); ctx.moveTo(keyW + 0.5, 0); ctx.lineTo(keyW + 0.5, h); ctx.stroke();
     ctx.font = "9px 'IBM Plex Mono'";
-    for (const r of rows) { const rh = r.h ?? this.rowH; ctx.fillStyle = r.kind === "knob" ? "#e0b95a" : THEME.rulerText; ctx.fillText(r.label, 6, r.y + rh - 4); }
+    for (const r of rows) { const rh = r.h ?? this.rowH; ctx.fillStyle = r.kind === "knob" ? "#e0b95a" : THEME.rulerText; if (r.kind === "pedal") { ctx.fillText(r.label, 6, r.y + rh / 2 + 3); ctx.fillStyle = "#6a6a6a"; ctx.font = "8px 'IBM Plex Mono'"; ctx.fillText(noteName(PEDAL_HIGH), keyW - 16, r.y + 7); ctx.fillText(noteName(PEDAL_LOW), keyW - 16, r.y + rh - 1); ctx.font = "9px 'IBM Plex Mono'"; } else ctx.fillText(r.label, 6, r.y + rh - 4); }
     ctx.fillStyle = "#4a4a4a"; ctx.font = "8px 'IBM Plex Mono'";
     ctx.fillText("L HAND", keyW - 34, 12); ctx.fillText("L FOOT", keyW - 34, rows.find((r) => r.id === "kick").y + this.rowH - 4 - 10 + 10);
   }

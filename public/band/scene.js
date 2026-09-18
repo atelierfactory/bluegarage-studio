@@ -56,7 +56,7 @@ const TOE_Z = (p) => (isBlack(p) ? PB_Z_HEEL - PB_LONG + 0.04 : PB_Z_HEEL - 0.16
 const KICK_POS = V(-0.105, 0.30, -0.13), KICK_R = 0.28, KICK_DEPTH = 0.36;
 const DRUMS = {
   sn: { pos: V(-0.40, 0.72, 0.10), r: 0.18, depth: 0.14, tilt: 0.12, shell: 0xf2efe6, kind: "drum", label: "SNARE" },
-  hh: { pos: V(-0.64, 0.86, -0.08), r: 0.17, tilt: 0.10, kind: "cymbal", label: "HI-HAT" },
+  hh: { pos: V(-0.63, 0.79, 0.00), r: 0.17, tilt: 0.10, kind: "cymbal", label: "HI-HAT" },   // 2026-09-18: 肩の高さ・遠すぎて肘が横に浮いていた → 低く・近くして肘が下がる位置に
   t1: { pos: V(-0.15, 0.96, -0.25), r: 0.13, depth: 0.20, tilt: 0.45, shell: 0x2a2f3a, kind: "drum", label: "TOM 1" },
   t2: { pos: V(-0.44, 0.96, -0.31), r: 0.15, depth: 0.23, tilt: 0.45, shell: 0x2a2f3a, kind: "drum", label: "TOM 2" },
   t3: { pos: V(-0.76, 0.60, 0.42), r: 0.20, depth: 0.36, tilt: 0.05, shell: 0x2a2f3a, kind: "drum", label: "FLOOR TOM" },
