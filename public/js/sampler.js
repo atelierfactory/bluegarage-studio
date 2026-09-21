@@ -15,6 +15,7 @@
 const bufferCache = new Map();   // url -> AudioBuffer (全コンテキスト共通。AudioBuffer はコンテキストに縛られない)
 const loading = new Map();       // url -> Promise<AudioBuffer>
 let cacheBytes = 0;
+let loadFailures = 0;             // 読み込め (decode でき) なかったファイルの数
 const CACHE_LIMIT = 1.4e9;       // decode 後 PCM の上限 (float32 換算)。超えたら古いものから捨てる
 const lru = new Map();           // url -> lastUsed
 
@@ -116,7 +117,7 @@ export class SfzInstrument {
     const workers = Array.from({ length: 6 }, async () => {
       while (urls.length) {
         const u = urls.shift();
-        try { await loadBuffer(decodeCtx, u); } catch (e) { console.warn("[sampler]", u, e.message); }
+        try { await loadBuffer(decodeCtx, u); } catch (e) { loadFailures++; console.warn("[sampler]", u, e.message); }
         done++; onProgress?.(done, done + urls.length);
       }
     });
@@ -251,4 +252,4 @@ export class SfzInstrument {
 }
 
 export function clearSampleCache() { bufferCache.clear(); lru.clear(); cacheBytes = 0; }
-export function sampleCacheStats() { return { files: bufferCache.size, mb: +(cacheBytes / 1e6).toFixed(0) }; }
+export function sampleCacheStats() { return { files: bufferCache.size, mb: +(cacheBytes / 1e6).toFixed(0), failures: loadFailures }; }

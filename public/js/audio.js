@@ -301,7 +301,15 @@ export function setMasterVolume(db) { state.song.master.volume = db; ensureGraph
 /* ─────────── transport / scheduling ─────────── */
 let started = false;
 export async function ensureAudio() {
+  // iPhone / iPad 対策 (2026-09-21): 本体の横の消音スイッチが「消音」側だと、
+  // 何も言わなければブラウザの音 (Web Audio) は鳴らない。画面も再生位置も動くのに音だけ出ない。
+  // 「これは音楽の再生です」と伝えると、消音スイッチに関係なく鳴る (Safari 16.4 以降。他のブラウザでは何も起きない)
+  try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch {}
   if (!started) { await Tone.start(); started = true; }
+  // 何かの拍子に止まったままのときは、もう一度起こす
+  const ctx = rawCtx();
+  if (ctx.state !== "running") { try { await ctx.resume(); } catch {} }
+  return ctx.state;
 }
 
 export async function rebuildAll(showLoad) {
@@ -316,6 +324,7 @@ export async function rebuildAll(showLoad) {
 }
 
 async function preloadAll(onProgress) {
+  const before = sampleCacheStats();
   for (const t of state.song.tracks) {
     if (!t.notes.length) continue;
     const eng = engines.get(t.id);
@@ -324,6 +333,12 @@ async function preloadAll(onProgress) {
   }
   const st = sampleCacheStats();
   if (st.files) console.info(`[audio] サンプルキャッシュ: ${st.files} files / ${st.mb} MB (PCM)`);
+  // 音源を 1 つも読めなかったときは黙って無音にせず、はっきり知らせる (前は console に出すだけだった)
+  const failed = st.failures - before.failures;
+  if (failed > 0) {
+    console.warn(`[audio] 音源を ${failed} 個読み込めませんでした`);
+    if (st.files === before.files) throw new Error(`音源を読み込めませんでした (${failed} 個)。電波の状態を確かめて、もう一度 ▶ を押してください`);
+  }
 }
 
 const usedMidi = new Map(); // portId -> Set(channel)
@@ -405,6 +420,7 @@ export async function play(fromBeat = null, onProgress = null) {
     await previous;
     if (revision !== playRevision || song !== state.song) return;
     await ensureAudio();
+    if (rawCtx().state !== "running") throw new Error("音を出せませんでした。画面を一度タップしてから、もう一度 ▶ を押してください");
     await rebuildAll(report);
     if (revision !== playRevision || song !== state.song) return;
     await preloadAll(report);
