@@ -25,41 +25,14 @@ body.band-app button:disabled { cursor: default; opacity: .45; }
 body.band-app .lib-row > div { min-width: 0; overflow-wrap: anywhere; }
 body.band-app .lib-meta { line-height: 1.7; }
 body.band-shot #stage > :not(canvas) { display: none; }
-@media (max-width: 1200px) {
+@media (max-width: 1200px) and (min-width: 901px) {
   body.band-app #topbar { flex-wrap: wrap; }
   body.band-app .logo-block { flex: 1; }
   body.band-app .topbar-right { order: 1; }
   body.band-app .transport { order: 2; flex-basis: 100%; flex-wrap: wrap; }
   body.band-app #aipanel { min-width: 340px; width: 43%; }
 }
-@media (max-width: 900px) {
-  body.band-app { overflow-y: auto; height: 100dvh; }
-  body.band-app #workspace { flex: none; flex-direction: column-reverse; min-height: 0; }
-  body.band-app #aipanel { width: 100%; min-width: 0; flex: none; height: max(440px, 58dvh); border-left: none; border-bottom: 1px solid #333; }
-  body.band-app #center { flex: none; height: 510px; }
-  body.band-app #play-hint { flex-basis: 100%; }
-  body.band-app #stage-close-tools { bottom: 47px; }
-  body.band-app .lib-row { grid-template-columns: minmax(0,1fr) auto; }
-  body.band-app .lib-row > span { display: none; }
-  body.band-app #dlg-songs { max-width: calc(100vw - 24px); padding: 14px; }
-  body.band-app.stage-full #aipanel { position: fixed; width: 100vw; height: 100dvh; }
-}
-@media (max-width: 700px) {
-  body.band-app .transport { gap: 5px; }
-  body.band-app .tbtn { width: 34px; }
-  body.band-app .lcd { padding: 5px; }
-  body.band-app .lcd-time { margin-left: 5px; font-size: 11px; letter-spacing: 0; }
-  body.band-app .logo { font-size: 22px; }
-  body.band-app #topbar { padding: 9px; }
-  body.band-app .topbar-right { flex-wrap: wrap; gap: 6px; }
-  body.band-app .tfield.master { display: flex; }
-  body.band-app .tfield.master input { width: 76px; }
-  body.band-app #prompt-bar { padding: 8px; }
-  body.band-app #prompt-bar .mtab { padding: 8px 10px; letter-spacing: 0; }
-  body.band-app #proll-head .dim { display: none; }
-  body.band-app #proll-head .song-title { max-width: 100%; }
-  body.band-app.stage-full #stage .divider { left: 0; right: 0; top: 58%; bottom: auto; height: 1px; width: auto; }
-}
+/* 携帯・タブレット (幅 900px まで) の並びは ../phone.css (ピアノとバンド共通) */
 
 /* AR is text in CSS pixels, projected from the real 3D control in each viewport. */
 body.band-shot #stage > .band-ar { display: block; }

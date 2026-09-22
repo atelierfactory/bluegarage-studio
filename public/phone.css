@@ -1,0 +1,106 @@
+/* ═══════════ 携帯・タブレット向け (VESPER PIANO / BAND 共通) ═══════════
+   2026-09-23 さとるん要望「携帯ではピアノとバンドで VESPER の位置が違う。統一して。他も携帯向けに」
+   幅 900px までで効く。並びはどちらも同じ:
+     上の帯 (ロゴ・再生ボタン) → VESPER の舞台 → 譜面 (バンドはレーンも) → 下の帯 (曲を選ぶ) → 状態の 1 行
+   ページ全体は動かさない (iPhone のアドレス帯の伸び縮みで崩れないよう 100dvh)。バンドの譜面 + レーンは高さが足りないときだけ中で縦に動く。 */
+
+@media (max-width: 900px) {
+  html, body { height: 100dvh; overflow: hidden; }
+  body.piano-app, body.band-app { height: 100dvh; overflow: hidden; }
+  body.piano-app #workspace, body.band-app #workspace { flex: 1 1 auto; flex-direction: column; min-height: 0; overflow: hidden; }
+  /* 上の帯: 幅が足りないので 2 段 (ロゴ + 右の群 / 再生の列)。700px 未満はさらに下でまとめ直す */
+  body.piano-app #topbar, body.band-app #topbar { flex-wrap: wrap; gap: 8px 12px; padding: 8px 12px; flex-shrink: 0; }
+  body.piano-app .logo-block, body.band-app .logo-block { order: 0; flex: 1 1 auto; }
+  body.piano-app .topbar-right, body.band-app .topbar-right { order: 1; }
+  body.piano-app .transport, body.band-app .transport { order: 2; flex: 1 1 100%; flex-wrap: wrap; }
+  /* 舞台 (VESPER) は上。画面の 44% */
+  body.piano-app #aipanel, body.band-app #aipanel { order: 0; width: 100%; min-width: 0; flex: 0 0 auto; height: 44dvh; min-height: 240px; border-left: 0; border-bottom: 1px solid #333; }
+  body.piano-app.stage-full #aipanel, body.band-app.stage-full #aipanel { position: fixed; inset: 0; width: 100vw; height: 100dvh; min-height: 0; z-index: 50; border: 0; }
+  /* 譜面は下。足りなければ中で縦に動く (下の帯と状態の行は貼り付いたまま) */
+  body.piano-app #center, body.band-app #center { order: 1; flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+  body.piano-app #center > *, body.band-app #center > * { flex-shrink: 0; }   /* 中身が溢れても下の帯や状態の行がつぶれない (バンドで 9px にされた) */
+  body.piano-app #proll-wrap { flex: 1 1 140px; min-height: 140px; }
+  body.band-app #proll-wrap { flex: 0 0 150px; min-height: 150px; }
+  body.band-app #lanes-wrap { flex: 0 0 232px; min-height: 232px; }
+  body.piano-app #prompt-bar, body.band-app #prompt-bar { position: sticky; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); z-index: 3; margin-top: auto; }
+  body.piano-app #status-bar, body.band-app #status-bar { position: sticky; bottom: 0; z-index: 3; box-sizing: border-box; height: calc(22px + env(safe-area-inset-bottom, 0px)); min-height: 0; max-height: none; padding: 4px 10px calc(4px + env(safe-area-inset-bottom, 0px)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* 舞台の上の文字と押しボタン */
+  #stage-title, body.stage-full #stage-title { font-size: 12px; letter-spacing: 1px; max-width: 78%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #stage-info { font-size: 9px; }
+  .vbtn, .cbtn { padding: 5px 8px; font-size: 11px; }
+  /* バンドの舞台のボタン: 上の絵 (全体) の左下に見る向き、下の絵 (手元) の右下に寄りの狙い。重ならないように分ける */
+  body.band-app #stage-tools { left: 8px; right: auto; bottom: calc(42% + 8px); flex-wrap: nowrap; }
+  body.band-app #stage-close-tools { right: 6px; bottom: 8px; flex-wrap: nowrap; }
+  body.band-app.stage-full #stage-tools { left: 8px; right: auto; bottom: calc(42% + 8px); }
+  body.band-app.stage-full #stage-close-tools { right: 6px; bottom: 8px; }
+  /* 曲を選ぶ (一覧) */
+  body.piano-app dialog, body.band-app dialog, body.piano-app dialog.wide, body.band-app dialog.wide { min-width: 0; width: calc(100vw - 20px); max-width: calc(100vw - 20px); max-height: 85dvh; padding: 14px; overflow-y: auto; }
+  body.piano-app .lib-row, body.band-app .lib-row { grid-template-columns: minmax(0, 1fr) auto; gap: 6px; padding: 8px; }
+  body.piano-app .lib-row .lib-title, body.piano-app .lib-row .lib-meta, body.band-app .lib-row > div { overflow-wrap: anywhere; min-width: 0; }
+  body.band-app .lib-row > span { display: none; }
+  .lib-row .gbtn { min-height: 38px; }
+  #toast { max-width: calc(100vw - 24px); bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* ── 携帯 (幅 700px 未満): 上の帯を 3 行にまとめる。ボタンは指で押せる大きさ (40px) ── */
+@media (max-width: 699px) {
+  body.piano-app #topbar, body.band-app #topbar { flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 6px 10px; flex-shrink: 0; }
+  body.piano-app .logo-block, body.band-app .logo-block { order: 0; flex: 1 1 auto; min-width: 0; }
+  body.piano-app .logo, body.band-app .logo { font-size: 19px; transform: none; white-space: nowrap; }
+  body.piano-app .logo-sub, body.band-app .logo-sub { display: none; }
+  /* 1 行目: ロゴ + 音量 + MIDI/WAV/♥/BAND */
+  body.piano-app .topbar-right, body.band-app .topbar-right { order: 1; flex: 0 0 auto; gap: 6px; flex-wrap: nowrap; }
+  body.piano-app .tfield.master, body.band-app .tfield.master { display: flex; flex-direction: row; align-items: center; gap: 3px; }
+  body.piano-app .tfield.master span, body.band-app .tfield.master span { display: none; }
+  body.piano-app .tfield.master input, body.band-app .tfield.master input { width: 58px; }
+  body.piano-app .gbtn.tiny, body.band-app .gbtn.tiny { height: 32px; padding: 0 8px; }
+  /* 2 行目: 再生ボタン + BPM。3 行目: 位置と時間 */
+  body.piano-app .transport, body.band-app .transport { order: 2; flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+  body.piano-app .transport .tbtn, body.band-app .transport .tbtn { width: 42px; height: 40px; font-size: 16px; }
+  body.piano-app .transport .tbtn.play, body.band-app .transport .tbtn.play { width: 56px; font-size: 18px; }
+  body.piano-app .transport > .tfield, body.band-app .transport > .tfield { flex-direction: row; align-items: center; gap: 4px; margin-left: auto; }
+  body.piano-app .transport > .tfield input, body.band-app .transport > .tfield input { width: 60px; font-size: 16px; padding: 4px 6px; }   /* 16px 未満だと iPhone が入力のとき画面を拡大してしまう */
+  body.piano-app .transport .lcd, body.band-app .transport .lcd { order: 10; flex: 1 1 100%; min-width: 0; padding: 4px 10px; font-size: 13px; }
+  body.piano-app .lcd-time, body.band-app .lcd-time { font-size: 13px; margin-left: auto; letter-spacing: 0; }
+  /* 下の帯 */
+  body.piano-app #prompt-bar, body.band-app #prompt-bar { flex-wrap: wrap; padding: 8px 10px; gap: 6px; }
+  #prompt-bar .mtab { padding: 0 12px; height: 40px; font-size: 12px; letter-spacing: 0; }
+  #prompt-bar #btn-songs, #prompt-bar #btn-go { height: 40px; padding: 0 14px; }
+  #prompt-bar #play-hint { flex: 1 1 100%; font-size: 11px; }
+  #prompt-bar #inp-theme { min-width: 0; flex: 1 1 170px; font-size: 16px; }
+  body.piano-app #proll-head, body.band-app #proll-head { padding: 5px 10px; min-height: 30px; }
+  body.piano-app #proll-head .song-title, body.band-app #proll-head .song-title { max-width: 100%; font-size: 12px; }
+  body.band-app #proll-head .dim { display: none; }
+  /* 全画面 (携帯の縦向き): 上が全体・下が指先 */
+  body.stage-full:not(.piano-shot) #stage .divider { top: 58%; bottom: auto; left: 0; right: 0; width: auto; height: 1px; }
+  body.stage-full:not(.piano-shot) #stage-tools { left: 10px; bottom: calc(42% + 10px); }
+  body.stage-full #stage-close { left: 10px; bottom: 10px; }
+}
+
+/* ── 携帯の横向き: 舞台を左、譜面を右。上の帯は 1 行 ── */
+@media (max-width: 900px) and (orientation: landscape) and (max-height: 520px) {
+  body.piano-app #workspace, body.band-app #workspace { flex-direction: row; }
+  body.piano-app #aipanel, body.band-app #aipanel { order: 0; height: auto; min-height: 0; flex: 0 0 54%; border-bottom: 0; border-right: 1px solid #333; }
+  body.piano-app #center, body.band-app #center { order: 1; flex: 1 1 auto; }
+  body.piano-app #topbar, body.band-app #topbar { flex-wrap: nowrap; padding: 4px max(10px, env(safe-area-inset-right, 0px)) 4px max(10px, env(safe-area-inset-left, 0px)); gap: 8px; }
+  body.piano-app .logo-block, body.band-app .logo-block { flex: 0 0 auto; }
+  body.piano-app .logo, body.band-app .logo { font-size: 16px; }
+  body.piano-app .transport, body.band-app .transport { order: 1; flex: 1 1 auto; flex-wrap: nowrap; gap: 4px; }
+  body.piano-app .transport .tbtn, body.band-app .transport .tbtn { width: 36px; height: 32px; font-size: 14px; }
+  body.piano-app .transport .tbtn.play, body.band-app .transport .tbtn.play { width: 44px; font-size: 16px; }
+  body.piano-app .transport .lcd, body.band-app .transport .lcd { order: 0; flex: 1 1 auto; min-width: 0; padding: 3px 8px; font-size: 12px; }
+  body.piano-app .transport > .tfield, body.band-app .transport > .tfield { margin-left: 0; }
+  body.piano-app .transport > .tfield input, body.band-app .transport > .tfield input { width: 52px; }
+  body.piano-app .topbar-right, body.band-app .topbar-right { order: 2; }
+  body.piano-app .tfield.master, body.band-app .tfield.master { display: none; }   /* 横向きは幅が無いので音量は隠す (本体のボタンで) */
+  body.piano-app #prompt-bar, body.band-app #prompt-bar { padding: 6px 8px; }
+  body.piano-app #aipanel, body.band-app #aipanel { padding-left: env(safe-area-inset-left, 0px); }
+}
+
+/* ── 指で使うときの当たり (マウスの無い端末) ── */
+@media (pointer: coarse) {
+  button, .gbtn, .tbtn, .mtab, .vbtn, .cbtn, a.gbtn, input[type="range"] { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  #stage-canvas { touch-action: none; }   /* 舞台は指で回す。ページは動かさない */
+  #proll { touch-action: pan-y; }         /* 譜面は横になぞって動かす (pianoroll.js)。縦は中の動きに任せる */
+  #lanes { touch-action: pan-y; }
+}

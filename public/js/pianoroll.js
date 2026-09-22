@@ -258,6 +258,26 @@ export class PianoRoll {
       this.draw();
     }, { passive: false });
 
+    // 指でなぞる (携帯・タブレット): 横になぞると譜面が横に動く。触れただけならブラウザが click を作るので、
+    // ルーラーのシークや鍵盤の試聴 (mousedown) はそのまま動く。縦は触らない (CSS の touch-action: pan-y でページ側に任せる)
+    let touch = null;
+    cv.addEventListener("touchstart", (e) => {
+      if (e.touches.length !== 1) { touch = null; return; }
+      const t = e.touches[0]; touch = { x: t.clientX, y: t.clientY, scrollX: this.scrollX, dir: null };
+    }, { passive: true });
+    cv.addEventListener("touchmove", (e) => {
+      if (!touch || e.touches.length !== 1) return;
+      const t = e.touches[0]; const dx = t.clientX - touch.x, dy = t.clientY - touch.y;
+      if (!touch.dir) { if (Math.hypot(dx, dy) < 8) return; touch.dir = Math.abs(dx) >= Math.abs(dy) ? "x" : "y"; }
+      if (touch.dir !== "x") return;
+      e.preventDefault();
+      this.scrollX = Math.max(0, touch.scrollX - dx / this.pxPerBeat);
+      this.markUserScroll();
+      this.draw();
+    }, { passive: false });
+    const touchEnd = () => { touch = null; };
+    cv.addEventListener("touchend", touchEnd); cv.addEventListener("touchcancel", touchEnd);
+
     window.addEventListener("keydown", (e) => {
       if (e.target.matches("input, textarea, select")) return;
       if (!this.canEdit()) return;

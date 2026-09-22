@@ -146,6 +146,14 @@ node astra/shot.mjs --size=390x844 --page out.png 'http://localhost:5173/piano/'
 
 ---
 
+## 6.5 携帯（2026-09-21〜23）
+
+- **音が出ない → 直した**（commit `ff62a38`）。iPhone は「これは音楽の再生」と申告しないと消音スイッチで無音になる。`audio.js` の `ensureAudio()` が `navigator.audioSession.type = "playback"` を宣言。音源を 1 つも読めなかったときも黙らず知らせる。
+- **並びを統一**（`public/phone.css`）。ピアノもバンドも、上の帯（ロゴ・再生・BPM・位置）→ VESPER の舞台（画面の 44%）→ 譜面（バンドはレーンも。足りなければ中で縦に動く）→ 下の帯（曲を選ぶ）→ 状態の 1 行。横向き（高さ 520px 以下）は舞台が左 54%・譜面が右。ボタンは 40px、入力欄は 16px（iPhone の勝手な拡大を防ぐ）、iPhone の縁は `viewport-fit=cover` + `env(safe-area-inset-*)`。
+- 譜面は指で横になぞれる（`pianoroll.js` の touchstart/move。縦はページ側に任せる `touch-action: pan-y`）。舞台は `touch-action: none` で指で回す。
+- 各ページの古い携帯用 `@media` は phone.css に移した（piano/style.css・band/style.css から削除）。バンドの 901〜1200px は band/style.css に残してある。
+- まだ: ピアノは 1 曲で解凍後 271 MB を持つ（`sampler.js` の `CACHE_LIMIT` 1.4 GB 固定）。携帯で落ちるなら次はここ。
+
 ## 7. 残っていること・次の候補
 
 - **`band-audio-check` の 1 件**（白磁の螺旋の音量差 6.9 dB）。前からの状態。曲データを直すかどうかはさとるんの判断。
@@ -166,6 +174,7 @@ node astra/shot.mjs --size=390x844 --page out.png 'http://localhost:5173/piano/'
 | `public/piano/loudness.js` + `sample-energy.json` | 曲ごとの音量補正 |
 | `public/band/band.js` / `scene.js` / `hardware.js` / `prompts.js` / `critic.js` | シンセ＆ドラム |
 | `public/js/claude.js` | Claude を呼ぶ（direct / proxy / remote、`songsLeft()`、`x-bluegarage-app`） |
+| `public/phone.css` | **携帯・タブレット（幅 900px まで）の並び。ピアノとバンド共通**（上の帯 → 舞台 → 譜面 → 下の帯 → 状態の 1 行。横向きは舞台が左）。2026-09-23 さとるん要望「携帯では 2 つの並びを統一」 |
 | `public/js/robot-hardware.js` | ロボットの手・腕の部品（ピアノとバンドで共有） |
 | `public/js/key-visual.js` | 押した鍵の印（小口の細い線。金色の全面発光はやめた） |
 | `public/js/fingering.js` | 手と指を決めるルール（曲全体を見て運指を決める） |
