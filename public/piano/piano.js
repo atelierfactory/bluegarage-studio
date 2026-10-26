@@ -482,12 +482,8 @@ async function pickStyle(theme, model) {
   let best = null, bestScore = 0;
   for (const s of styles) { const words = [...(STYLE_WORDS[s.id] ?? []), s.name]; const score = words.reduce((a, w) => a + (q.includes(w.toLowerCase()) ? 1 : 0), 0); if (score > bestScore) { best = s; bestScore = score; } }
   if (best) return best;
-  // 言葉が当たらなければ Claude に選ばせる (小さな呼び出し)
-  try {
-    const schema = { type: "object", additionalProperties: false, required: ["id"], properties: { id: { type: "string", enum: styles.map((s) => s.id) } } };
-    const { data } = await generateStructured({ system: "お題に一番近いスタイルを 1 つ選ぶ。", userText: `お題: ${theme}\nスタイル: ${styles.map((s) => `${s.id}=${s.name} (${s.desc})`).join(" / ")}`, schema, model: "claude-sonnet-5", maxTokens: 200 });
-    return styles.find((s) => s.id === data.id) ?? styles[0];
-  } catch { return styles[Math.floor(Math.random() * styles.length)]; }
+  // 言葉が当たらなければくじで選ぶ (生成 AI は呼ばない)
+  return styles[Math.floor(Math.random() * styles.length)];
 }
 async function jamStart(theme, { model } = {}) {
   if (jam) jamStop();
@@ -531,10 +527,10 @@ function jamStop() { if (!jam) return; clearInterval(jam.timer); jam = null; if 
 /* ─────────── お題バー ─────────── */
 const COMPOSE_MODEL = "claude-fable-5-1"; // 作曲は Fable 5.1 の超作り込み一本 (さとるん決定)
 let mode = "play";
-// 凍結中 (2026-09-14): 「作曲」と「即興」のタブを画面から消す (さとるん指示)。残るのは「既存の曲を弾く」だけ
-if (FROZEN) document.querySelectorAll('.mtab[data-mode="compose"], .mtab[data-mode="jam"]').forEach((b) => b.classList.add("hidden"));
+// 凍結中 (2026-09-14): 「作曲」のタブを画面から消す (さとるん指示)。即興は同梱の手札をつなぐだけで生成 AI を呼ばないので出す (2026-10-26 さとるん「即興を復活」)
+if (FROZEN) document.querySelectorAll('.mtab[data-mode="compose"]').forEach((b) => b.classList.add("hidden"));
 function applyMode() {
-  if (FROZEN) mode = "play";
+  if (FROZEN && mode === "compose") mode = "play";
   document.querySelectorAll(".mtab").forEach((x) => x.classList.toggle("on", x.dataset.mode === mode));
   const play = mode === "play";
   $("#btn-songs").classList.toggle("hidden", !play); $("#play-hint").classList.toggle("hidden", !play);
@@ -565,7 +561,7 @@ $("#btn-go").addEventListener("click", async () => {
   const theme = $("#inp-theme").value.trim();
   const model = $("#sel-model").value;
   const tr = await resolveTransport();
-  if (tr === "none" && (mode === "compose" || theme)) { await settingsUi.openIfNoKey(); if ((await resolveTransport()) === "none") { status(t("nokey")); return; } }
+  if (tr === "none" && mode === "compose") { await settingsUi.openIfNoKey(); if ((await resolveTransport()) === "none") { status(t("nokey")); return; } }
   cancelFlag = false;
   try {
     if (mode === "jam") { setGoUi(true); await jamStart(theme, { model }); }
