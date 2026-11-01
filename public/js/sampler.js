@@ -97,21 +97,36 @@ export class SfzInstrument {
     return out;
   }
 
+  /* ── 隣り合う強さの録音を混ぜる (曲が pianoPlayback.blend を指定したときだけ) ──
+     録音は強さごとに 8 種類しかなく、境目で 1〜6 dB 跳ぶ。録音の中ほどを基準点にして間を混ぜ、
+     強さの差が 1 でも音量と音色がなめらかに変わるようにする。返すのは [{r, mix}] (mix は音量の比) */
+  layerMix(pitch, vel) {
+    const layers = (this.byKey[pitch] ?? []).map((i) => this.regions[i]).filter((r) => !r.rel).sort((a, b) => a.v[0] - b.v[0]);
+    if (!layers.length) return [];
+    const at = (i) => (i === 0 ? 30 : (layers[i].v[0] + layers[i].v[1]) / 2);
+    if (vel <= at(0)) return [{ r: layers[0], mix: Math.pow(vel / at(0), 1.1) }];
+    const last = layers.length - 1;
+    if (vel >= at(last)) return [{ r: layers[last], mix: 1 }];
+    let i = 0; while (vel > at(i + 1)) i++;
+    const t = (vel - at(i)) / (at(i + 1) - at(i));
+    return [{ r: layers[i], mix: Math.cos(t * Math.PI / 2) }, { r: layers[i + 1], mix: Math.sin(t * Math.PI / 2) }].filter((x) => x.mix > 0.02);
+  }
+
   /* ── 曲で使うサンプルを前もって decode (再生・オフライン共通) ── */
   // notes: [{p, s, d, v, i}] — i は再生時に noteOn へ渡すのと同じ番号 (配列順)
-  plan(notes, tempo) {
+  plan(notes, tempo, { blend = false } = {}) {
     const urls = new Set();
     const spb = 60 / tempo;
     notes.forEach((n, idx) => {
       const noteIdx = n.i ?? idx;
       const short = this.hasShort && n.d * spb < 0.35;
-      for (const r of this.select(n.p, n.v, { noteIdx, short })) if (r.s >= 0) urls.add(this.sampleUrl(r));
+      for (const r of blend ? this.layerMix(n.p, n.v).map((x) => x.r) : this.select(n.p, n.v, { noteIdx, short })) if (r.s >= 0) urls.add(this.sampleUrl(r));
       for (const r of this.select(n.p, n.v, { release: true, noteIdx })) if (r.s >= 0) urls.add(this.sampleUrl(r));
     });
     return urls;
   }
-  async preload(decodeCtx, notes, tempo, onProgress) {
-    const urls = [...this.plan(notes, tempo)];
+  async preload(decodeCtx, notes, tempo, onProgress, opts) {
+    const urls = [...this.plan(notes, tempo, opts)];
     evictIfNeeded(new Set(urls));
     let done = 0;
     const workers = Array.from({ length: 6 }, async () => {
@@ -128,7 +143,7 @@ export class SfzInstrument {
     await Promise.all(rs.filter((r) => r.s >= 0).map((r) => loadBuffer(decodeCtx, this.sampleUrl(r)).catch(() => null)));
   }
 
-  createOutput(ctx, { velocityTracking = null } = {}) { const g = ctx.createGain(); g.gain.value = 1; g.vesperVelocityTracking = velocityTracking; return g; }
+  createOutput(ctx, { velocityTracking = null, blend = false, releaseScale = 1 } = {}) { const g = ctx.createGain(); g.gain.value = 1; g.vesperVelocityTracking = velocityTracking; g.vesperBlend = blend; g.vesperReleaseScale = releaseScale; return g; }
 
   /* ── ゲイン計算 ── */
   velGain(r, vel, velocityTracking = null) {
@@ -166,12 +181,12 @@ export class SfzInstrument {
   gc(now) { if (this.voices.length > 64) this.voices = this.voices.filter((v) => !v.ended && v.endTime > now - 1 && v.natEnd > now); }
 
   /* ── 発音 ── */
-  startVoice(ctx, out, r, pitch, time, vel, { releaseTrigger = false, heldSec = 0, oneShotDur = null, expr = null } = {}) {
+  startVoice(ctx, out, r, pitch, time, vel, { releaseTrigger = false, heldSec = 0, oneShotDur = null, expr = null, mix = 1, sibling = false } = {}) {
     const buf = r.s >= 0 ? bufferCache.get(this.sampleUrl(r)) : null;
     if (r.choke) { if (r.grp) this.choke(r.grp, time); return null; }
     if (!buf) return null;
     touch(this.sampleUrl(r));
-    let g = r.g * this.velGain(r, vel, out.vesperVelocityTracking);
+    let g = r.g * this.velGain(r, vel, out.vesperVelocityTracking) * mix;
     if (releaseTrigger && r.rt) g *= Math.pow(10, (-r.rt * heldSec) / 20);
     if (g < 1e-4) return null;
 
@@ -216,7 +231,8 @@ export class SfzInstrument {
       },
       release: (t) => {
         if (voice.ended) return; voice.ended = true;
-        const rel = Math.max(0.005, e.r);
+        const scale = out.vesperReleaseScale ?? 1;                        // 低音の弦はダンパーが効きにくい
+        const rel = Math.max(0.005, e.r) * (pitch < 48 ? Math.sqrt(scale) : scale);
         gain.gain.cancelScheduledValues(t);
         gain.gain.setTargetAtTime(0, t, rel / 3);
         try { src.stop(t + rel * 1.5 + 0.05); } catch {}
@@ -224,7 +240,7 @@ export class SfzInstrument {
       } };
     src.onended = () => { voice.ended = true; try { src.disconnect(); gain.disconnect(); node.disconnect(); } catch {} };
     if (r.grp) this.choke(r.grp, t0, voice);
-    this.limitPolyphony(r, pitch, t0, voice);
+    if (!sibling) this.limitPolyphony(r, pitch, t0, voice);
     this.voices.push(voice);
     return voice;
   }
@@ -233,14 +249,14 @@ export class SfzInstrument {
     this.gc(time);
     const idx = noteIdx ?? this.noteIndex++;
     const short = this.hasShort && durSec < 0.35;
-    const regs = this.select(pitch, vel, { noteIdx: idx, short });
+    const regs = out.vesperBlend ? this.layerMix(pitch, vel) : this.select(pitch, vel, { noteIdx: idx, short }).map((r) => ({ r }));
     const started = [];
     const tOff = time + Math.max(0.02, durSec);
     // v2 (終わりの強さ): ベロシティ曲線 (v^2) に合わせた比率で、tOff までに到達
     const expr = velEnd != null && velEnd !== vel && durSec >= 0.15
       ? { ratio: Math.max(0.03, Math.min(4, Math.pow(Math.max(1, velEnd) / Math.max(1, vel), 2))), tEnd: tOff }
       : null;
-    for (const r of regs) { const v = this.startVoice(ctx, out, r, pitch, time, vel, { expr }); if (v) started.push(v); }
+    regs.forEach(({ r, mix }, i) => { const v = this.startVoice(ctx, out, r, pitch, time, vel, { expr, mix, sibling: i > 0 && mix != null }); if (v) started.push(v); });
     // ノートオフ: ワンショット以外は指定時間後にリリース
     for (const v of started) if (!v.region.oneShot) v.release(tOff);
     // リリースサンプル

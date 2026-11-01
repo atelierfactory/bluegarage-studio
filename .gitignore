@@ -16,3 +16,6 @@ proxy/.wrangler/
 astra/logs/
 
 astra/shots/
+
+# オーケストラの検査ページは公開しない
+public/orchestra/dev/

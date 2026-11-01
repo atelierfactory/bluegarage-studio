@@ -114,6 +114,19 @@
   "perfNote": "楽譜はそのまま、強弱・間・音の切り方・手と指・ペダルを Claude Fable 5.1 が演奏家として決めた版 (2026-09-10)"
  },
  {
+  "file": "nocturne-op9-2.vesper.json",
+  "title": "ノクターン 第 2 番 (Op.9-2)",
+  "composer": "Frédéric Chopin",
+  "year": "1832",
+  "source": "https://archive.org/details/libraryofmusical00unse",
+  "typesetter": "VESPER (printed score entered by hand)",
+  "license": "Public Domain (composition 1832; notes entered from the Joseffy edition, G. Schirmer 1915)",
+  "note": "Andante。左手の伴奏の上で右手が飾りをつけて歌う曲",
+  "perf": "nocturne-op9-2.vesper.json",
+  "perfBy": "Claude Opus 5.5",
+  "perfNote": "楽譜のまま。Claude Opus 5.5 が演奏家として強弱・間・音の切り方・手と指・ペダル・テンポの揺れを決めた版 (2026-11-01)"
+ },
+ {
   "file": "gymnopedie_1.mid",
   "title": "ジムノペディ 第 1 番",
   "composer": "Erik Satie",

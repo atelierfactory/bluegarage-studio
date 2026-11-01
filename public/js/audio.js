@@ -214,7 +214,8 @@ async function makeMelodic(track) {
     const sfz = await loadSfz(instrument);
     if (sfz) {
       const ctx = rawCtx();
-      const out = sfz.createOutput(ctx, { velocityTracking: instrument === "piano" ? track.pianoPlayback?.velocityTracking ?? null : null });
+      const pb = instrument === "piano" ? track.pianoPlayback : null;
+      const out = sfz.createOutput(ctx, { velocityTracking: pb?.velocityTracking ?? null, blend: !!pb?.blend, releaseScale: pb?.releaseScale ?? 1 });
       const extra = [];
       let tail = out;
       if (instrument.startsWith("guitar-electric")) {
@@ -229,7 +230,7 @@ async function makeMelodic(track) {
         kind: instrument, sampled: true, sfz,
         trigger: (p, time, dur, vel, noteIdx = null, velEnd = null) => sfz.noteOn(ctx, out, p, time, dur, vel, noteIdx, velEnd),
         outs: [tail],
-        preload: (notes, tempo, cb) => sfz.preload(ctx, notes.map((n, i) => ({ ...n, i })), tempo, cb),
+        preload: (notes, tempo, cb) => sfz.preload(ctx, notes.map((n, i) => ({ ...n, i })), tempo, cb, { blend: out.vesperBlend }),
         ensure: (p, v) => sfz.ensure(ctx, p, v),
         reset: () => sfz.resetCounters(), panic: (t) => sfz.allNotesOff(t),
         dispose: () => { sfz.allNotesOff(ctx.currentTime); try { out.disconnect(); } catch {} extra.forEach((n) => n.dispose()); },

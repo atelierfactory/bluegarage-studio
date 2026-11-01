@@ -535,7 +535,7 @@ function applyMode() {
   const play = mode === "play";
   $("#btn-songs").classList.toggle("hidden", !play); $("#play-hint").classList.toggle("hidden", !play);
   $("#inp-theme").classList.toggle("hidden", play); $("#btn-go").classList.toggle("hidden", play);
-  $("#btn-go").textContent = mode === "compose" ? "♪ 作曲する (数分)" : "▶ 即興を始める";
+  $("#btn-go").textContent = mode === "compose" ? "♪ 作曲する (数分)" : "\u25B6\uFE0E 即興を始める";   // \uFE0E: iPhone で ▶ が青い絵文字にならないように
   $("#inp-theme").placeholder = mode === "compose" ? "お題 (例: 雨の日の午後、静かで少し切ない曲)" : "お題 (空でもすぐ始まります。例: ジャズバラード)";
   $("#quota").classList.toggle("hidden", mode !== "compose" || !quotaText);
   if (FROZEN) $("#btn-go").disabled = mode === "compose";   // 凍結中: 作曲ボタンは押せない (即興は同梱の手札だけで動く。running はこの下で宣言されるのでここでは見ない)

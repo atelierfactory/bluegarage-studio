@@ -43,7 +43,8 @@ export function pianoBalance(song,table) {
   const offset=table.calibration?.modelOffsetDb??0;
   const mean=notes.reduce((a,n)=>a+n.v,0)/Math.max(1,notes.length);
   const target=-20.5-clamp((76-mean)*.09,0,3.5);
-  const gainDb=Math.round(clamp(target-afterCurve.medianDb-offset,0,15)*10)/10;
+  // 曲が自分で音量を決めていればそれを使う (録音を混ぜる曲は、この見積もりと実際の大きさがずれるので測って書く)
+  const gainDb=song.tracks.find(t=>t.instrument==='piano')?.pianoPlayback?.gainDb??Math.round(clamp(target-afterCurve.medianDb-offset,0,15)*10)/10;
   return {gainDb,velocityTracking:PIANO_VELOCITY_TRACKING,targetDb:target,
     predictedBeforeDb:before.medianDb+offset,predictedMedianDb:afterCurve.medianDb+offset+gainDb,
     predictedTopDb:afterCurve.topDb+offset+gainDb,curveLiftDb:afterCurve.medianDb-before.medianDb,
@@ -53,7 +54,7 @@ export function pianoBalance(song,table) {
 export function applyPianoBalance(song,table) {
   const tr=song.tracks.find(t=>t.instrument==='piano');if(!tr)return null;
   const report=pianoBalance(song,table);
-  tr.pianoPlayback={velocityTracking:PIANO_VELOCITY_TRACKING};
+  tr.pianoPlayback={velocityTracking:PIANO_VELOCITY_TRACKING,...tr.pianoPlayback};   // 曲が自分の指定を持っていればそちらを使う
   // Makeup follows the bus compressor, so it does not drive it harder.
   song.master.pianoGainDb=report.gainDb;
   return report;

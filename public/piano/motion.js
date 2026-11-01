@@ -111,7 +111,8 @@ function planMotion(notes, toSec, geometry, released=new Set()) {
       let dist=Math.hypot(b.palm.x-a.palm.x,b.palm.z-a.palm.z,(b.palm.y??0)-(a.palm.y??0));
       let lift=Math.min(.016,dist*.065);
       const pathBudget=peak*dist+Math.PI*lift;
-      const travel=Math.max(MOTION_LIMITS.minTravel,pathBudget/MOTION_LIMITS.speed);
+      // 静かな曲は早めに動き始めて、ゆっくり手を運ぶ (曲の最初の音に handSpeed を書いた曲だけ。上限は MOTION_LIMITS.speed のまま)
+      const travel=Math.max(MOTION_LIMITS.minTravel,pathBudget/(notes[0]?.handSpeed??MOTION_LIMITS.speed));
       const arrive=b.s-Math.min(MOTION_LIMITS.settle,(b.s-a.s)*.04);
       const start=Math.max(Math.max(...a.notes.map(n=>n._s))+.003,arrive-Math.min(MOTION_LIMITS.maxLead,travel));
       const available=Math.max(.001,arrive-start);

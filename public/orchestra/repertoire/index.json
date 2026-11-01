@@ -1,0 +1,32 @@
+[
+  {
+    "file": "beethoven-5-1.orch.json",
+    "title": "Symphony No. 5 in C minor, Op. 67 — I. Allegro con brio",
+    "composer": "Ludwig van Beethoven",
+    "year": "1808",
+    "license": "Score: OpenScore Orchestra, CC0 1.0 (annotations removed). Samples: VSCO 2 CE, CC0.",
+    "source": "https://github.com/MarkGotham/hauptstimme/blob/8f677853c45b74ca0afcd79677e5379c06c82354/data/Beethoven,_Ludwig_van/Symphony_No.5,_Op.67/1/Beethoven_Op.67_1.mxl",
+    "shots": {
+      "wide": 43,
+      "strings": 24.5,
+      "horns": 118,
+      "oboe": 788.5,
+      "conductor": 2.5
+    }
+  },
+  {
+    "file": "tchaikovsky-1-1.orch.json",
+    "title": "Piano Concerto No. 1 — I. Introduction (opening)",
+    "composer": "Pyotr Ilyich Tchaikovsky",
+    "year": "1875",
+    "license": "CC0 / Public Domain",
+    "source": "MuseScore 5871238 / PDMX (dataset CC BY 4.0)",
+    "shots": {
+      "wide": 12,
+      "strings": 42,
+      "piano-hands": 15,
+      "horns": 0,
+      "conductor": 0
+    }
+  }
+]

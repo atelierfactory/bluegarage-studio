@@ -36,6 +36,7 @@ export function keyX(p) {
   return boundary + shift;
 }
 const KEY_TOP_Y = 0.735;   // 白鍵の上面
+const BODY_LEAN = 1;       // 胴を傾ける向き
 const KEY_DIP = 0.010;     // 鍵の沈み (手前で約 1cm)
 
 /* ─────────── 材質 ─────────── */
@@ -821,14 +822,18 @@ export class PianoStage {
     // 鍵・ハンマー・ダンパー
     for (const k of Object.values(pn.keys)) k.target = 0;
     // 体
-    this.robot.position.x=clamp(((poses.L?.palm.x??0)+(poses.R?.palm.x??0))*.24,-.14,.14);
+    // 体は椅子に座ったまま: 腰と脚は動かさず、両手の真ん中へ胴を横に傾ける (10-31 さとるん「体全体がスライドして見える」。前は体全体を毎コマ動かしていた)。
+    // 手が跳んでも急に動かないよう、前後 0.8 秒の手の位置を平均する。曲の時刻だけから計算する (止めて動かしても同じ姿勢になる)
+    let reach=0,reachW=0;
+    for(let i=-4;i<=4;i++){const w=5-Math.abs(i),a=motionAt(this.motion,"L",nowSec+i*.2),b=motionAt(this.motion,"R",nowSec+i*.2);reach+=w*((a?.palm.x??0)+(b?.palm.x??0));reachW+=w;}
+    const side=BODY_LEAN*clamp(reach/reachW*.24,-.14,.14)/.42;
     this.energy = clamp(bodyEnergy*.42,0,1.2);
     this.headNod = nod;
     const sway = Math.sin(this.t * 0.9) * 0.03 * (0.4 + this.energy) + Math.sin(this.t * 0.37) * 0.015;
     const lean = 0.10 + this.energy * 0.12;
-    B.LowerBack.rotation.set(lean * 0.5, 0, sway * 0.5);
-    B.Spine.rotation.set(lean * 0.4, sway * 0.3, sway * 0.5);
-    B.Spine1.rotation.set(lean * 0.2, 0, sway * 0.3);
+    B.LowerBack.rotation.set(lean * 0.5, 0, sway * 0.5 + side * 0.5);
+    B.Spine.rotation.set(lean * 0.4, sway * 0.3, sway * 0.5 + side * 0.3);
+    B.Spine1.rotation.set(lean * 0.2, 0, sway * 0.3 + side * 0.2);
     const cx = ((poses.L?.palm.x??this.handState.L.x) + (poses.R?.palm.x??this.handState.R.x)) / 2;
     B.Neck1.rotation.set(0.1, 0, 0);
     B.Head.rotation.set(0.42 + this.headNod * 0.18 + Math.sin(this.t * 1.3) * 0.015, clamp(cx * 0.9, -0.5, 0.5), -sway * 0.5);

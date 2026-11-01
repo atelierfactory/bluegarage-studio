@@ -1,0 +1,61 @@
+/* ═══════════ VESPER ORCHESTRA — ピアノの見た目 (../piano/style.css) の上に足す物だけ ═══════════ */
+/* 総譜のレーン: 左の面いっぱい */
+body.orchestra-app #proll-wrap { background: #050505; }
+#lanes { display: block; width: 100%; height: 100%; cursor: pointer; }
+/* 見出しの凡例: 明るさ = 強さ (pp → ff)、金 = いま鳴っている音 */
+body.orchestra-app #proll-head .legend { margin-left: auto; flex-shrink: 0; }
+.legend .ramp { display: inline-block; width: 34px; height: 8px; border-radius: 2px; background: linear-gradient(90deg, #6c6c6c, #ffffff); }
+.legend .lg-txt { color: #8a8a8a; }
+body.orchestra-app #proll-head .song-title { max-width: none; flex: 1 1 auto; min-width: 0; }
+body.orchestra-app #prompt-bar #play-hint { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+/* 舞台のボタン: 文字が長くても舞台からはみ出さない (はみ出す分は横に送る) */
+body.orchestra-app #stage-tools, body.orchestra-app #stage-close { max-width: calc(100% - 20px); overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
+body.orchestra-app #stage-tools::-webkit-scrollbar, body.orchestra-app #stage-close::-webkit-scrollbar { display: none; }
+body.orchestra-app .vbtn { white-space: nowrap; flex-shrink: 0; }
+/* 寄りの画面の名前: 寄りの画面の右上 (左下のボタンと重ならない所) */
+body.orchestra-app #stage-label-hands { top: calc(58% + 9px); bottom: auto; right: 10px; color: #c0c0c0; background: rgba(0,0,0,.8); padding: 2px 5px; border-radius: 3px; text-shadow: 0 1px 2px #000; }
+body.orchestra-app.stage-full #stage-label-hands { top: 10px; bottom: auto; right: 14px; }
+body.orchestra-app.stage-full #stage-close { max-width: calc(40% - 28px); }
+body.orchestra-app.stage-full #stage-tools { max-width: calc(60% - 28px); }
+/* 舞台の上の題名は 1 行 (長いときは … で切る)。右の「小節・テンポ」は折り返さない */
+body.orchestra-app #stage-hud { gap: 12px; }
+body.orchestra-app #stage-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.orchestra-app #stage-info { flex-shrink: 0; white-space: nowrap; }
+/* 撮影: 舞台だけを写す (ボタン・仕切り線・名前は隠す) */
+body.orchestra-shot #stage-tools, body.orchestra-shot #stage-close, body.orchestra-shot #stage-label-hands, body.orchestra-shot #stage .divider { display: none; }
+
+/* 携帯・タブレット: レーンは 12 行あるので、ピアノの譜面より高さを取る (足りなければ左の面の中で縦に動く) */
+@media (max-width: 900px) {
+  body.orchestra-app #proll-wrap { flex: 1 1 250px; min-height: 250px; }
+}
+@media (max-width: 699px) {
+  /* 全画面が上下に分かれるのは 700px 未満だけ (stage.js)。700px 以上は左右に分かれるので、寄りのボタンは右の 40% の中で横に送る (上の calc(40% - 28px) のまま) */
+  body.orchestra-app.stage-full #stage-close { max-width: calc(100% - 20px); }
+  body.orchestra-app.stage-full #stage-tools { max-width: calc(100% - 20px); }
+  body.orchestra-app #stage-label-hands { top: calc(58% + 7px); right: 8px; font-size: 10px; letter-spacing: 2px; }
+  body.orchestra-app.stage-full:not(.piano-shot) #stage-label-hands { top: calc(58% + 7px); }
+  body.orchestra-app .legend .lg-txt { display: none; }
+}
+/* 携帯の縦: 舞台の下の残り (約 320px) にレーン 12 行を収める。題名は舞台の上にも出ているので、レーンの見出しは隠す。
+   「曲を選ぶ」と作曲者の行は 1 行に (ピアノは 2 行に折るが、ここは短い) */
+@media (max-width: 699px) and (orientation: portrait) {
+  body.orchestra-app #proll-head { display: none; }
+  body.orchestra-app #proll-wrap { flex: 1 1 0; flex-shrink: 1; min-height: 150px; }
+  body.orchestra-app #prompt-bar { flex-wrap: nowrap; }
+  body.orchestra-app #prompt-bar #play-hint { flex: 1 1 auto; }
+}
+@media (max-width: 900px) and (orientation: landscape) and (max-height: 520px) {
+  body.orchestra-app #proll-wrap { flex: 1 1 auto; min-height: 150px; }
+}
+
+/* 長い日本語の文: ことばのまとまり (<wbr> の所) と空白でだけ折る。行の頭に「、」「。」を置かない */
+body.orchestra-app .phrases { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; text-wrap: pretty; }
+/* 窓は画面の真ん中に出す (../style.css の * { margin: 0 } が dialog の真ん中寄せの余白まで消すため) */
+body.orchestra-app dialog { margin: auto; }
+/* クレジットの英語の 1 行: 最後の行が短く残らないように折り、住所は途中で折らない */
+body.orchestra-app #dlg-thanks p.dim { text-wrap: pretty; }
+body.orchestra-app #dlg-thanks p.dim a { white-space: nowrap; }
+
+/* 終わりの指揮者の画より、選択ボタンの白を強くしない。協奏曲だけ。 */
+body.concerto #stage-close .cbtn.on[data-close="conductor"] { background: #d4d4d4; border-color: #d4d4d4; color: #111; }
