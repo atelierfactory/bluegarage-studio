@@ -15,7 +15,7 @@ import {
 import { DRUM_KEYS, KEY_OF_DRUM, KICK, SYNTH_LOW, SYNTH_HIGH, PEDAL_LOW, PEDAL_HIGH, LIMITS } from "./prompts.js";
 import { KNOBS } from "../js/synth2.js";
 import { knobStateAt } from "../js/synth-automation.js";
-import { knobMotionAt } from "./knob-motion.js";
+import { knobMotionAt, KNOB_BACK } from "./knob-motion.js";
 import LAYOUT from "./layout.js";
 import BODY from "./chimp/body.js";
 import { KnobAR, knobChangesAt, arProtectedRegions } from "./ar.js";
@@ -84,7 +84,15 @@ function buildHeadset(head) {
   const cap = new THREE.Mesh(new THREE.SphereGeometry(0.0085, 24, 16), dark); cap.position.set(0.034, 0.003, 0.154); g.add(cap);
   const led = new THREE.Mesh(new THREE.SphereGeometry(0.0022, 12, 8), new THREE.MeshStandardMaterial({ color: 0x220000, emissive: 0xff2a1a, emissiveIntensity: 0.4 }));
   led.position.set(0.041, 0.01, 0.156); g.add(led);
-  const hole = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 12), new THREE.MeshBasicMaterial({ color: 0x1c0d0a }));
+  // 口笛の穴: すぼめた唇の奥に置く、奥行きのある短い筒 (前の端は唇になじむ暗い茶色、奥へ行くほど黒・いちばん奥に黒い底。少し横長)。
+  // 前は黒い平たい楕円で、唇に丸い黒を貼っただけに見えた (2026-11-03 さとるん「口がただの丸になっているのもっとリアルに」)。
+  // 筒の前の端は唇のふちの内側に隠れ、正面から見ると暗い赤のふちから黒へ落ちる穴、斜めから見ると奥の内側の壁が見える
+  const holeGeo = new THREE.CylinderGeometry(1, 0.6, 1, 32, 6, true); holeGeo.rotateX(Math.PI / 2); holeGeo.translate(0, 0, -0.5);
+  { const p = holeGeo.attributes.position, c = new Float32Array(p.count * 3), a = new THREE.Color(0x24120f), b = new THREE.Color(0x050202), t = new THREE.Color();
+    for (let i = 0; i < p.count; i++) { t.copy(a).lerp(b, Math.min(1, -p.getZ(i) * 1.5)); c.set([t.r, t.g, t.b], i * 3); }
+    holeGeo.setAttribute("color", new THREE.BufferAttribute(c, 3)); }
+  const hole = new THREE.Mesh(holeGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+  const holeBack = new THREE.Mesh(new THREE.CircleGeometry(0.6, 32), new THREE.MeshBasicMaterial({ color: 0x050202 })); holeBack.position.z = -1; hole.add(holeBack);
   hole.scale.setScalar(1e-4); hole.visible = false; g.add(hole);
   return { group: g, led, boom, cap, hole };
 }
@@ -820,9 +828,11 @@ export class BandStage {
       const hs = this.headset, open = clamp((this._pucker + this._round - 0.15) / 0.6, 0, 1);
       if (hs.mouth) {
         hs.hole.visible = open > 0.01;
-        hs.hole.position.copy(hs.mouth).addScaledVector(hs.mouthFwd, PUCKER_Z * this._pucker + ROUND_Z * this._round - 0.004);
+        // 筒の前の端は、唇のふちの輪 (前へ出した量の 9 割) の少し奥。奥行き 6 mm で、まん中の引っこめた皮より前に収まる
+        hs.hole.position.copy(hs.mouth).addScaledVector(hs.mouthFwd, (PUCKER_Z * this._pucker + ROUND_Z * this._round) * 0.85);
         // 穴の大きさ: 低い音ほど丸く大きく、音の頭で強くすぼめた瞬間は小さく (音ごとに口の形が少し変わって見える)
-        hs.hole.scale.set((0.0026 + 0.004 * this._round + 0.0016 * (1 - this._pucker)) * open, (0.0018 + 0.006 * this._round + 0.002 * (1 - this._pucker)) * open, 0.0015);
+        hs.hole.scale.set((0.0032 + 0.0026 * this._round + 0.001 * (1 - this._pucker)) * open, (0.0022 + 0.0035 * this._round + 0.001 * (1 - this._pucker)) * open, 0.006 * open + 1e-4);
+        if (this.chimp.userData.lip) this.chimp.userData.lip.value = clamp(this._pucker + 0.6 * this._round, 0, 1);
       }
     }
     const sway = Math.sin(this.t * 0.9) * 0.03 * (0.4 + this.energy) * mv.calm + Math.sin(this.t * 0.37) * 0.015 * mv.calm + mv.roll;
@@ -872,6 +882,8 @@ export class BandStage {
     // ── 右手: 鍵盤 or つまみ
     const hand = this.hands.Right; const st = this.handR;
     const FI = (n) => n._f ?? clamp((n.f ?? 3) - 1, 0, 4);
+    // 手のひらの位置 (鍵盤の座標)。鍵盤の「手のひら」と同じ式 (横は指ごとの鍵の位置から、奥行きは白鍵・黒鍵と指の長さから)
+    const palmOf = (arr) => { let x = 0, zs = 0, ws = 0; for (const n of arr) { const fi = FI(n), w = FINGER_Z_WEIGHT[fi]; x += keyXL(n.p) - F_OFF[fi] / KB_SCALE; zs += ((isBlack(n.p) ? -0.085 : -0.040) + F_REACH[fi] / KB_SCALE) * w; ws += w; } return { x: x / arr.length, z: zs / ws - 0.85 * ROBOT_SCALE * HAND_S / KB_SCALE }; };
     if (knobEv) {
       st.mode = "knob";
       const ki = KNOBS.findIndex((k) => k.id === knobEv.param);
@@ -915,6 +927,11 @@ export class BandStage {
       orientation.quaternion=turn.clone().multiply(hand.bone.getWorldQuaternion(new THREE.Quaternion()));
       // 手を伸ばす間・戻す間は、鍵盤の上の手の位置と向きから、つまみの上へつなぐ (前は 1 コマで 50 cm 飛んでいた)
       const reach=knobMotion.travel?1:there, e=reach*reach*(3-2*reach);
+      // 戻るときは、つまみへ行く前の手の位置ではなく、次に弾く音の手の位置へ戻る (2026-11-03)。戻る時間を 0.15 → 0.225 秒にのばしたら、
+      // 前の位置へ戻ってから次の音まで動く時間がなくなり、ほかの曲で鍵の外れが増えた (ネオン 2 → 6・オーバードライブ 5 → 8)
+      if(!knobMotion.travel&&there<1&&now>=beatToSec(knobEv.s+knobEv.d)&&st.keysQ){const nx=S.synth.filter(n=>{const a=beatToSec(n.s)-now;return a>0&&a<0.8;});
+        if(nx.length){const s0=Math.min(...nx.map(n=>beatToSec(n.s))),P=palmOf(nx.filter(n=>beatToSec(n.s)-s0<=0.03));st.x=P.x;st.z=P.z;
+          st.keysPalm=kb.localToWorld(V(P.x,0.044*HAND_S/KB_SCALE,P.z+0.85*ROBOT_SCALE*HAND_S/KB_SCALE));}}
       if(e<.999&&st.keysPalm){const knobPalm=palmW.clone();palmW.copy(st.keysPalm).lerp(knobPalm,e).add(V(0,.04*Math.sin(Math.PI*e),0));orientation.quaternion=st.keysQ.clone().slerp(orientation.quaternion,e);}
       this._solveArm("Right",palmW,orientation);
       hand.fingers.forEach((f,i)=>{f.exactPose=null;if(i>1){f.root.rotation.set(0,-hand.sgn*.50*e, -hand.sgn*2.25*e);f.joint.rotation.set(0,0,-hand.sgn*.90*e);}});
@@ -928,11 +945,13 @@ export class BandStage {
 
     } else {
       // 鍵盤。piano/scene.js と同じ段取り (1 本の手)
-      let list;
-      { const mean = (arr) => arr.reduce((a, n) => a + keyXL(n.p), 0) / arr.length; const act = active; const up = lead.filter((n) => !act.includes(n)); const soon = lead.filter((n) => { const ds = beatToSec(n.s) - now; return ds >= -0.12 && ds <= 0.06; });
+      // 弾く音の組を決める (時刻 t の、鳴っている音 act・すぐ次の音 ld・その先の音 upc から)。音の頭のすぐあとの組も同じ決め方で読む (notesAt)
+      const pickList = (t, act, ld, upc) => { const mean = (arr) => arr.reduce((a, n) => a + keyXL(n.p), 0) / arr.length; const up = ld.filter((n) => !act.includes(n)); const soon = ld.filter((n) => { const ds = beatToSec(n.s) - t; return ds >= -0.12 && ds <= 0.06; });
         let kept = act; if (soon.length) { const cx = mean(soon); kept = act.filter((n) => Math.abs(keyXL(n.p) - cx) <= 0.12); }
-        if (kept.length) { const cx = mean(kept); list = kept.concat(up.filter((n) => Math.abs(keyXL(n.p) - cx) <= 0.12)); }
-        else { const src = up.length ? up : upcoming; if (src.length) { const s0 = Math.min(...src.map((n) => beatToSec(n.s))); list = src.filter((n) => beatToSec(n.s) - s0 <= 0.03); } else list = []; } }
+        if (kept.length) { const cx = mean(kept); return kept.concat(up.filter((n) => Math.abs(keyXL(n.p) - cx) <= 0.12)); }
+        const src = up.length ? up : upc; if (!src.length) return []; const s0 = Math.min(...src.map((n) => beatToSec(n.s))); return src.filter((n) => beatToSec(n.s) - s0 <= 0.03); };
+      const notesAt = (t) => { const act = [], ld = [], upc = []; for (const n of S.synth) { const s = beatToSec(n.s), e = beatToSec(n.s + n.d); if (e < t - 0.3) continue; if (s > t + LOOK + 0.2) break; if (s <= t + 0.004 && t < Math.max(e, s + 0.09)) { act.push(n); ld.push(n); } else if (s > t && s <= t + LEAD) { ld.push(n); upc.push(n); } else if (s > t && s <= t + LOOK) upc.push(n); } return pickList(t, act, ld, upc); };
+      let list = pickList(now, active, lead, upcoming), early = false;
       // 次の音で手のひらが 5 cm 以上動くときは、距離に合わせた時間 (0.8 m/秒・0.08〜0.25 秒) だけ前に今の音から手を離して動き始める (2026-11-02)。
       // 前は今の音が離れる (次の音の 0.01 秒前) まで待ち、1 コマで 14〜23 cm 飛んでいた (メドレーのオクターブの跳び)。
       // 手のひらの位置で比べる: 鍵が隣でも、小指から親指へ替わると手のひらは 10 cm 以上動く
@@ -940,7 +959,7 @@ export class BandStage {
         if (cur.length && nxt.length) { const s0 = Math.min(...nxt.map((n) => beatToSec(n.s))), grp = nxt.filter((n) => beatToSec(n.s) - s0 <= 0.03);
           const cx = (arr) => arr.reduce((a, n) => a + keyXL(n.p) - F_OFF[clamp((n.f ?? 3) - 1, 0, 4)] / KB_SCALE, 0) / arr.length, dist = Math.abs(cx(grp) - cx(cur));
           const held = now - Math.max(...cur.map((n) => beatToSec(n.s)));   // 鳴らしてから 0.05 秒は離れない (鍵を押した所を見せる)
-          if (dist > 0.05 && held >= 0.05 && s0 - now <= clamp(dist / 0.8, 0.08, 0.25)) list = grp; } }
+          if (dist > 0.05 && held >= 0.05 && s0 - now <= clamp(dist / 0.8, 0.08, 0.25)) { list = grp; early = true; } } }
       { const conflict = (arr) => { for (const n of arr) n._f = clamp((n.f ?? 3) - 1, 0, 4); const used = new Map(); for (const n of arr) { const prev = used.get(n._f); if (prev && prev.p !== n.p) return true; used.set(n._f, n); } const srt = arr.slice().sort((a, b) => a.p - b.p); for (let i = 1; i < srt.length; i++) { if (srt[i].p === srt[i - 1].p) continue; if (srt[i]._f < srt[i - 1]._f) return true; } return false; };
         let bad = conflict(list);
         if (bad && list.some((n) => beatToSec(n.s) > now)) { const fresh = list.filter((n) => !(beatToSec(n.s) <= now && beatToSec(n.s + n.d) <= now + 0.004)); if (fresh.length < list.length && !conflict(fresh)) { list = fresh; bad = false; } }
@@ -952,16 +971,33 @@ export class BandStage {
       let palmX = st.x, palmZ = 0.045;
       if (list.length) {
         st.mode = "keys";
-        const offs = list.map((n) => keyXL(n.p) - F_OFF[FI(n)] / KB_SCALE); palmX = offs.reduce((a, b) => a + b, 0) / offs.length;
-        let zsum = 0, wsum = 0; for (const n of list) { const fi = FI(n); const w = FINGER_Z_WEIGHT[fi]; zsum += ((isBlack(n.p) ? -0.085 : -0.040) + F_REACH[fi] / KB_SCALE) * w; wsum += w; }
-        palmZ = zsum / wsum - 0.85 * ROBOT_SCALE * HAND_S / KB_SCALE;
+        const P0 = palmOf(list); palmX = P0.x; palmZ = P0.z;
       } else { st.mode = playing ? "keys" : "idle"; palmX = lerp(st.x, keyXL(62), 0.002); palmZ = 0.05; }
+      // 和音の一部の音が先に離れただけ (新しい音が無い) のときは、手のひらを動かさない。残った指は鍵に置いたまま (2026-11-03)。
+      // 前は、残った音だけで手のひらを計算し直し、1 コマで最大 4.4 cm 寄っていた (トルコ行進曲の 2 回目のオクターブの上の音が先に離れる所)
+      if (list.length) { const ref = st.palmRef; if (ref && ref.notes && list.every((n) => ref.notes.has(n))) { palmX = ref.x; palmZ = ref.z; } else st.palmRef = { notes: new Set(list), x: palmX, z: palmZ }; }
+      else st.palmRef = null;
+      // 次の音の頭で手のひらの位置が変わるときは、その前から動かしておく (2026-11-03 さとるん「手がワープしているように見えます」)。
+      // 前は、今の音と次の音のまん中に手を置いたまま、音の頭で今の音が離れた 1 コマに 次の音の位置へ最大 4.5 cm 飛んでいた (メドレーで 40 か所ほど)。
+      // 音の頭のすぐあとの組を同じ決め方で読み、その手のひらへ、距離に合わせた時間 (0.7 m/秒・0.06〜0.25 秒) でなめらかに寄せる。
+      // 寄せ始めは今の音を鳴らしてから 0.05 秒あと。押している指は鍵に残る (指を鍵に合わせる計算が、手を最大 4.5 cm ずらして届かせる)
+      // 寄せる道は「寄せ始めたコマの手の位置 → 次の音の手のひら」で決めて、途中で変えない (弾く音の組は、指の割りあての調整で
+      // 音の頭の直前に 1 コマだけ入れかわることがあり、組から計算した位置を元にすると、寄せる途中でも 7 cm 飛んだ)
+      let glide = false;
+      if (list.length) { const nx = upcoming.filter((n) => beatToSec(n.s) > now + 0.004);
+        if (nx.length) { const s0 = Math.min(...nx.map((n) => beatToSec(n.s))), L1 = notesAt(s0 + 0.006);
+          if (L1.length) { const P1 = palmOf(L1), g0 = st.glide?.s0 === s0 ? st.glide : null, d = g0 ? 1 : Math.hypot(P1.x - st.x, P1.z - st.z);
+            if (d > 0.003) { const lastS = Math.max(...list.map((n) => Math.min(beatToSec(n.s), now))), T = clamp(d / 0.7, 0.06, 0.25);
+              const start = Math.min(Math.max(s0 - T, lastS + 0.05), s0 - 0.034);
+              if (g0 || now > start || early) { const g = g0 ?? (st.glide = { s0, x: st.x, z: st.z, t0: now - dt });
+                const u = clamp((now - g.t0) / (s0 - g.t0), 0, 1), w = u * u * (3 - 2 * u); palmX = lerp(g.x, P1.x, w); palmZ = lerp(g.z, P1.z, w); glide = true; } } } } }
+      if (!glide) st.glide = null;
       // 次の音が鳴る時刻ちょうどに着くよう、残りの距離を残りの時間で割って進む (2026-11-02)。
       // 前は lerp(dt*55) で 1 コマに 9 割進み、和音が変わるたびに手が飛んでいた。鳴っている音だけなら今までどおりすぐ合わせる
       const onsets = list.map((n) => beatToSec(n.s) - now).filter((x) => x > 0.004);
       const arrive = onsets.length ? Math.min(...onsets) : 0;
       const struck = list.some((n) => { const a = now - beatToSec(n.s); return a >= -0.004 && a < 0.05; });   // 鳴り始めの音は今までどおりすぐ合わせる
-      const k = list.length ? Math.max(arrive > dt ? dt / arrive : onsets.length ? 1 : 0, struck || !onsets.length ? Math.min(1, dt * 55) : 0) : Math.min(1, dt * 22);
+      const k = glide ? 1 : list.length ? Math.max(arrive > dt ? dt / arrive : onsets.length ? 1 : 0, struck || !onsets.length ? Math.min(1, dt * 55) : 0) : Math.min(1, dt * 22);
       st.x = lerp(st.x, palmX, k); if (Math.abs(st.x - palmX) < 0.0004) st.x = palmX;
       st.z = lerp(st.z, palmZ, list.length ? k : Math.min(1, dt * 12)); if (Math.abs(st.z - palmZ) < 0.0004) st.z = palmZ;
       // 手の寸法 (m) は、鍵盤の中の座標では KB_SCALE で割る (シンセだけ大きくしたので)
@@ -1356,7 +1392,7 @@ export class BandStage {
 
   /** つまみを回す手首の向きの基準 (ev._ref・この値で手がまっすぐ) を、曲の頭から順に決める (右手のつまみの所の説明を見る) */
   _knobRefs() {
-    const K = this.song.knobs, KA = 2 * KNOB_ANGLE, LIM = 1.9, RATE = 6, gapMax = LIMITS.knobBefore + LIMITS.knobAfter * .6;
+    const K = this.song.knobs, KA = 2 * KNOB_ANGLE, LIM = 1.9, RATE = 6, gapMax = LIMITS.knobBefore + KNOB_BACK;
     let end = 0, prevEnd = -Infinity;   // end = 前のつまみを回し終えた手首の向き (ラジアン)。鍵盤に戻ったら 0
     for (const ev of K) {
       const from = knobStateAt(this.knobDefaults, K, ev.s - 1e-4, (b) => this._b2s(b))[ev.param] ?? .5, T = (ev.to - from) * KA;
