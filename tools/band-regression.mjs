@@ -15,7 +15,9 @@ const songs=JSON.parse(fs.readFileSync(new URL('../public/band/repertoire/index.
 for(const bad of [null,{}, {sections:3}, {...songs[0],tracks:[null,null,null]}, {...songs[0],tempo:NaN}, {...songs[0],tempoMap:[null]}])check(validateBandSong(bad).length>0,'Malformed input rejected');
 for(const song of songs) {
   const p=partsFromSong(song),k=p.knobs[0],defaults=synth2.knobDefaults(song.tracks[0].synth2),toSec=b=>S.beatToSec(b,song);
-  close(automation.knobStateAt(defaults,p.knobs,k.s+k.d/2,toSec)[k.param],(defaults[k.param]+k.to)/2,'Midpoint');
+  // つまみは時間で動くので、真ん中は「秒の真ん中」の拍で見る (テンポが変わる曲: メドレーの魔王はだんだん速くなる)
+  const midSec=(toSec(k.s)+toSec(k.s+k.d))/2;let lo=k.s,hi=k.s+k.d;for(let i=0;i<60;i++){const m=(lo+hi)/2;if(toSec(m)<midSec)lo=m;else hi=m;}
+  close(automation.knobStateAt(defaults,p.knobs,(lo+hi)/2,toSec)[k.param],(defaults[k.param]+k.to)/2,'Midpoint');
   close(automation.knobStateAt(defaults,p.knobs,0,toSec)[k.param],defaults[k.param],'Rewind defaults');
 }
 const tooFast=structuredClone(songs[0]);tooFast.tempo=300;

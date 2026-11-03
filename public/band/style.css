@@ -56,8 +56,6 @@ body.band-shot #stage > .band-ar { display: block; }
 .ar-graph path { fill: none; vector-effect: non-scaling-stroke; }
 .ar-before { stroke: #77766d; stroke-width: 1; stroke-dasharray: 3 3; }
 .ar-current { stroke: #e0b95a; stroke-width: 1.4; }
-.ar-message { color: #f2ead8; font: 13px/1.3 sans-serif; white-space: nowrap; }
-.ar-caption { color: #92918a; font: 10px/1.2 sans-serif; margin-top: 3px; }
 #lanes-wrap { flex-basis: 246px; min-height: 246px; }
 @media (max-width: 600px) { .ar-card { padding: 8px 10px; } .ar-title { gap: 4px; } .ar-title b { font-size: 12px; } }
 
@@ -65,10 +63,9 @@ body.band-shot #stage > .band-ar { display: block; }
 .ar-card.compact .ar-values { margin: 5px 0; }
 .ar-card.compact .ar-values strong { font-size: 21px; }
 .ar-card.compact .ar-graph { height: 22px; margin: 5px 0 2px; }
-.ar-card.compact .ar-caption { margin-top: 2px; font-size: 8px; }
 
 .ar-card.summary .ar-title span, .ar-card.summary .ar-values small,
-.ar-card.summary .ar-meter, .ar-card.summary .ar-graph, .ar-card.summary .ar-message, .ar-card.summary .ar-caption { display: none; }
+.ar-card.summary .ar-meter, .ar-card.summary .ar-graph { display: none; }
 .ar-card.summary .ar-values { position: absolute; right: 10px; top: 9px; margin: 0; }
 .ar-card.summary .ar-values strong { font-size: 13px; }
 .ar-card.summary .ar-title b { font-size: 12px; }
@@ -81,5 +78,3 @@ body.band-shot #stage > .band-ar { display: block; }
 .ar-card.banner .ar-values small { font-size: 9px; }
 .ar-card.banner .ar-graph { position: absolute; right: 10px; top: 23px; width: 92px; height: 24px; margin: 0; }
 .ar-card.banner .ar-meter { position: absolute; left: 10px; right: 10px; bottom: 7px; }
-.ar-card.banner .ar-message { position: absolute; left: 10px; bottom: 16px; font-size: 11px; }
-.ar-card.banner .ar-caption { position: absolute; right: 10px; bottom: 16px; font-size: 8px; }

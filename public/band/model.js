@@ -6,7 +6,7 @@ export function partsFromSong(song) {
   const get = (role) => song.tracks.find((t) => t.role === role);
   return { synth: get("keys").notes, pedal: get("pedal").notes,
     drums: get("drums").notes.filter((n) => n.p !== KICK).map((n) => ({ ...n, k: n.k ?? KEY_OF_DRUM[n.p] })),
-    kick: get("drums").notes.filter((n) => n.p === KICK), knobs: get("keys").knobs ?? [] };
+    kick: get("drums").notes.filter((n) => n.p === KICK), knobs: get("keys").knobs ?? [], moves: song.moves ?? [], whistle: get("whistle")?.notes ?? [] };
 }
 
 export function validateBandSong(song) {
@@ -43,11 +43,12 @@ export function validateBandSong(song) {
   }
   if (!song.master || typeof song.master !== "object") fail("master", "音量設定がありません");
   else for (const [key, lo, hi] of [["volume", -60, 6], ["hallDecay", 0.1, 12], ["roomDecay", 0.1, 12], ["glue", 0, 1], ["width", 0, 2], ["targetLufs", -40, 0]]) if (!number(song.master[key], lo, hi)) fail(`master.${key}`, "invalid number");
-  if (!Array.isArray(song.tracks) || song.tracks.length !== 3) return [...errors, "tracks: 右手・足鍵盤・ドラムの3つが必要です"];
+  // 4 つ目に口笛 (role whistle・チンパンジーが頭のマイクで吹く) を置いてよい (2026-11-03 さとるん「オクターブ上で猿が口笛吹く」)
+  if (!Array.isArray(song.tracks) || song.tracks.length < 3 || song.tracks.length > 4 || !["keys", "pedal", "drums"].every((r) => song.tracks.some((t) => t?.role === r))) return [...errors, "tracks: 右手・足鍵盤・ドラムの3つ (と口笛) が必要です"];
   const ids = new Set(), roles = new Set(); let count = 0;
   for (const t of song.tracks) {
     if (!t || typeof t !== "object") { fail("track", "object required"); continue; }
-    const expected = { keys: "synth", pedal: "synth-bass", drums: "drums" }[t.role];
+    const expected = { keys: "synth", pedal: "synth-bass", drums: "drums", whistle: "synth" }[t.role];
     if (!expected || roles.has(t.role) || t.instrument !== expected) fail("track.role", "楽器の組み合わせが不正です");
     roles.add(t.role);
     if (typeof t.id !== "string" || ids.has(t.id)) fail("track.id", "識別名が不正・重複しています");
@@ -66,7 +67,7 @@ export function validateBandSong(song) {
     const noteIds = new Set(); let previous = -1;
     for (const n of t.notes) {
       if (!n || typeof n !== "object") { fail(t.role, "音符が不正です"); continue; }
-      const range = t.role === "keys" ? [48, 84] : t.role === "pedal" ? [24, 36] : [0, 127];
+      const range = t.role === "keys" ? [48, 84] : t.role === "pedal" ? [24, 36] : t.role === "whistle" ? [67, 100] : [0, 127];
       if (!Number.isInteger(n.p) || !number(n.p, ...range) || !number(n.s, 0, end - 0.00001) || !number(n.d, 0.00001, end - n.s + 0.00001) || !Number.isInteger(n.v) || !number(n.v, 1, 127)) fail(`${t.role}@${n.s}`, "音程・拍・長さ・強さが不正です");
       if (n.s < previous) fail(t.role, "音符が拍順ではありません"); previous = n.s;
       if (typeof n.id !== "string" || noteIds.has(n.id)) fail(t.role, "音符の識別名が不正・重複しています"); noteIds.add(n.id);

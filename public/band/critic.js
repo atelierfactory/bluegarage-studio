@@ -65,7 +65,7 @@ export function analyzeBand(raw, { song, range }) {
       const prev = out[out.length - 1];
       if (prev) {
         if (Math.abs(n.s - prev.s) < 1e-3) { if (n.p < prev.p) { out[out.length - 1] = n; } mono++; continue; }   // 同時 → 低い方を残す
-        const gap = toBeat(Math.abs(n.p - prev.p) > 5 ? LIMITS.pedalJumpGap : LIMITS.pedalGap);
+        const step = Math.abs(n.p - prev.p), gap = toBeat(step > 5 ? LIMITS.pedalJumpGap : step <= 2 && step > 0 ? LIMITS.pedalStepGap : LIMITS.pedalGap);
         if (n.s - prev.s < gap - 1e-6) { if (Math.abs(n.p - prev.p) > 5) jump++; else tooFast++; continue; }   // 速すぎる → 落とす
         if (prev.s + prev.d > n.s + 1e-6) { prev.d = +(n.s - prev.s).toFixed(4); overlap++; }
       }

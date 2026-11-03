@@ -74,7 +74,7 @@ function pushStage() { signalHistory.reset();shotRevision++;stage.setSignal(); c
 /* ─────────── views ─────────── */
 const proll = new PianoRoll($("#proll"), { getSnap: () => parseFloat($("#inp-snap").value) || 0, editable: false });
 proll.scrollY = 84;
-const stage = new BandStage($("#stage-canvas"));
+const stage = new BandStage($("#stage-canvas")); window.bandStage = stage;   // 調べるときの入口 (カメラを寄せて撮る)
 const lanes = new Lanes($("#lanes"), proll, parts);
 lanes.onSeek = (b) => { proll.resetFollow(); audio.seek(b); };
 window.vesperStage = stage; window.vesperRoll = proll;
@@ -464,6 +464,9 @@ async function boot() {
   else if(!hasSaved) {const list=await listRepertoire();if(list[0])await openRepertoire(list[0]);else installSong(demoSong());}
   ensureTracks();syncTransportFields();setTitleUi();emit("song");emit("selection");
   status(`「${state.song.title}」を開きました。▶ で再生できます`,"lit");
+  // 配置の画面の中 (?layoutDraft=1) では、配置を変えて読み直しても同じ所・同じ全画面のまま見られるようにする
+  if(query.has("layoutDraft")) {const keep=JSON.parse(sessionStorage.getItem("vesperBandLayoutView")??"{}");if(keep.beat)audio.seek(Math.min(+keep.beat,songEndBeat()));if(keep.full)setFullscreen(true);
+   addEventListener("pagehide",()=>sessionStorage.setItem("vesperBandLayoutView",JSON.stringify({beat:state.playheadBeat,full:document.body.classList.contains("stage-full")})));}
   if(query.has("shot")) {await document.fonts.ready;const view=query.get("shot"),beat=query.has("beat")?Number(query.get("beat")):state.song.shots?.[view]??0;await window.bandShot({view,beat});}
   return {title:state.song.title,shots:state.song.shots??{}};
 }

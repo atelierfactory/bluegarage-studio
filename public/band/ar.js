@@ -5,14 +5,14 @@ import { KNOBS } from '../js/synth2.js';
 import { tracePath } from './signal.js';
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 export const KNOB_MEANINGS={
- cutoff:{name:'音の明るさ',up:'音が明るく鋭くなった',down:'音が柔らかく落ち着いた'},
- resonance:{name:'クセの強さ',up:'音のクセが強くなった',down:'音のクセが穏やかになった'},
- envAmount:{name:'音の立ち上がりの動き',up:'鳴り始めの変化が大きくなった',down:'鳴り始めの変化が小さくなった'},
- lfoRate:{name:'揺れの速さ',up:'揺れが速くなった',down:'揺れがゆっくりになった'},
- lfoDepth:{name:'揺れの深さ',up:'音が大きく揺れるようになった',down:'音の揺れが浅くなった'},
- drive:{name:'音の歪み',up:'音が荒く力強くなった',down:'音が澄んだ響きになった'},
- delay:{name:'やまびこ',up:'やまびこが増えた',down:'やまびこが少なくなった'},
- reverb:{name:'響きの広さ',up:'響きが広がった',down:'響きが近くに集まった'},
+ cutoff:{name:'音の明るさ',en:'BRIGHTNESS',up:'音が明るく鋭くなった',down:'音が柔らかく落ち着いた'},
+ resonance:{name:'クセの強さ',en:'EMPHASIS',up:'音のクセが強くなった',down:'音のクセが穏やかになった'},
+ envAmount:{name:'音の立ち上がりの動き',en:'SWEEP',up:'鳴り始めの変化が大きくなった',down:'鳴り始めの変化が小さくなった'},
+ lfoRate:{name:'揺れの速さ',en:'WOBBLE SPEED',up:'揺れが速くなった',down:'揺れがゆっくりになった'},
+ lfoDepth:{name:'揺れの深さ',en:'WOBBLE DEPTH',up:'音が大きく揺れるようになった',down:'音の揺れが浅くなった'},
+ drive:{name:'音の歪み',en:'DISTORTION',up:'音が荒く力強くなった',down:'音が澄んだ響きになった'},
+ delay:{name:'やまびこ',en:'ECHO',up:'やまびこが増えた',down:'やまびこが少なくなった'},
+ reverb:{name:'響きの広さ',en:'SPACE',up:'響きが広がった',down:'響きが近くに集まった'},
 };
 export function knobChangesAt(defaults,events,beat,toSec,linger=3.2){
  const now=toSec(beat),values={...defaults},out=[];
@@ -44,12 +44,37 @@ function projectedBounds(object,camera,w,h,clip=true){
  if(clip){x0=clamp(x0,0,w);y0=clamp(y0,0,h);x1=clamp(x1,0,w);y1=clamp(y1,0,h);}
  return {x:x0,y:y0,width:x1-x0,height:y1-y0};
 }
-export function arProtectedRegions(stage,camera,w,h,{clip=true,allKnobs=false}={}){
- camera.updateMatrixWorld();
- const objects=[['hand',stage.hands.Right.bone],['display',stage.synth.display.surface],
-  ...(allKnobs?stage.synth.knobs:(stage.arChanges??[]).map(e=>stage.synth.knobs.find(k=>k.id===e.param))).map(k=>['knob',k.holder])];
- return objects.flatMap(([kind,o])=>{const b=projectedBounds(o,camera,w,h,clip);return b?[{...b,kind}]:[];});
+// 皮 (SkinnedMesh) の手と顔は骨の下に形が無いので、関節の位置に半径をつけた球で囲む。2026-11-03: ロボットの手の形は隠してあるので、
+// 前の測り方では手が 1 つも守られておらず、寄りの画面でカードが指の下の鍵にかぶっていた
+const camRight=new Vector3(),camUp=new Vector3();
+function sphereBounds(spheres,camera,w,h,clip=true){
+ camRight.setFromMatrixColumn(camera.matrixWorld,0).normalize();camUp.setFromMatrixColumn(camera.matrixWorld,1).normalize();
+ let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+ for(const [p,r]of spheres)for(const dx of[-1,1])for(const dy of[-1,1]){
+  point.copy(p).addScaledVector(camRight,dx*r).addScaledVector(camUp,dy*r).project(camera);if(point.z<=-1||point.z>=1)continue;
+  const px=(point.x*.5+.5)*w,py=(-point.y*.5+.5)*h;x0=Math.min(x0,px);y0=Math.min(y0,py);x1=Math.max(x1,px);y1=Math.max(y1,py);
+ }
+ if(!Number.isFinite(x0)||clip&&(x0>w||y0>h||x1<0||y1<0))return null;
+ if(clip){x0=clamp(x0,0,w);y0=clamp(y0,0,h);x1=clamp(x1,0,w);y1=clamp(y1,0,h);}
+ return {x:x0,y:y0,width:x1-x0,height:y1-y0};
 }
+// 守る物は、その画面に写っている主役で決める (2026-11-03):
+//  - ふつう (鍵盤・つまみの寄り、シンセの寄りのカメラの写し方を決めるとき): 右手 (指先まで)・画面・つまみ
+//  - ドラムの寄り (focus drums): スティックの手と太鼓 / 口笛の寄り (focus face): 顔とマイク
+//  - 全体の画面 (body): 右手・顔・スティックの手・太鼓・体・画面・つまみの全部
+// (どの画面でも全部を守ると、スマホの小さい寄りの画面では置く所が無くなり、シンセの寄りのカメラは全部を写そうと遠くへ引いて、
+//  斜めにずれた絵になった。さとるん「無茶苦茶なカメラアングル」)
+export function arProtectedRegions(stage,camera,w,h,{clip=true,allKnobs=false,body=false,focus=null}={}){
+ camera.updateMatrixWorld();
+ const parts=stage.arSpheres?.()??{},drums=(parts.drums??[]).map(d=>['drum',[d]]);
+ const spheres=body?[['hand',parts.hand],['face',parts.face],['stick',parts.stick],...drums,['body',parts.body]]
+  :focus==='drums'?[['stick',parts.stick],...drums]:focus==='face'?[['face',parts.face]]:[['hand',parts.hand]];
+ const fromSpheres=spheres.flatMap(([kind,list])=>{if(!list?.length)return [];const b=sphereBounds(list,camera,w,h,clip);return b?[{...b,kind}]:[];});
+ const objects=focus==='drums'||focus==='face'?[]:[['display',stage.synth.display.surface],
+  ...(allKnobs?stage.synth.knobs:(stage.arChanges??[]).map(e=>stage.synth.knobs.find(k=>k.id===e.param))).map(k=>['knob',k.holder])];
+ return [...fromSpheres,...objects.flatMap(([kind,o])=>{const b=projectedBounds(o,camera,w,h,clip);return b?[{...b,kind}]:[];})];
+}
+export const CARD_H=[142,108,64,34];
 export function arLayout(rect,count,anchor=null,protectedRegions=[]){
  if(!count)return [];
  const [x,y,w,h]=rect,focus=anchor??{x:x+w*.55,y:y+h*.55},pad=10,gap=18,width=Math.min(312,w-20);
@@ -58,7 +83,8 @@ export function arLayout(rect,count,anchor=null,protectedRegions=[]){
  const overlap=(a,b,g=8)=>a.x<b.x+b.width+g&&a.x+a.width+g>b.x&&a.y<b.y+b.height+g&&a.y+a.height+g>b.y;
  const dist=b=>Math.hypot(focus.x-clamp(focus.x,b.x,b.x+b.width),focus.y-clamp(focus.y,b.y,b.y+b.height));
  const candidates=[];
- for(const height of[178,144,82,34]){
+ // カードの高さ: 全部 142・小さめ 108・横長 64 (グラフは右に小さく)・題名だけ 34
+ for(const height of CARD_H){
   if(height>h-20)continue;
   const positions=[{x:x+pad,y:y+pad},{x:x+w-width-pad,y:y+pad},{x:x+pad,y:y+h-height-pad},{x:x+w-width-pad,y:y+h-height-pad}];
   for(const r of regions){
@@ -69,14 +95,14 @@ export function arLayout(rect,count,anchor=null,protectedRegions=[]){
   const seen=new Set();
   for(const p of positions){const b=clampBox({...p,width,height}),key=`${b.x},${b.y}`;if(seen.has(key)||regions.some(r=>overlap(b,r)))continue;seen.add(key);
    // Favor a readable full card, with a short wire, above the instrument.
-   const score=dist(b)+(178-height)*2+(b.y>focus.y?18:0);candidates.push({...b,score});
+   const score=dist(b)+(CARD_H[0]-height)*2+(b.y>focus.y?18:0);candidates.push({...b,score});
   }
  }
  candidates.sort((a,b)=>a.score-b.score);
- const hasGraphSpace=candidates.some(b=>b.height>=82);let best=null;
+ const hasGraphSpace=candidates.some(b=>b.height>=CARD_H[2]);let best=null;
  for(const current of candidates){
   // Prefer the current measured comparison over two title-only strips.
-  if(hasGraphSpace&&current.height<82)continue;
+  if(hasGraphSpace&&current.height<CARD_H[2])continue;
   const previous=count>1?candidates.find(b=>!overlap(b,current)):null;
   const score=current.score+(count>1?(previous?previous.score*.3:230):0);
   if(!best||score<best.score)best={score,boxes:previous?[previous,current]:[current]};
@@ -96,8 +122,9 @@ export class KnobAR{
     const line=document.createElementNS('http://www.w3.org/2000/svg','path');svg.appendChild(line);
     const dot=document.createElementNS('http://www.w3.org/2000/svg','circle');dot.setAttribute('r','3');svg.appendChild(dot);
     const card=document.createElement('div');card.className='ar-card';
-    card.innerHTML='<div class="ar-title"><b></b><span></span></div><div class="ar-values"><strong></strong><small></small></div><div class="ar-meter"><i></i><em></em></div><svg class="ar-graph" viewBox="0 0 216 32" preserveAspectRatio="none"><path class="ar-before"/><path class="ar-current"/></svg><div class="ar-message"></div><div class="ar-caption"></div>';
-    layer.appendChild(card);cards.push({card,line,dot,title:card.querySelector('b'),meaning:card.querySelector('.ar-title span'),values:card.querySelector('strong'),goal:card.querySelector('small'),meter:card.querySelector('i'),start:card.querySelector('em'),before:card.querySelector('.ar-before'),current:card.querySelector('.ar-current'),message:card.querySelector('.ar-message'),caption:card.querySelector('.ar-caption')});
+    // 文は英語だけ・説明の 1 行 (「音が柔らかく落ち着いた」) と注 (「実音の周波数・点線は回す前」) は出さない (2026-11-03 さとるん「情報量が多すぎ」「書いてあることは全部英語に」)
+    card.innerHTML='<div class="ar-title"><b></b><span></span></div><div class="ar-values"><strong></strong><small></small></div><div class="ar-meter"><i></i><em></em></div><svg class="ar-graph" viewBox="0 0 216 32" preserveAspectRatio="none"><path class="ar-before"/><path class="ar-current"/></svg>';
+    layer.appendChild(card);cards.push({card,line,dot,title:card.querySelector('b'),meaning:card.querySelector('.ar-title span'),values:card.querySelector('strong'),goal:card.querySelector('small'),meter:card.querySelector('i'),start:card.querySelector('em'),before:card.querySelector('.ar-before'),current:card.querySelector('.ar-current')});
    }
    this.layers.push({layer,svg,cards});
   }
@@ -105,12 +132,14 @@ export class KnobAR{
  render(stage){
   const views=stage.getViews();
   this.layers.forEach(({layer,svg,cards},i)=>{
-   const view=views[i];layer.hidden=!view;if(!view)return;
+   // 寄りカメラの画面があるときは、札はそちらにだけ出す (2026-11-03 さとるん「シンセの情報が出過ぎてチンパンジーにかぶってる」)
+   const view=views[i];layer.hidden=!view||(views.length>1&&i===0);if(layer.hidden)return;
    const [x,by,w,h]=view.rect,y=stage.h-by-h;
    Object.assign(layer.style,{left:`${x}px`,top:`${y}px`,width:`${w}px`,height:`${h}px`});svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
    const events=stage.arChanges??[],latest=events.at(-1);let focus=null;
    if(latest){const p=stage.synth.knobs.find(k=>k.id===latest.param).holder.getWorldPosition(stage._arPoint).project(view.camera);if(p.z>-1&&p.z<1)focus={x:(p.x*.5+.5)*w,y:(-p.y*.5+.5)*h};}
-   const protectedRegions=events.length?arProtectedRegions(stage,view.camera,w,h):[];
+   // 寄りの画面では、回しているつまみだけでなく、つまみの列を全部守る (2026-11-03: カードが隣のつまみと鍵にかぶっていた)
+   const protectedRegions=events.length?[...arProtectedRegions(stage,view.camera,w,h,{body:views.length===1,allKnobs:views.length>1,focus:views.length>1?stage.closeTarget:null}),...this.hudRegions(x,y)]:[];
    const positions=arLayout([0,0,w,h],events.length,focus,protectedRegions),shown=events.slice(events.length-positions.length);
    cards.forEach((c,j)=>{
     const e=shown[j],p=positions[j];c.card.hidden=c.line.hidden=c.dot.hidden=!e||!p;
@@ -118,16 +147,25 @@ export class KnobAR{
     const anchor=stage.synth.knobs.find(k=>k.id===e.param).holder.getWorldPosition(stage._arPoint);
     anchor.project(view.camera);const ax=(anchor.x*.5+.5)*w,ay=(-anchor.y*.5+.5)*h,visible=anchor.z>-1&&anchor.z<1&&ax>=0&&ax<=w&&ay>=0&&ay<=h;
     Object.assign(c.card.style,{left:`${p.x}px`,top:`${p.y}px`,width:`${p.width}px`,height:`${p.height}px`,opacity:e.opacity});
-    c.title.textContent=e.label;c.meaning.textContent=e.name;c.values.textContent=`${Math.round(e.from*100)} → ${Math.round(e.current*100)}`;c.goal.textContent=`目標 ${Math.round(e.to*100)} / 100`;
+    c.title.textContent=e.label;c.meaning.textContent=e.en??'';c.values.textContent=`${Math.round(e.from*100)} → ${Math.round(e.current*100)}`;c.goal.textContent=`TARGET ${Math.round(e.to*100)} / 100`;
     c.meter.style.width=`${e.current*100}%`;c.start.style.left=`${e.from*100}%`;
-    const trace=stage.signalTraces?.[e.id];c.before.setAttribute('d',tracePath(trace?.before?.spectrum));c.current.setAttribute('d',tracePath(trace?.current?.spectrum));c.caption.textContent=trace?.caption??'再生すると実音を測ります';c.message.textContent=e.message;
-    c.card.classList.toggle('turning',e.active);c.card.classList.toggle('compact',p.height<178);c.card.classList.toggle('summary',p.height<80);c.card.classList.toggle('banner',p.height===82);
+    const trace=stage.signalTraces?.[e.id];c.before.setAttribute('d',tracePath(trace?.before?.spectrum));c.current.setAttribute('d',tracePath(trace?.current?.spectrum));
+    c.card.classList.toggle('turning',e.active);c.card.classList.toggle('compact',p.height<CARD_H[0]);c.card.classList.toggle('summary',p.height<CARD_H[2]);c.card.classList.toggle('banner',p.height===CARD_H[2]);
     let endX,endY,elbowX,elbowY;
     if(ax<p.x||ax>p.x+p.width){endX=ax<p.x?p.x:p.x+p.width;endY=clamp(ay,p.y+10,p.y+p.height-10);elbowX=endX+(ax<p.x?-14:14);elbowY=endY;}
     else {endX=clamp(ax,p.x+12,p.x+p.width-12);endY=ay<p.y?p.y:p.y+p.height;elbowX=endX;elbowY=endY+(ay<p.y?-14:14);}
     c.line.setAttribute('d',`M${ax},${ay} L${elbowX},${elbowY} L${endX},${endY}`);c.line.style.opacity=visible?e.opacity:0;
     c.dot.setAttribute('cx',ax);c.dot.setAttribute('cy',ay);c.dot.style.opacity=visible?e.opacity:0;
    });
+  });
+ }
+ // 舞台の上のボタンと題名 (HTML) にもかぶせない (2026-11-03: カードが右下の Auto・Keys のボタンに重なっていた)。x, y はこの画面の左上
+ hudRegions(x,y){
+  if(!this.root.getBoundingClientRect||!this.root.parentElement?.querySelectorAll)return [];   // 検査 (node) の作り物の画面
+  const base=this.root.getBoundingClientRect();
+  return [...this.root.parentElement.querySelectorAll('#stage-tools,#stage-close-tools,#stage-title,#stage-info')].flatMap(el=>{
+   const r=el.getBoundingClientRect();if(!r.width||!r.height)return [];
+   return [{x:r.left-base.left-x,y:r.top-base.top-y,width:r.width,height:r.height,kind:'ui'}];
   });
  }
  dispose(){this.root.remove();}

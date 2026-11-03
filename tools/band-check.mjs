@@ -12,7 +12,9 @@ for(const item of list) {
   const target=message=>(report.candidate?report.advisories:report.errors).push(message);
   try {
     if(!/^[a-z0-9-]+\.band\.json$/.test(item.file)||files.has(item.file)) throw Error('Invalid/duplicate filename'); files.add(item.file);
-    if(!['GPT-6 Astra','Claude Fable 5.1'].includes(item.composer)||!item.license?.includes('オリジナル')) report.errors.push('Composer/license metadata');
+    // 著作権の切れた曲の編曲 (publicDomain) は「オリジナル」と書けないので、権利の文に「著作権が切れた」があるかを見る (2026-11-02 メドレー)
+    const licenseOk=item.publicDomain===true?/著作権が切れた/.test(item.license??''):item.license?.includes('オリジナル');
+    if(!['GPT-6 Astra','Claude Fable 5.1'].includes(item.composer)||!licenseOk) report.errors.push('Composer/license metadata');
     if(item.candidate!==undefined&&typeof item.candidate!=='boolean')report.errors.push('candidate must be boolean');
     const data=JSON.parse(fs.readFileSync(new URL(item.file,dir),'utf8'));
     report.errors.push(...validateBandSong(data.song));

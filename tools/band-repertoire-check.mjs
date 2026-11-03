@@ -13,8 +13,8 @@ async function run(index){
  await main.evaluate();return writes;
 }
 const writes=await run(existing),out=JSON.parse([...writes].find(([p])=>p.endsWith('/index.json'))[1]);
-const candidates=existing.filter(x=>x.candidate);assert.equal(candidates.length,3);
+const candidates=existing.filter(x=>x.candidate);assert.ok(candidates.length>=3);   // 試聴待ちの候補の数は目録から数える (2026-11-02 メドレーで 4 になった)
 for(const item of candidates){assert.deepEqual(out.find(x=>x.file===item.file),item);assert.ok(![...writes.keys()].some(p=>p.endsWith('/'+item.file)));}
 assert.equal(out.length,existing.length);
 await assert.rejects(run(existing.map((x,i)=>i===0?{...x,candidate:true}:x)),/Refusing to overwrite/);
-console.log('PASS: 3 candidate entries and files preserved; owned-candidate collision rejects before writing. Actual repertoire untouched.');
+console.log(`PASS: ${candidates.length} candidate entries and files preserved; owned-candidate collision rejects before writing. Actual repertoire untouched.`);

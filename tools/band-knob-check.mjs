@@ -7,7 +7,7 @@ import {analyzeBand} from '../public/band/critic.js';
 import {knobMotionAt} from '../public/band/knob-motion.js';
 import {LIMITS} from '../public/band/prompts.js';
 const ctx={fillRect(){},strokeRect(){},fillText(){},measureText:s=>({width:s.length*22})};globalThis.document={createElement:()=>({getContext:()=>ctx})};
-const{BandStage}=await import('../public/band/scene.js');const stage=new BandStage(null,{headless:true});
+const{BandStage,KB_SCALE,TIP}=await import('../public/band/scene.js');const stage=new BandStage(null,{headless:true});
 const{song:base}=JSON.parse(fs.readFileSync(new URL('../public/band/repertoire/glass-current.band.json',import.meta.url)));
 const song={...base,tempo:120,tempoMap:[],timeSig:4,sections:[{name:'Check',bars:8}]},toSec=b=>b*.5;
 const empty={synth:[{p:60,s:0,d:.2,v:100,f:1}],pedal:[],drums:[],kick:[]};
@@ -15,7 +15,8 @@ let checks=0,cases=0,maxGap=0,maxError=0;const failures=[];
 function install(knobs,defaults){const parts={...empty,knobs},a=analyzeBand(parts,{song,range:{startBar:0,bars:8}});assert.equal(a.stats.fixes.length,0);assert.equal(a.issues.length,0);stage.setSong(parts,defaults);cases++;}
 function contact(e,beat){stage.update(beat,toSec,1/60,true);const k=stage.synth.knobs.find(k=>k.id===e.param);
  for(const f of stage.hands.Right.fingers.slice(0,2)){
-  const p=k.holder.worldToLocal(f.contactPad.getWorldPosition(new THREE.Vector3())),r=.0125+(.011-.0125)*(p.y+.0065)/.017,gap=Math.hypot(p.x,p.z)-r-.0055;
+  // つまみの中の座標はシンセの倍率 KB_SCALE。指先の丸みは TIP (m・手を縮めた分だけ小さい)
+  const p=k.holder.worldToLocal(f.contactPad.getWorldPosition(new THREE.Vector3())),r=.0125+(.011-.0125)*(p.y+.0065)/.017,gap=(Math.hypot(p.x,p.z)-r)*KB_SCALE-TIP;
   const error=f.tip.getWorldPosition(new THREE.Vector3()).distanceTo(stage.knobContacts[stage.hands.Right.fingers.indexOf(f)]);maxGap=Math.max(maxGap,Math.abs(gap));maxError=Math.max(maxError,error);checks++;
   if(Math.abs(gap)>.002||p.y<-.0065||p.y>.0105||error>.002)failures.push({param:e.param,beat,gap,y:p.y,error});
  }

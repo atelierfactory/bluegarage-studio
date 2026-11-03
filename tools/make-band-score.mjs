@@ -15,8 +15,10 @@ const seconds=beatToSec(bars*song.timeSig,song);
 console.log(`${id}: ${seconds.toFixed(3)} seconds; ${bars} bars; keys ${a.stats.synth} / pedal ${a.stats.pedal} / drums ${a.stats.drums} / kick ${a.stats.kick} / knobs ${a.stats.knobs}; keys per bar ${(a.stats.synth/bars).toFixed(2)}`);
 if(errors.length||a.stats.fixes.length||a.issues.length){console.error(JSON.stringify({errors,fixes:a.stats.fixes,issues:a.issues},null,2));process.exitCode=1;}
 else{
- const entry={title:song.title,file:`${id}.band.json`,composer:song.composer,license:song.license,tempo:song.tempo,bars,note:song.concept,shots:song.shots,moments:song.moments};
- const existing=JSON.parse(fs.readFileSync(new URL('index.json',dir),'utf8')).filter(item=>item.file!==entry.file);
+ const entry={title:song.title,file:`${id}.band.json`,composer:song.composer,license:song.license,...(song.publicDomain?{publicDomain:true}:{}),tempo:song.tempo,bars,note:song.concept,shots:song.shots,moments:song.moments};
+ const all=JSON.parse(fs.readFileSync(new URL('index.json',dir),'utf8')), prev=all.find(item=>item.file===entry.file);
+ if(prev?.candidate!==undefined)entry.candidate=prev.candidate;   // 目録で決めた「候補」の印は、書き出し直しても残す
+ const existing=all.filter(item=>item.file!==entry.file);
  const index=first?[entry,...existing]:[...existing,entry];
  fs.writeFileSync(new URL(entry.file,dir),JSON.stringify({song},null,2)+'\n');
  fs.writeFileSync(new URL('index.json',dir),JSON.stringify(index,null,2)+'\n');

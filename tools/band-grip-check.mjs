@@ -7,7 +7,8 @@ import {beatToSec, secToBeat} from '../public/js/state.js';
 import {partsFromSong} from '../public/band/model.js';
 import {knobDefaults} from '../public/js/synth2.js';
 import './piano-headless.mjs';
-const {BandStage, DRUMS} = await import('../public/band/scene.js');
+// 手 (とスティック) は模型の大きさに HAND_S 倍に縮めてある
+const {BandStage, DRUMS, HAND_S, TIP} = await import('../public/band/scene.js');
 const stage = new BandStage(null, {headless:true}), V = (x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
 const dir = new URL('../public/band/repertoire/', import.meta.url);
 const list = JSON.parse(fs.readFileSync(new URL('index.json', dir))), rows=[], failures=[];
@@ -21,8 +22,11 @@ function measure() {
   const boneError=Math.max(Math.abs(shoulder.distanceTo(elbow)-stage.armLen.upper),Math.abs(elbow.distanceTo(wrist)-stage.armLen.fore));
   return {dorsalY:dorsal.y, bend:degrees(forward.angleTo(fore)), stickAngle:degrees(axis.angleTo(fore)), tipError:tip.distanceTo(stage.stickState.tip), reachError:stage.drumGrip.reachError, boneError, tip, axis};
 }
-function valid(m) {return m.dorsalY>.5 && m.bend<15 && m.stickAngle>45 && m.stickAngle<80 && m.tipError<.000001 && m.reachError<.000001 && m.boneError<1e-9;}
-for(const item of list) {
+// 2026-11-03: 手首の曲がり 15 → 55 度・スティックと前腕 80 → 85 度。ひじを下げて前腕と手首で叩き、構えの手首を曲げた形
+// (scene.js WRIST_COCK) で、手首が最大 50.7 度 (上下の返し 50・横 21)・スティックと前腕が最大 83.2 度になった。
+// 人やチンパンジーの手首は上下に 60〜80 度・横に 20〜30 度曲がる。15 度はロボットの手首のときの値。折れた手首 (117 度) は下で今も落ちる
+function valid(m) {return m.dorsalY>.5 && m.bend<55 && m.stickAngle>45 && m.stickAngle<85 && m.tipError<.000001 && m.reachError<.000001 && m.boneError<1e-9;}
+for(const item of list.filter(x=>!process.env.ONLY||x.file.includes(process.env.ONLY))) {   // ONLY=曲のファイル名の一部 で曲をしぼる
   const {song}=JSON.parse(fs.readFileSync(new URL(item.file, dir))), toSec=b=>beatToSec(b,song);
   stage.setSong(partsFromSong(song), knobDefaults(song.tracks[0].synth2));
   const r={file:item.file,attacks:0,frames:0,minDorsalY:1,maxWristBend:0,minStickAngle:180,maxStickAngle:0,maxTipErrorMm:0,maxPadGapMm:0,maxGripGapMm:0,minDownwardAngle:90,byDrum:{}};
@@ -39,7 +43,7 @@ for(const item of list) {
       if(Math.abs(local.y)>.015||Math.hypot(local.x,local.z)>d.r*.95)failures.push({file:item.file,beat,reason:'drum contact',local:local.toArray()});
       for(const f of stage.hands.Left.fingers){
         const point=stage.stick.pivot.worldToLocal(f.tip.getWorldPosition(V()));
-        const gap=(Math.hypot(point.x,point.z)-.12)*.061-.0055;
+        const gap=(Math.hypot(point.x,point.z)-.12)*.061*HAND_S-TIP;
         r.maxGripGapMm=Math.max(r.maxGripGapMm,Math.abs(gap)*1000);
         if(Math.abs(gap)>.005)failures.push({file:item.file,beat,reason:'finger grip',gap});
       }
@@ -64,5 +68,8 @@ for(const side of ['Left','Right']){
   assert.ok(!fore.children.some(c=>c.children.some(m=>m.geometry?.type==='CapsuleGeometry')));
   assert.ok(!hand.bone.children.some(c=>c.geometry?.type==='SphereGeometry'&&c.position.length()<1e-9));
 }
-console.log(JSON.stringify({rows,failures:failures.length,examples:failures.slice(0,12)},null,2));
+// 落ちた理由ごとの数 (どの決まりで落ちたか)
+const why=f=>f.reason??[f.dorsalY<=.5&&'dorsal',f.bend>=55&&'bend',f.stickAngle<=45&&'stickLow',f.stickAngle>=85&&'stickHigh',f.tipError>=1e-6&&'tip',f.reachError>=1e-6&&'reach',f.boneError>=1e-9&&'bone'].filter(Boolean).join('+');
+const reasons={};for(const f of failures){const k=why(f);reasons[k]=(reasons[k]??0)+1;}
+console.log(JSON.stringify({rows,failures:failures.length,reasons,examples:failures.slice(0,12)},null,2));
 assert.equal(failures.length,0,'Dorsal hemisphere, wrist bend, stick direction and contact preservation');

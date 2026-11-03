@@ -6,10 +6,10 @@ import {beatToSec} from '../public/js/state.js';
 import {knobDefaults} from '../public/js/synth2.js';
 import {knobStateAt} from '../public/js/synth-automation.js';
 import {partsFromSong} from '../public/band/model.js';
-import {KnobAR,knobChangesAt,arLayout,arProtectedRegions} from '../public/band/ar.js';
+import {KnobAR,knobChangesAt,arLayout,arProtectedRegions,CARD_H} from '../public/band/ar.js';
 const ctx={fillRect(){},strokeRect(){},fillText(){},measureText:s=>({width:s.length*22})};
 globalThis.document={createElement:()=>({getContext:()=>ctx})};
-const{BandStage,DRUMS}=await import('../public/band/scene.js');
+const{BandStage,DRUMS,KB_SCALE,TIP}=await import('../public/band/scene.js');
 const stage=new BandStage(null,{headless:true}),dir=new URL('../public/band/repertoire/',import.meta.url),list=JSON.parse(fs.readFileSync(new URL('index.json',dir)));
 let count=0,maxGap=0;const check=(v,m)=>{assert.ok(v,m);count++;};
 // Contacts have a dedicated exhaustive check; this flag reruns layout after a cosmetic edit.
@@ -19,7 +19,8 @@ for(const item of process.argv.includes("--layout-only")?[]:list){
  for(const e of part.knobs)for(const u of[0,.5,.98]){
   const beat=e.s+e.d*u;stage.poseAt(beat,toSec);const knob=stage.synth.knobs.find(k=>k.id===e.param),centres=[];
   for(const f of stage.hands.Right.fingers.slice(0,2)){
-   const c=knob.holder.worldToLocal(f.contactPad.getWorldPosition(new THREE.Vector3())),r=Math.hypot(c.x,c.z),radius=.0125+(.011-.0125)*(c.y+.0065)/.017,gap=r-radius-.0055;maxGap=Math.max(maxGap,Math.abs(gap));centres.push(c);
+   // つまみの中の座標はシンセの倍率 KB_SCALE。指先の丸みは TIP (m・手を縮めた分だけ小さい)
+   const c=knob.holder.worldToLocal(f.contactPad.getWorldPosition(new THREE.Vector3())),r=Math.hypot(c.x,c.z),radius=.0125+(.011-.0125)*(c.y+.0065)/.017,gap=(r-radius)*KB_SCALE-TIP;maxGap=Math.max(maxGap,Math.abs(gap));centres.push(c);
    check(Math.abs(gap)<.002&&c.y>-.0065&&c.y<.0105,`Visible fingertip off knob: ${item.file} ${e.param}@${beat} gap=${gap} y=${c.y}`);
   }
   check(centres[0].x*centres[1].x+centres[0].z*centres[1].z<0,'Thumb and index oppose');
@@ -71,9 +72,9 @@ function checkPlacement(camera,w,h,label){
  const e=stage.arChanges.at(-1),v=stage.synth.knobs.find(k=>k.id===e.param).holder.getWorldPosition(new THREE.Vector3()).project(camera);
  const regions=arProtectedRegions(stage,camera,w,h),boxes=arLayout([0,0,w,h],stage.arChanges.length,{x:(v.x*.5+.5)*w,y:(-v.y*.5+.5)*h},regions);
  check(boxes.length>0,`Visible AR in ${label}`);
- check(boxes.at(-1).height>=82,`Current measured plot remains visible in ${label}`);
+ check(boxes.at(-1).height>=CARD_H[2],`Current measured plot remains visible in ${label}`);
  for(const box of boxes){check(!regions.some(r=>intersects(r,box)),`AR covers hand/knob/display in ${label}`);check(box.x>=0&&box.y>=0&&box.x+box.width<=w&&box.y+box.height<=h,`AR outside ${label}`);placementChecks++;}
- if(w===1600){check(boxes.length===stage.arChanges.length&&boxes.every(b=>b.height>=144),`Both readable comparison plots in ${label}`);}
+ if(w===1600){check(boxes.length===stage.arChanges.length&&boxes.every(b=>b.height>=CARD_H[1]),`Both readable comparison plots in ${label}`);}
  placements.push({label,cards:boxes.length,heights:boxes.map(b=>b.height)});
 }
 for(const beat of[song.shots.knob,song.shots.knob+4,song.shots.full]){   // the first song's own shot beats (was fixed to one score's beats)

@@ -80,23 +80,24 @@
 
   <aside id="aipanel">
     <div id="stage">
-      <canvas id="stage-canvas" aria-label="VESPER-01 の演奏する舞台"></canvas>
+      <canvas id="stage-canvas" aria-label="Monkey Solo Band stage"></canvas>
+      <!-- 舞台に書く文字は全部英語 (2026-11-03 さとるん「書いてあることは全部英語に」) -->
       <div id="stage-hud"><span id="stage-title"></span><span id="stage-info"></span></div>
       <div id="stage-tools">
-        <button class="vbtn on" data-view="wide" title="全体 (ドラッグで回転・ホイールで寄り引き)">全体</button>
-        <button class="vbtn" data-view="drums" title="ドラム側から">ドラム</button>
-        <button class="vbtn" data-view="synth" title="シンセ側から">シンセ</button>
-        <button class="vbtn" data-view="top" title="上から">上</button>
-        <button class="vbtn" data-view="eye" title="VESPER の目線">目線</button>
-        <button id="btn-fullscreen" class="vbtn" title="全画面 (左: 全体 / 右: 手元)。Esc で戻る">全画面</button>
+        <button class="vbtn on" data-view="wide" title="Whole band (drag to orbit, scroll to zoom)">Wide</button>
+        <button class="vbtn" data-view="drums" title="From the drum side">Drums</button>
+        <button class="vbtn" data-view="synth" title="From the synth side">Synth</button>
+        <button class="vbtn" data-view="top" title="From above">Top</button>
+        <button class="vbtn" data-view="eye" title="Player's view">POV</button>
+        <button id="btn-fullscreen" class="vbtn" title="Fullscreen (left: whole band, right: close-up). Esc to exit">Fullscreen</button>
       </div>
       <div id="stage-close-tools">
-        <button class="cbtn on" data-close="auto" title="右手とドラムを自動で切り替え">自動</button>
-        <button class="cbtn" data-close="keys" title="右手 (鍵盤)">鍵盤</button>
-        <button class="cbtn" data-close="knobs" title="つまみ">つまみ</button>
-        <button class="cbtn" data-close="drums" title="ドラム">ドラム</button>
+        <button class="cbtn on" data-close="auto" title="Switch between hands and drums automatically">Auto</button>
+        <button class="cbtn" data-close="keys" title="Right hand on the keys">Keys</button>
+        <button class="cbtn" data-close="knobs" title="Knobs">Knobs</button>
+        <button class="cbtn" data-close="drums" title="Drums">Drums</button>
       </div>
-      <div id="stage-label-hands">手元</div>
+      <div id="stage-label-hands">Close-up</div>
     </div>
   </aside>
 </div>
