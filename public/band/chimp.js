@@ -178,12 +178,14 @@ function faceToHead(meta, g, pos, si8) {
    唇の合わせ目は顔のまん中で高さ 0.822・前 0.124、口の端は左右 4.5 cm で 1.3 cm 下がる (高さ 0.809・前 0.092)。
    合わせ目の上 (0.823〜0.85) の明るくふくらんだ所が上唇。前に 0.853 の くぼみを合わせ目とみなしたのはまちがいで、鼻の下だった
    0: すぼめ (口笛の形) = 口の端を内へ寄せて持ち上げ、唇を前へ 2.4 cm 出し、まん中を少し開く。1: 丸 = すぼめより少しゆるい O の形。
-   唇は前へ突き出した筒の形 (まん中の幅 3 割は同じだけ前へ出し、外はなめらかに戻す。合わせ目のまわりの輪は さらに前へ巻く)。
-   前はまん中ほど前へ出るドームの形で、黒い円盤を貼った丸い ふくらみに見えた (2026-11-03 さとるん「口がただの丸になっているのもっとリアルに」)。
-   すぼめた唇は、合わせ目のまわりをチンパンジーの唇の暗いくすんだ色にする (lipMask・強さは scene.js が userData.lip に入れる)。
-   つやは出さない (11-03 夕さとるん「口のすぼみのほくろみたいなのが目立ってしまう」: つやの白い光が上のふちに三日月の形に出て、明るいピンクの輪と赤黒い穴の丸と重なり、ほくろに見えた)。
-   穴は皮の色だけでは出ないので、scene.js が唇の奥に、奥行きのある短い筒 (headset.hole) を置く ── */
-export const MOUTH = new THREE.Vector3(0, 0.822, 0.124), PUCKER_Z = 0.024, ROUND_Z = 0.014;
+   唇は前へ突き出した筒の形 (まん中の幅 3 割は同じだけ前へ出し、外はなめらかに戻す)。別の物は足さない。
+   すぼめた唇は合わせ目のまわりをチンパンジーの唇の暗いくすんだ色にし (つやは出さない)、まん中は上下に開いて奥へ引き、口の中の暗さを小さな O に見せる
+   (11-03 夜さとるん「口を完全に閉じてると口笛ならないのでちょっとだけ口を開けさせる」)。色の強さは scene.js が userData.lip に入れる。
+   形を変えた分だけ光の当たり方の向き (法線) も変えて、すぼまった形とすき間を陰影でも見せる。
+   (11-03 夜さとるん「ほくろみたい」「球のようなものがここにあること自体やや違和感」「ここだけ質感がちがうこと自体が問題」: 唇だけ暗い色・つや・
+   黒い穴の筒を足し、形だけ動かして法線は平らな顔のままだったので、すぼめた所だけ別の材質の球に見えた) ── */
+// 前へ出す量は、すぼめ 1.3 cm・丸 0.8 cm (11-03 夜さとるん「球のようなものがここにあること自体やや違和感」: 2.4 cm・1.4 cm では口が前へ丸くふくらんだ球に見えた)
+export const MOUTH = new THREE.Vector3(0, 0.822, 0.124), PUCKER_Z = 0.013, ROUND_Z = 0.008;
 const MOUTH_RX = 0.062, MOUTH_RY = 0.034;
 const lipLine = (x) => MOUTH.y - 0.013 * Math.min(1, (x / 0.045) ** 2);   // 唇の合わせ目の高さ (口の端ほど下がる)
 const smooth01 = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -199,31 +201,36 @@ function addMouth(g, mesh, pos, meta, si, sw) {
     if (hw < 0.3 || z < 0.06 || (r2 >= 1 && g2 >= 1)) continue;
     const fz = Math.min(1, (z - 0.06) / 0.04), front = fz * fz * (3 - 2 * fz);
     const w = Math.max(0, 1 - r2) ** 2 * front, gw = Math.max(0, 1 - g2) ** 1.2 * front, line = lipLine(x), toLine = y - line, lift = MOUTH.y - line;
-    // まん中の穴: 合わせ目のすぐ上の唇は上へ、すぐ下は下へ開き、合わせ目は奥へ引く (奥に置いた筒が見える すき間になる)
-    const hole = Math.exp(-((x / 0.010) ** 2) - (toLine / 0.006) ** 2), side = Math.sign(toLine);
+    // まん中の穴: 合わせ目のすぐ上の唇は上へ、すぐ下は下へ開き、合わせ目は奥へ引く (陰になる すき間になる)
+    const hole = Math.exp(-((x / 0.008) ** 2) - (toLine / 0.005) ** 2), side = Math.sign(toLine);
     // 前へ出す量: 筒 (tube) + 唇のふちの輪 (rim)。どちらも front で後ろへ行くほど 0
     const rho = Math.sqrt(r2), tube = rho < 1 ? 1 - smooth01(0.3, 1, rho) : 0, rim = Math.exp(-(((rho - 0.2) / 0.09) ** 2));
-    // 唇の色の印: 合わせ目のまわりの輪は 0.7 まで、引っこめたまん中 (穴の奥に見える皮) は 1 (シェーダーで暗い口の中の色に)
+    // 唇の色の印: 合わせ目のまわりの輪は 0.85 まで (暗い唇の色)、開いたまん中は 1 (口の中のさらに暗い色)
     lip[i] = front * Math.max(0.85 * (1 - smooth01(0.2, 1, Math.hypot(x / 0.04, toLine / 0.02))), hole);
     pucker[i * 3] = -x * 0.55 * gw;
     // 寄せた口の端は、まん中の高さまで持ち上げる (寄せる量と同じ gw で。w で持ち上げると V の字の口になった)
-    pucker[i * 3 + 1] = -toLine * 0.35 * w + lift * 0.9 * gw + side * 0.0035 * hole;
-    pucker[i * 3 + 2] = PUCKER_Z * (0.8 * tube + 0.3 * rim) * front - 0.008 * hole;
+    pucker[i * 3 + 1] = -toLine * 0.35 * w + lift * 0.9 * gw + side * 0.0045 * hole;
+    pucker[i * 3 + 2] = PUCKER_Z * (0.8 * tube + 0.12 * rim) * front - 0.009 * hole;
     round[i * 3] = -x * 0.3 * gw;
-    round[i * 3 + 1] = -toLine * 0.12 * w + lift * 0.6 * gw + side * 0.006 * hole;
-    round[i * 3 + 2] = ROUND_Z * (0.8 * tube + 0.3 * rim) * front - 0.009 * hole;
+    round[i * 3 + 1] = -toLine * 0.12 * w + lift * 0.6 * gw + side * 0.0065 * hole;
+    round[i * 3 + 2] = ROUND_Z * (0.8 * tube + 0.12 * rim) * front - 0.009 * hole;
   }
+  // 法線の差: 皮の形を変える前と後で法線を計算し、その差を形と同じ割合で足す (動かさない所は差 0)
+  const tmp = new THREE.BufferGeometry(); tmp.setIndex(g.index); tmp.setAttribute("position", new THREE.BufferAttribute(new Float32Array(pos), 3));
+  tmp.computeVertexNormals(); const n0 = tmp.attributes.normal.array.slice();
+  const normalDelta = (d) => { const p1 = tmp.attributes.position.array; for (let i = 0; i < p1.length; i++) p1[i] = pos[i] + d[i];
+    tmp.computeVertexNormals(); const n1 = tmp.attributes.normal.array, out = new Float32Array(n1.length); for (let i = 0; i < out.length; i++) out[i] = n1[i] - n0[i]; return out; };
   g.morphAttributes.position = [new THREE.BufferAttribute(pucker, 3), new THREE.BufferAttribute(round, 3)];
+  g.morphAttributes.normal = [new THREE.BufferAttribute(normalDelta(pucker), 3), new THREE.BufferAttribute(normalDelta(round), 3)];
   g.morphTargetsRelative = true;
   mesh.updateMorphTargets();
-  // 唇の色: lipMask × すぼめの強さ で、暗く赤みのある色へ (合わせ目のまわりほど暗い)。つやも少し
   g.setAttribute("lipMask", new THREE.BufferAttribute(lip, 1));
   const lipU = { value: 0 }; mesh.userData.lip = lipU;
   mesh.material.onBeforeCompile = (sh) => {
     sh.uniforms.lipPucker = lipU;
     sh.vertexShader = "attribute float lipMask;\nvarying float vLip;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vLip = lipMask;");
     sh.fragmentShader = "uniform float lipPucker;\nvarying float vLip;\n" + sh.fragmentShader
-      .replace("#include <map_fragment>", "#include <map_fragment>\n  { float m = vLip * lipPucker; diffuseColor.rgb *= mix(vec3(1.0), vec3(0.065, 0.05, 0.046), smoothstep(0.0, 0.45, m)) * mix(1.0, 0.4, smoothstep(0.75, 1.0, vLip) * smoothstep(0.1, 0.5, lipPucker)); }");
+      .replace("#include <map_fragment>", "#include <map_fragment>\n  { float m = vLip * lipPucker; diffuseColor.rgb *= mix(vec3(1.0), vec3(0.065, 0.05, 0.046), smoothstep(0.0, 0.45, m)) * mix(1.0, 0.2, smoothstep(0.6, 0.95, vLip) * smoothstep(0.1, 0.5, lipPucker)); }");
   };
   mesh.material.customProgramCacheKey = () => "chimp-lip";
 }

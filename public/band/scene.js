@@ -20,7 +20,7 @@ import LAYOUT from "./layout.js";
 import BODY from "./chimp/body.js";
 import { KnobAR, knobChangesAt, arProtectedRegions } from "./ar.js";
 import { HARDWARE, roundedSlab, meshAt, metalRod, valueArc, buildSynthCase, buildDisplay, cymbalGeometry, refineHands } from "./hardware.js";
-import { snapshotRest, loadChimp, hideRobot, MOUTH, PUCKER_Z, ROUND_Z } from "./chimp.js";
+import { snapshotRest, loadChimp, hideRobot, MOUTH } from "./chimp.js";
 
 /* ─────────── シンセの鍵盤 (37 鍵 C3〜C6) — 鍵盤のローカル座標: x = 低→高、z = 手前が +、鍵の上面 y=0 ─────────── */
 // 鍵の幅だけ 1.15 倍 (2026-11-03 さとるん「鍵盤を大きくした方がいい」: 白鍵の幅 2.25 cm → 2.59 cm。模型の指の太さは約 2.0 cm)。
@@ -84,26 +84,14 @@ function buildHeadset(head) {
   const cap = new THREE.Mesh(new THREE.SphereGeometry(0.0085, 24, 16), dark); cap.position.set(0.034, 0.003, 0.154); g.add(cap);
   const led = new THREE.Mesh(new THREE.SphereGeometry(0.0022, 12, 8), new THREE.MeshStandardMaterial({ color: 0x220000, emissive: 0xff2a1a, emissiveIntensity: 0.4 }));
   led.position.set(0.041, 0.01, 0.156); g.add(led);
-  // 口笛の穴: すぼめた唇の奥に置く、奥行きのある短い筒 (前の端は唇になじむ暗い茶色、奥へ行くほど黒・いちばん奥に黒い底。少し横長)。
-  // 前は黒い平たい楕円で、唇に丸い黒を貼っただけに見えた (2026-11-03 さとるん「口がただの丸になっているのもっとリアルに」)。
-  // 筒の前の端は唇のふちの内側に隠れ、正面から見ると暗い赤のふちから黒へ落ちる穴、斜めから見ると奥の内側の壁が見える
-  const holeGeo = new THREE.CylinderGeometry(1, 0.6, 1, 32, 6, true); holeGeo.rotateX(Math.PI / 2); holeGeo.translate(0, 0, -0.5);
-  { const p = holeGeo.attributes.position, c = new Float32Array(p.count * 3), a = new THREE.Color(0x24120f), b = new THREE.Color(0x050202), t = new THREE.Color();
-    for (let i = 0; i < p.count; i++) { t.copy(a).lerp(b, Math.min(1, -p.getZ(i) * 1.5)); c.set([t.r, t.g, t.b], i * 3); }
-    holeGeo.setAttribute("color", new THREE.BufferAttribute(c, 3)); }
-  const hole = new THREE.Mesh(holeGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
-  const holeBack = new THREE.Mesh(new THREE.CircleGeometry(0.6, 32), new THREE.MeshBasicMaterial({ color: 0x050202 })); holeBack.position.z = -1; hole.add(holeBack);
-  hole.scale.setScalar(1e-4); hole.visible = false; g.add(hole);
-  return { group: g, led, boom, cap, hole };
+  return { group: g, led, boom, cap };
 }
 // 皮を着せたあとで、マイクを本当の口へ合わせる (2026-11-03 さとるん「マイクが猿の口の位置にあっていない」)。前は頭の関節から測った寸法で
 // 置いていて、マイクの先が鼻の下 (唇の合わせ目の 3 cm 上・3 cm 横) にあった。皮の座標 (m) で口から決め、頭の骨の座標へ移す (toGroup)。
 // マイクの先は、すぼめた唇の左下の前 (口の穴は隠さない)。腕はほおに沿って耳から伸ばす。
-// 口笛の穴: すぼめた唇のまん中に置く暗い楕円。唇を前へ出した分だけ前へ動かす (mouth → mouthFront)
 function fitHeadset(hs, toGroup) {
   const S = (x, y, z) => toGroup(V(x, y, z));
-  hs.mouth = toGroup(MOUTH.clone()); hs.mouthFwd = toGroup(MOUTH.clone().add(V(0, 0, 0.01))).sub(hs.mouth).multiplyScalar(100);
-  hs.hole.position.copy(hs.mouth); hs.hole.lookAt(hs.mouth.clone().add(hs.mouthFwd));
+  hs.mouth = toGroup(MOUTH.clone());
   const tip = S(0.016, MOUTH.y - 0.007, MOUTH.z + 0.030);
   const path = new THREE.CatmullRomCurve3([V(0.114, 0.042, 0.022), S(0.100, 0.848, 0.060), S(0.080, 0.826, 0.100), S(0.048, 0.812, 0.134), S(0.027, 0.814, 0.150)]);
   hs.boom.geometry.dispose(); hs.boom.geometry = new THREE.TubeGeometry(path, 48, 0.0022, 10);
@@ -825,15 +813,7 @@ export class BandStage {
       this._pucker = lerp(this._pucker ?? 0, (whNote ? 0.72 + 0.28 * atk : 0.55) * this._whistle, Math.min(1, dt * 24));
       this._round = lerp(this._round ?? 0, (whNote ? 0.15 + 0.35 * low : 0.3) * this._whistle, Math.min(1, dt * 14));
       this.chimp.morphTargetInfluences[0] = this._pucker; this.chimp.morphTargetInfluences[1] = this._round;
-      const hs = this.headset, open = clamp((this._pucker + this._round - 0.15) / 0.6, 0, 1);
-      if (hs.mouth) {
-        hs.hole.visible = open > 0.01;
-        // 筒の前の端は、唇のふちの輪 (前へ出した量の 9 割) の少し奥。奥行き 6 mm で、まん中の引っこめた皮より前に収まる
-        hs.hole.position.copy(hs.mouth).addScaledVector(hs.mouthFwd, (PUCKER_Z * this._pucker + ROUND_Z * this._round) * 0.85);
-        // 穴の大きさ: 低い音ほど丸く大きく、音の頭で強くすぼめた瞬間は小さく (音ごとに口の形が少し変わって見える)
-        hs.hole.scale.set((0.0032 + 0.0026 * this._round + 0.001 * (1 - this._pucker)) * open, (0.0022 + 0.0035 * this._round + 0.001 * (1 - this._pucker)) * open, 0.006 * open + 1e-4);
-        if (this.chimp.userData.lip) this.chimp.userData.lip.value = clamp(this._pucker + 0.6 * this._round, 0, 1);
-      }
+      if (this.chimp.userData.lip) this.chimp.userData.lip.value = clamp(this._pucker + 0.6 * this._round, 0, 1);
     }
     const sway = Math.sin(this.t * 0.9) * 0.03 * (0.4 + this.energy) * mv.calm + Math.sin(this.t * 0.37) * 0.015 * mv.calm + mv.roll;
     // つまみを回す間は、胴を少しだけ前へ傾ける (0.12 rad)。0.30 rad では曲の場面の傾きと重なって頭が鍵盤の高さまで下がり、
